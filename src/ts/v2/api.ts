@@ -26,9 +26,9 @@ export type CustomServiceCall = (inputs: any) => Promise<unknown>;
 type ExtractCamelCaseValue<T extends object> = T extends undefined
   ? never
   : {
-      [TKey in keyof T]: T[TKey] extends (
-        input: infer TInput
-      ) => Promise<infer TResult>
+      [TKey in keyof T]: T[TKey] extends () => Promise<infer TResult>
+        ? () => Promise<CamelCasedPropertiesDeep<TResult>>
+        : T[TKey] extends (input: infer TInput) => Promise<infer TResult>
         ? (input: TInput) => Promise<CamelCasedPropertiesDeep<TResult>>
         : never;
     };
