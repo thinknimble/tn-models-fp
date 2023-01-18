@@ -16,7 +16,7 @@ import fields, {
 import Model, { ToValRepresentation, KeysToString, PickModelFields } from "./ts/model"
 import Pagination, { PaginationDefaults, PaginationKwargs, IPagination } from "./ts/pagination"
 import { PickByValue } from "./ts/utility-types"
-export { createApi } from "./ts/v2"
+export { createApi, parseResponse } from "./ts/v2"
 
 export {
   ModelAPI,
