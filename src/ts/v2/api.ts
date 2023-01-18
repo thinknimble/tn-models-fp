@@ -1,8 +1,4 @@
-import {
-  objectToCamelCase,
-  objectToSnakeCase,
-  CamelCasedPropertiesDeep,
-} from "@thinknimble/tn-utils"
+import { objectToCamelCase, objectToSnakeCase, CamelCasedPropertiesDeep } from "@thinknimble/tn-utils"
 import axios, { Axios, AxiosInstance } from "axios"
 import { ZodType, z, ZodAny } from "zod"
 import { parseResponse } from "./utils"
@@ -41,11 +37,7 @@ const getPaginatedZod = <T extends ZodType>(zod: T) =>
     results: z.array(zod),
   })
 
-type BareApiService<
-  TEntity extends ZodType,
-  TCreate extends ZodType,
-  TExtraFilters extends ZodType = ZodAny
-> = {
+type BareApiService<TEntity extends ZodType, TCreate extends ZodType, TExtraFilters extends ZodType = ZodAny> = {
   client: AxiosInstance
   retrieve(id: string): Promise<z.infer<TEntity>>
   create(inputs: z.infer<TCreate>): Promise<z.infer<TCreate>>
@@ -101,31 +93,24 @@ export function createApi<
   base: ApiBaseParams<TApiEntity, TApiCreate, TApiUpdate, TExtraFilters>
 ): BareApiService<TApiEntity, TApiCreate, TExtraFilters>
 
-export function createApi(
-  { models, client, endpoint },
-  customEndpoints = undefined
-) {
+export function createApi({ models, client, endpoint }, customEndpoints = undefined) {
   if (!(client instanceof Axios)) {
-    throw new Error(
-      "Need to provide an axios instance to create an api handler"
-    )
+    throw new Error("Need to provide an axios instance to create an api handler")
   }
-  const createCustomServiceCallHandler =
-    (serviceCall: CustomServiceCall) => async (inputs: unknown) => {
-      const snaked =
-        typeof inputs !== "object" || !inputs
-          ? inputs
-          : objectToSnakeCase(inputs)
-      const result = await serviceCall(snaked)
-      if (typeof result !== "object" || result === null) return result
-      return objectToCamelCase(result)
-    }
+  const createCustomServiceCallHandler = (serviceCall: CustomServiceCall) => async (inputs: unknown) => {
+    const snaked = typeof inputs !== "object" || !inputs ? inputs : objectToSnakeCase(inputs)
+    const result = await serviceCall(snaked)
+    if (typeof result !== "object" || result === null) return result
+    //TODO: what if result is array of objects? This does some isObject logic which leaves out arrays.
+    return objectToCamelCase(result)
+  }
 
   const modifiedCustomServiceCalls = customEndpoints
     ? Object.fromEntries(
-        Object.entries(
-          customEndpoints as Record<string, CustomServiceCall>
-        ).map(([k, v]) => [k, createCustomServiceCallHandler(v)])
+        Object.entries(customEndpoints as Record<string, CustomServiceCall>).map(([k, v]) => [
+          k,
+          createCustomServiceCallHandler(v),
+        ])
       )
     : undefined
 
@@ -157,9 +142,7 @@ export function createApi(
 
   const list = async (filters) => {
     //throws if the fields do not comply with the zod schema
-    const parsed = models.extraFilters
-      ? models.extraFilters.and(filtersZod).parse(filters)
-      : filtersZod.parse(filters)
+    const parsed = models.extraFilters ? models.extraFilters.and(filtersZod).parse(filters) : filtersZod.parse(filters)
     const paginatedZod = getPaginatedZod(models.entity)
     const snaked = parsed ? objectToSnakeCase(parsed) : undefined
     const snakedCleanParsed = snaked
@@ -171,13 +154,9 @@ export function createApi(
           })
         )
       : undefined
-    const apiFilters = snakedCleanParsed
-      ? new URLSearchParams(snakedCleanParsed as any)
-      : undefined
+    const apiFilters = snakedCleanParsed ? new URLSearchParams(snakedCleanParsed as any) : undefined
     //TODO: check whether this needs the slash or we just append the params
-    const res = await client.get(
-      `${endpoint}${apiFilters ? "/?" + apiFilters.toString() : ""}`
-    )
+    const res = await client.get(`${endpoint}${apiFilters ? "/?" + apiFilters.toString() : ""}`)
     return paginatedZod.parse(res)
   }
 
