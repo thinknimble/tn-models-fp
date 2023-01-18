@@ -16,7 +16,7 @@ declare const filtersZod: z.ZodOptional<z.ZodObject<{
 }>>;
 export declare type CustomServiceCall = (inputs: any) => Promise<unknown>;
 declare type ExtractCamelCaseValue<T extends object> = T extends undefined ? never : {
-    [TKey in keyof T]: T[TKey] extends (input: infer TInput) => Promise<infer TResult> ? (input: TInput) => Promise<CamelCasedPropertiesDeep<TResult>> : never;
+    [TKey in keyof T]: T[TKey] extends () => Promise<infer TResult> ? () => Promise<CamelCasedPropertiesDeep<TResult>> : T[TKey] extends (input: infer TInput) => Promise<infer TResult> ? (input: TInput) => Promise<CamelCasedPropertiesDeep<TResult>> : never;
 };
 declare const getPaginatedZod: <T extends ZodType<any, z.ZodTypeDef, any>>(zod: T) => z.ZodObject<{
     count: z.ZodNumber;
