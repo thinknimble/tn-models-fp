@@ -1,9 +1,6 @@
-import ModelAPI, { FiltersPaginationQuery } from "./ts/api";
-import ApiFilter, { IApiFilter, IApiFilterKwargs } from "./ts/apiFilter";
-import CollectionManager, {
-  ICollectionKwargs,
-  ICollectionManager,
-} from "./ts/collectionManager";
+import ModelAPI, { FiltersPaginationQuery } from "./ts/api"
+import ApiFilter, { IApiFilter, IApiFilterKwargs } from "./ts/apiFilter"
+import CollectionManager, { ICollectionKwargs, ICollectionManager } from "./ts/collectionManager"
 import fields, {
   TFields,
   BooleanField,
@@ -15,19 +12,11 @@ import fields, {
   IField,
   ArrayField,
   ModelField,
-} from "./ts/fields";
-import Model, {
-  ToValRepresentation,
-  KeysToString,
-  PickModelFields,
-} from "./ts/model";
-import Pagination, {
-  PaginationDefaults,
-  PaginationKwargs,
-  IPagination,
-} from "./ts/pagination";
-import { PickByValue } from "./ts/utility-types";
-export { createApi } from "./ts/v2";
+} from "./ts/fields"
+import Model, { ToValRepresentation, KeysToString, PickModelFields } from "./ts/model"
+import Pagination, { PaginationDefaults, PaginationKwargs, IPagination } from "./ts/pagination"
+import { PickByValue } from "./ts/utility-types"
+export { createApi } from "./ts/v2"
 
 export {
   ModelAPI,
@@ -57,5 +46,5 @@ export {
   IPagination,
   PickByValue,
   fields,
-};
-export default Model;
+}
+export default Model
