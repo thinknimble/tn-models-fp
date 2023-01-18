@@ -94,9 +94,6 @@ export function createApi<
 ): BareApiService<TApiEntity, TApiCreate, TExtraFilters>
 
 export function createApi({ models, client, endpoint }, customEndpoints = undefined) {
-  if (!(client instanceof Axios)) {
-    throw new Error("Need to provide an axios instance to create an api handler")
-  }
   const createCustomServiceCallHandler = (serviceCall: CustomServiceCall) => async (inputs: unknown) => {
     const snaked = typeof inputs !== "object" || !inputs ? inputs : objectToSnakeCase(inputs)
     const result = await serviceCall(snaked)
