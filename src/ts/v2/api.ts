@@ -1,4 +1,4 @@
-import { objectToCamelCase, objectToSnakeCase, CamelCasedPropertiesDeep } from "@thinknimble/tn-utils"
+import { objectToCamelCase, objectToSnakeCase, CamelCasedPropertiesDeep, isObject } from "@thinknimble/tn-utils"
 import axios, { Axios, AxiosInstance } from "axios"
 import { ZodType, z, ZodAny } from "zod"
 import { parseResponse } from "./utils"
@@ -94,11 +94,11 @@ export function createApi<
 ): BareApiService<TApiEntity, TApiCreate, TExtraFilters>
 
 export function createApi({ models, client, endpoint }, customEndpoints = undefined) {
+  const axiosClient: AxiosInstance = client
   const createCustomServiceCallHandler = (serviceCall: CustomServiceCall) => async (inputs: unknown) => {
     const snaked = typeof inputs !== "object" || !inputs ? inputs : objectToSnakeCase(inputs)
     const result = await serviceCall(snaked)
-    if (typeof result !== "object" || result === null) return result
-    //TODO: what if result is array of objects? This does some isObject logic which leaves out arrays.
+    if (Array.isArray(result) || typeof result !== "object" || result === null) return result
     return objectToCamelCase(result)
   }
 
@@ -116,7 +116,7 @@ export function createApi({ models, client, endpoint }, customEndpoints = undefi
       console.warn("The passed id is not a valid UUID, check your input")
     }
     const uri = `${endpoint}/${id}`
-    const res = await client.get(uri)
+    const res = await axiosClient.get(uri)
     const parsed = parseResponse({
       uri,
       data: res.data,
@@ -127,7 +127,7 @@ export function createApi({ models, client, endpoint }, customEndpoints = undefi
 
   const create = async (inputs) => {
     const snaked = objectToSnakeCase(inputs)
-    const res = await client.post(snaked)
+    const res = await axiosClient.post(endpoint, snaked)
     return objectToCamelCase(
       parseResponse({
         uri: endpoint,
@@ -153,7 +153,7 @@ export function createApi({ models, client, endpoint }, customEndpoints = undefi
       : undefined
     const apiFilters = snakedCleanParsed ? new URLSearchParams(snakedCleanParsed as any) : undefined
     //TODO: check whether this needs the slash or we just append the params
-    const res = await client.get(`${endpoint}${apiFilters ? "/?" + apiFilters.toString() : ""}`)
+    const res = await axiosClient.get(`${endpoint}${apiFilters ? "/?" + apiFilters.toString() : ""}`)
     return paginatedZod.parse(res)
   }
 
