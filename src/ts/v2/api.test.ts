@@ -1,34 +1,35 @@
+//! using this file as a rubber duck and check types. Probably I'll remove it or find a way to test this properly
 import axios from "axios"
 import { z } from "zod"
-import { createApi } from "./api"
+import { createApi, GetZodInferredTypeFromRaw } from "./api"
 import assert from "assert"
 
 describe("v2 api tests", async () => {
-  const updateZod = z.object({
+  const updateZodShape = {
     name: z.string(),
     age: z.number(),
-  })
+  }
 
   const testApi = createApi(
     {
       client: axios.create(),
       endpoint: "users",
       models: {
-        create: z.object({ hello: z.string() }),
-        entity: z.object({
+        create: { hello: z.string() },
+        entity: {
           name: z.string(),
           lastName: z.string(),
           age: z.number(),
-        }),
-        update: z.object({ name: z.string(), age: z.number() }),
-        extraFilters: z.object({
+        },
+        update: { name: z.string(), age: z.number() },
+        extraFilters: {
           myFilter: z.string().optional(),
           yetAnotherFilter: z.number().optional(),
-        }),
+        },
       },
     },
     {
-      helloViper: async (inputs: z.infer<typeof updateZod>) => {
+      helloViper: async (inputs: GetZodInferredTypeFromRaw<typeof updateZodShape>) => {
         return { this_is_a_viper: "Una vibora" }
       },
       test: async (testStr: string) => "hola",
@@ -52,4 +53,6 @@ describe("v2 api tests", async () => {
   const stringparam = await testApi.customEndpoints.test("hello")
   const noparams = await testApi.customEndpoints.testNoParams()
   const listTest = await testApi.customEndpoints.list()
+  const list = await testApi.list()
+  const listResults = list.results
 })

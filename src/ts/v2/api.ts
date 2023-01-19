@@ -1,6 +1,12 @@
-import { objectToCamelCase, objectToSnakeCase, CamelCasedPropertiesDeep, isObject } from "@thinknimble/tn-utils"
-import axios, { Axios, AxiosInstance } from "axios"
-import { ZodType, z, ZodAny } from "zod"
+import {
+  CamelCase,
+  CamelCasedPropertiesDeep,
+  objectToCamelCase,
+  objectToSnakeCase,
+  SnakeCase,
+} from "@thinknimble/tn-utils"
+import { AxiosInstance } from "axios"
+import { z, ZodAny, ZodRawShape } from "zod"
 import { parseResponse } from "./utils"
 
 const filtersZod = z
@@ -29,70 +35,126 @@ type ExtractCamelCaseValue<T extends object> = T extends undefined
         : never
     }
 
-const getPaginatedZod = <T extends ZodType>(zod: T) =>
+type ZodRawShapeSnakeCased<T extends ZodRawShape> = {
+  [TKey in keyof T as SnakeCase<TKey>]: T[TKey]
+}
+
+const getSnakeCasedZodRawShape = <T extends ZodRawShape>(zodShape: T) => {
+  const unknownCamelCasedZod = objectToSnakeCase(zodShape)
+  return unknownCamelCasedZod as ZodRawShapeSnakeCased<T>
+}
+
+const getPaginatedZod = <T extends ZodRawShape>(zod: T) =>
   z.object({
     count: z.number(),
     next: z.string().nullable(),
     previous: z.string().nullable(),
-    results: z.array(zod),
+    results: z.array(z.object(zod)),
   })
 
-type BareApiService<TEntity extends ZodType, TCreate extends ZodType, TExtraFilters extends ZodType = ZodAny> = {
+const getPaginatedSnakeCasedZod = <T extends ZodRawShape>(zodShape: T) => {
+  return getPaginatedZod(getSnakeCasedZodRawShape(zodShape))
+}
+
+export type GetZodInferredTypeFromRaw<T extends ZodRawShape> = z.infer<ReturnType<typeof z.object<T>>>
+
+type BareApiService<
+  TEntity extends ZodRawShape,
+  TCreate extends ZodRawShape,
+  TExtraFilters extends ZodRawShape = {}
+> = {
   client: AxiosInstance
-  retrieve(id: string): Promise<z.infer<TEntity>>
-  create(inputs: z.infer<TCreate>): Promise<z.infer<TCreate>>
+  retrieve(id: string): Promise<GetZodInferredTypeFromRaw<TEntity>>
+  create(inputs: GetZodInferredTypeFromRaw<TCreate>): Promise<GetZodInferredTypeFromRaw<TEntity>>
   list(
-    filters: TExtraFilters extends ZodAny
+    filters?: TExtraFilters extends ZodAny
       ? z.infer<typeof filtersZod>
-      : z.infer<TExtraFilters> & z.infer<typeof filtersZod>
+      : GetZodInferredTypeFromRaw<TExtraFilters> & z.infer<typeof filtersZod>
   ): Promise<z.infer<ReturnType<typeof getPaginatedZod<TEntity>>>>
 }
 type ApiService<
-  TEntity extends ZodType,
-  TCreate extends ZodType,
+  TEntity extends ZodRawShape,
+  TCreate extends ZodRawShape,
   //extending from record makes it so that if you try to access anything it would not error, we want to actually error if there is no key in TCustomEndpoints that does not belong to it
   TCustomEndpoints extends object,
-  TExtraFilters extends ZodType = ZodAny
+  TExtraFilters extends ZodRawShape = {}
 > = BareApiService<TEntity, TCreate, TExtraFilters> & {
   customEndpoints: ExtractCamelCaseValue<TCustomEndpoints>
 }
 
 type ApiBaseParams<
-  TApiEntity extends ZodType,
-  TApiCreate extends ZodType,
-  TApiUpdate extends ZodType,
-  TExtraFilters extends ZodType = ZodAny
+  TApiEntity extends ZodRawShape,
+  TApiCreate extends ZodRawShape,
+  TApiUpdate extends ZodRawShape,
+  TExtraFilters extends ZodRawShape = {}
 > = {
+  /**
+   * Zod raw shapes to use as models. All these should be the frontend camelCased version
+   */
   models: {
+    /**
+     * Zod raw shape of the equivalent camel-cased version of the entity in backend
+     *
+     * Example
+     * ```ts
+     * type BackendModel = {
+     *  my_model:string
+     * }
+     * type TApiEntity = {
+     *  myModel: z.string()
+     * }
+     * ```
+     */
     entity: TApiEntity
+    /**
+     * Zod raw shape of the input for creating an entity
+     */
     create: TApiCreate
+    //TODO: not being used nor I'm sure whether we need this since it is not included in old api
+    /**
+     * Zod raw shape of input for updating an entity
+     */
     update: TApiUpdate
+    /**
+     * Zod raw shape of extra filters if any
+     */
     extraFilters?: TExtraFilters
   }
+  /**
+   * The base endpoint for te api to hit. We append this to request's uris for listing, retrieving and creating
+   */
   endpoint: string
+  /**
+   * The axios instance created for the app.
+   */
   client: AxiosInstance
 }
 
 export function createApi<
-  TApiEntity extends ZodType,
-  TApiCreate extends ZodType,
-  TApiUpdate extends ZodType,
+  TApiEntity extends ZodRawShape,
+  TApiCreate extends ZodRawShape,
+  TApiUpdate extends ZodRawShape,
   TCustomEndpoints extends Record<string, CustomServiceCall>,
-  TExtraFilters extends ZodType = ZodAny
+  TExtraFilters extends ZodRawShape = {}
 >(
   base: ApiBaseParams<TApiEntity, TApiCreate, TApiUpdate, TExtraFilters>,
+  /**
+   * Create your own custom endpoints to use with this API. We take care of camel and snake casing on the way in and out.
+   * You will need to handle errors and reuse the same client passed in previous parameter as well as append the endpoint.
+   */
   customEndpoints: TCustomEndpoints
 ): ApiService<TApiEntity, TApiCreate, TCustomEndpoints, TExtraFilters>
 
 export function createApi<
-  TApiEntity extends ZodType,
-  TApiCreate extends ZodType,
-  TApiUpdate extends ZodType,
-  TExtraFilters extends ZodType = ZodAny
+  TApiEntity extends ZodRawShape,
+  TApiCreate extends ZodRawShape,
+  TApiUpdate extends ZodRawShape,
+  TExtraFilters extends ZodRawShape = {}
 >(
   base: ApiBaseParams<TApiEntity, TApiCreate, TApiUpdate, TExtraFilters>
 ): BareApiService<TApiEntity, TApiCreate, TExtraFilters>
 
+//! doing overloads to improve UX is a bit of a double-edged sword here. We are risking the type safety within this method! We'd still get errors if we don't match the declared input-outputs from overloads so that's something.
 export function createApi({ models, client, endpoint }, customEndpoints = undefined) {
   const axiosClient: AxiosInstance = client
   const createCustomServiceCallHandler = (serviceCall: CustomServiceCall) => async (inputs: unknown) => {
@@ -120,7 +182,7 @@ export function createApi({ models, client, endpoint }, customEndpoints = undefi
     const parsed = parseResponse({
       uri,
       data: res.data,
-      zod: models.entity,
+      zod: z.object(getSnakeCasedZodRawShape(models.entity)),
     })
     return objectToCamelCase(parsed)
   }
@@ -132,15 +194,16 @@ export function createApi({ models, client, endpoint }, customEndpoints = undefi
       parseResponse({
         uri: endpoint,
         data: res.data,
-        zod: models.entity,
+        zod: z.object(getSnakeCasedZodRawShape(models.entity)),
       })
     )
   }
 
   const list = async (filters) => {
-    //throws if the fields do not comply with the zod schema
-    const parsed = models.extraFilters ? models.extraFilters.and(filtersZod).parse(filters) : filtersZod.parse(filters)
-    const paginatedZod = getPaginatedZod(models.entity)
+    // Filters parsing, throws if the fields do not comply with the zod schema
+    const parsed = models.extraFilters
+      ? z.object(models.extraFilters).and(filtersZod).parse(filters)
+      : filtersZod.parse(filters)
     const snaked = parsed ? objectToSnakeCase(parsed) : undefined
     const snakedCleanParsed = snaked
       ? Object.fromEntries(
@@ -152,9 +215,12 @@ export function createApi({ models, client, endpoint }, customEndpoints = undefi
         )
       : undefined
     const apiFilters = snakedCleanParsed ? new URLSearchParams(snakedCleanParsed as any) : undefined
+
+    const paginatedZod = getPaginatedSnakeCasedZod(models.entity)
     //TODO: check whether this needs the slash or we just append the params
-    const res = await axiosClient.get(`${endpoint}${apiFilters ? "/?" + apiFilters.toString() : ""}`)
-    return paginatedZod.parse(res)
+    const res = await axiosClient.get(`${endpoint}${apiFilters ? "/?" + apiFilters.toString() : "/"}`)
+    const rawResponse = paginatedZod.parse(res)
+    return { ...rawResponse, results: rawResponse.results.map((r) => objectToCamelCase(r)) }
   }
 
   const baseReturn = { client, retrieve, create, list }
