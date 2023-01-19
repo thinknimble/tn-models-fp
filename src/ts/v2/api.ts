@@ -1,4 +1,10 @@
-import { CamelCasedPropertiesDeep, objectToCamelCase, objectToSnakeCase, SnakeCase } from "@thinknimble/tn-utils"
+import {
+  CamelCasedPropertiesDeep,
+  objectToCamelCase,
+  objectToSnakeCase,
+  SnakeCase,
+  toSnakeCase,
+} from "@thinknimble/tn-utils"
 import { AxiosInstance } from "axios"
 import { z, ZodAny, ZodRawShape, ZodTypeAny } from "zod"
 import { parseResponse } from "./utils"
@@ -34,8 +40,12 @@ type ZodRawShapeSnakeCased<T extends ZodRawShape> = {
 }
 
 const getSnakeCasedZodRawShape = <T extends ZodRawShape>(zodShape: T) => {
-  const unknownCamelCasedZod = objectToSnakeCase(zodShape)
-  return unknownCamelCasedZod as ZodRawShapeSnakeCased<T>
+  const unknownSnakeCasedZod: unknown = Object.fromEntries(
+    Object.entries(zodShape).map(([k, v]) => {
+      return [toSnakeCase(k), v]
+    })
+  )
+  return unknownSnakeCasedZod as ZodRawShapeSnakeCased<T>
 }
 
 const getPaginatedZod = <T extends ZodRawShape>(zod: T) =>
@@ -184,11 +194,12 @@ export function createApi({ models, client, endpoint }, customEndpoints = undefi
   const create = async (inputs) => {
     const snaked = objectToSnakeCase(inputs)
     const res = await axiosClient.post(endpoint, snaked)
+    const snakedEntityShape = getSnakeCasedZodRawShape(models.entity)
     return objectToCamelCase(
       parseResponse({
         uri: endpoint,
         data: res.data,
-        zod: z.object(getSnakeCasedZodRawShape(models.entity)),
+        zod: z.object(snakedEntityShape),
       })
     )
   }
