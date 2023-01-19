@@ -1,12 +1,6 @@
-import {
-  CamelCase,
-  CamelCasedPropertiesDeep,
-  objectToCamelCase,
-  objectToSnakeCase,
-  SnakeCase,
-} from "@thinknimble/tn-utils"
+import { CamelCasedPropertiesDeep, objectToCamelCase, objectToSnakeCase, SnakeCase } from "@thinknimble/tn-utils"
 import { AxiosInstance } from "axios"
-import { z, ZodAny, ZodRawShape } from "zod"
+import { z, ZodAny, ZodRawShape, ZodTypeAny } from "zod"
 import { parseResponse } from "./utils"
 
 const filtersZod = z
@@ -61,7 +55,7 @@ export type GetZodInferredTypeFromRaw<T extends ZodRawShape> = z.infer<ReturnTyp
 type BareApiService<
   TEntity extends ZodRawShape,
   TCreate extends ZodRawShape,
-  TExtraFilters extends ZodRawShape = {}
+  TExtraFilters extends ZodRawShape = Record<string, ZodTypeAny>
 > = {
   client: AxiosInstance
   retrieve(id: string): Promise<GetZodInferredTypeFromRaw<TEntity>>
@@ -77,7 +71,7 @@ type ApiService<
   TCreate extends ZodRawShape,
   //extending from record makes it so that if you try to access anything it would not error, we want to actually error if there is no key in TCustomEndpoints that does not belong to it
   TCustomEndpoints extends object,
-  TExtraFilters extends ZodRawShape = {}
+  TExtraFilters extends ZodRawShape = Record<string, ZodTypeAny>
 > = BareApiService<TEntity, TCreate, TExtraFilters> & {
   customEndpoints: ExtractCamelCaseValue<TCustomEndpoints>
 }
@@ -86,7 +80,7 @@ type ApiBaseParams<
   TApiEntity extends ZodRawShape,
   TApiCreate extends ZodRawShape,
   TApiUpdate extends ZodRawShape,
-  TExtraFilters extends ZodRawShape = {}
+  TExtraFilters extends ZodRawShape = Record<string, ZodTypeAny>
 > = {
   /**
    * Zod raw shapes to use as models. All these should be the frontend camelCased version
@@ -135,7 +129,7 @@ export function createApi<
   TApiCreate extends ZodRawShape,
   TApiUpdate extends ZodRawShape,
   TCustomEndpoints extends Record<string, CustomServiceCall>,
-  TExtraFilters extends ZodRawShape = {}
+  TExtraFilters extends ZodRawShape = Record<string, ZodTypeAny>
 >(
   base: ApiBaseParams<TApiEntity, TApiCreate, TApiUpdate, TExtraFilters>,
   /**
@@ -149,7 +143,7 @@ export function createApi<
   TApiEntity extends ZodRawShape,
   TApiCreate extends ZodRawShape,
   TApiUpdate extends ZodRawShape,
-  TExtraFilters extends ZodRawShape = {}
+  TExtraFilters extends ZodRawShape = Record<string, ZodTypeAny>
 >(
   base: ApiBaseParams<TApiEntity, TApiCreate, TApiUpdate, TExtraFilters>
 ): BareApiService<TApiEntity, TApiCreate, TExtraFilters>
@@ -214,7 +208,7 @@ export function createApi({ models, client, endpoint }, customEndpoints = undefi
           })
         )
       : undefined
-    const apiFilters = snakedCleanParsed ? new URLSearchParams(snakedCleanParsed as any) : undefined
+    const apiFilters = snakedCleanParsed ? new URLSearchParams(snakedCleanParsed) : undefined
 
     const paginatedZod = getPaginatedSnakeCasedZod(models.entity)
     //TODO: check whether this needs the slash or we just append the params

@@ -1,6 +1,6 @@
 import { CamelCasedPropertiesDeep } from "@thinknimble/tn-utils";
 import { AxiosInstance } from "axios";
-import { z, ZodAny, ZodRawShape } from "zod";
+import { z, ZodAny, ZodRawShape, ZodTypeAny } from "zod";
 declare const filtersZod: z.ZodOptional<z.ZodObject<{
     page: z.ZodOptional<z.ZodNumber>;
     pageSize: z.ZodOptional<z.ZodNumber>;
@@ -35,16 +35,16 @@ declare const getPaginatedZod: <T extends z.ZodRawShape>(zod: T) => z.ZodObject<
     results: (z.objectUtil.addQuestionMarks<{ [k_2_1 in keyof T]: T[k_2_1]["_input"]; }> extends infer T_2 ? { [k_3 in keyof T_2]: z.objectUtil.addQuestionMarks<{ [k_2 in keyof T]: T[k_2]["_input"]; }>[k_3]; } : never)[];
 }>;
 export declare type GetZodInferredTypeFromRaw<T extends ZodRawShape> = z.infer<ReturnType<typeof z.object<T>>>;
-declare type BareApiService<TEntity extends ZodRawShape, TCreate extends ZodRawShape, TExtraFilters extends ZodRawShape = {}> = {
+declare type BareApiService<TEntity extends ZodRawShape, TCreate extends ZodRawShape, TExtraFilters extends ZodRawShape = Record<string, ZodTypeAny>> = {
     client: AxiosInstance;
     retrieve(id: string): Promise<GetZodInferredTypeFromRaw<TEntity>>;
     create(inputs: GetZodInferredTypeFromRaw<TCreate>): Promise<GetZodInferredTypeFromRaw<TEntity>>;
     list(filters?: TExtraFilters extends ZodAny ? z.infer<typeof filtersZod> : GetZodInferredTypeFromRaw<TExtraFilters> & z.infer<typeof filtersZod>): Promise<z.infer<ReturnType<typeof getPaginatedZod<TEntity>>>>;
 };
-declare type ApiService<TEntity extends ZodRawShape, TCreate extends ZodRawShape, TCustomEndpoints extends object, TExtraFilters extends ZodRawShape = {}> = BareApiService<TEntity, TCreate, TExtraFilters> & {
+declare type ApiService<TEntity extends ZodRawShape, TCreate extends ZodRawShape, TCustomEndpoints extends object, TExtraFilters extends ZodRawShape = Record<string, ZodTypeAny>> = BareApiService<TEntity, TCreate, TExtraFilters> & {
     customEndpoints: ExtractCamelCaseValue<TCustomEndpoints>;
 };
-declare type ApiBaseParams<TApiEntity extends ZodRawShape, TApiCreate extends ZodRawShape, TApiUpdate extends ZodRawShape, TExtraFilters extends ZodRawShape = {}> = {
+declare type ApiBaseParams<TApiEntity extends ZodRawShape, TApiCreate extends ZodRawShape, TApiUpdate extends ZodRawShape, TExtraFilters extends ZodRawShape = Record<string, ZodTypeAny>> = {
     /**
      * Zod raw shapes to use as models. All these should be the frontend camelCased version
      */
@@ -85,12 +85,12 @@ declare type ApiBaseParams<TApiEntity extends ZodRawShape, TApiCreate extends Zo
      */
     client: AxiosInstance;
 };
-export declare function createApi<TApiEntity extends ZodRawShape, TApiCreate extends ZodRawShape, TApiUpdate extends ZodRawShape, TCustomEndpoints extends Record<string, CustomServiceCall>, TExtraFilters extends ZodRawShape = {}>(base: ApiBaseParams<TApiEntity, TApiCreate, TApiUpdate, TExtraFilters>, 
+export declare function createApi<TApiEntity extends ZodRawShape, TApiCreate extends ZodRawShape, TApiUpdate extends ZodRawShape, TCustomEndpoints extends Record<string, CustomServiceCall>, TExtraFilters extends ZodRawShape = Record<string, ZodTypeAny>>(base: ApiBaseParams<TApiEntity, TApiCreate, TApiUpdate, TExtraFilters>, 
 /**
  * Create your own custom endpoints to use with this API. We take care of camel and snake casing on the way in and out.
  * You will need to handle errors and reuse the same client passed in previous parameter as well as append the endpoint.
  */
 customEndpoints: TCustomEndpoints): ApiService<TApiEntity, TApiCreate, TCustomEndpoints, TExtraFilters>;
-export declare function createApi<TApiEntity extends ZodRawShape, TApiCreate extends ZodRawShape, TApiUpdate extends ZodRawShape, TExtraFilters extends ZodRawShape = {}>(base: ApiBaseParams<TApiEntity, TApiCreate, TApiUpdate, TExtraFilters>): BareApiService<TApiEntity, TApiCreate, TExtraFilters>;
+export declare function createApi<TApiEntity extends ZodRawShape, TApiCreate extends ZodRawShape, TApiUpdate extends ZodRawShape, TExtraFilters extends ZodRawShape = Record<string, ZodTypeAny>>(base: ApiBaseParams<TApiEntity, TApiCreate, TApiUpdate, TExtraFilters>): BareApiService<TApiEntity, TApiCreate, TExtraFilters>;
 export {};
 //# sourceMappingURL=api.d.ts.map
