@@ -23,7 +23,7 @@ export type PaginationFilters = z.infer<typeof paginationFiltersZod>
 
 const filtersZod = z
   .object({
-    //TODO: add the ones that are always available on TN backend's for listing entities
+    //TODO: (help wanted) add filter fields that are always available on TN backend's for listing entities -- Need Python guys here to chime in
     ordering: z.string(),
   })
   .partial()

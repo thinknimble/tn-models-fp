@@ -17,8 +17,6 @@ type FilterFn<TFilter, TEntity> = (params?: {
 
 type FilterParam<T extends FilterFn<any, any>> = T extends FilterFn<infer TFilters, any> ? TFilters : never
 
-//TODO: work in inference here
-//TODO: probably move to another file such as it is with previous version.
 export const createCollectionManager = <TFetchList extends FilterFn<any, any>, TEntity extends ZodRawShape>({
   fetchList,
   list: feedList,
@@ -38,7 +36,6 @@ export const createCollectionManager = <TFetchList extends FilterFn<any, any>, T
 }) => {
   let list: GetZodInferredTypeFromRaw<TEntity>[] = feedList ?? []
   let pagination: IPagination = feedPagination
-  //? how to manage state here and make it persistable? I am not sure whether primitives are going to work?
   let refreshing: boolean = feedRefreshing
   let loadingNextPage: boolean = feedLoadingNextPage
 
@@ -97,6 +94,7 @@ export const createCollectionManager = <TFetchList extends FilterFn<any, any>, T
     nextPage,
     prevPage,
     addNextPage,
+    //TODO: I'd like someone to give this a shot in a vue app so that we can tell whether it works as expected (as a piece of state?)
     get refreshing() {
       return refreshing
     },
