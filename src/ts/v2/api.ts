@@ -6,14 +6,24 @@ import {
   toSnakeCase,
 } from "@thinknimble/tn-utils"
 import { AxiosInstance } from "axios"
-import { z, ZodAny, ZodRawShape, ZodTypeAny } from "zod"
+import { z, ZodRawShape } from "zod"
+import { getPaginatedZod } from "./pagination"
 import { parseResponse } from "./utils"
+
+const paginationFiltersZod = z
+  .object({
+    page: z.number(),
+    pageSize: z.number(),
+  })
+  .partial()
+  .strict()
+  .optional()
+
+export type PaginationFilters = z.infer<typeof paginationFiltersZod>
 
 const filtersZod = z
   .object({
     //TODO: add the ones that are always available on TN backend's for listing entities
-    page: z.number(),
-    pageSize: z.number(),
     ordering: z.string(),
   })
   .partial()
@@ -47,15 +57,6 @@ const getSnakeCasedZodRawShape = <T extends ZodRawShape>(zodShape: T) => {
   )
   return unknownSnakeCasedZod as ZodRawShapeSnakeCased<T>
 }
-
-const getPaginatedZod = <T extends ZodRawShape>(zod: T) =>
-  z.object({
-    count: z.number(),
-    next: z.string().nullable(),
-    previous: z.string().nullable(),
-    results: z.array(z.object(zod)),
-  })
-
 const getPaginatedSnakeCasedZod = <T extends ZodRawShape>(zodShape: T) => {
   return getPaginatedZod(getSnakeCasedZodRawShape(zodShape))
 }
@@ -65,23 +66,22 @@ export type GetZodInferredTypeFromRaw<T extends ZodRawShape> = z.infer<ReturnTyp
 type BareApiService<
   TEntity extends ZodRawShape,
   TCreate extends ZodRawShape,
-  TExtraFilters extends ZodRawShape = Record<string, ZodTypeAny>
+  TExtraFilters extends ZodRawShape = never
 > = {
   client: AxiosInstance
   retrieve(id: string): Promise<GetZodInferredTypeFromRaw<TEntity>>
   create(inputs: GetZodInferredTypeFromRaw<TCreate>): Promise<GetZodInferredTypeFromRaw<TEntity>>
-  list(
-    filters?: TExtraFilters extends ZodAny
-      ? z.infer<typeof filtersZod>
-      : GetZodInferredTypeFromRaw<TExtraFilters> & z.infer<typeof filtersZod>
-  ): Promise<z.infer<ReturnType<typeof getPaginatedZod<TEntity>>>>
+  list(params?: {
+    filters?: GetZodInferredTypeFromRaw<TExtraFilters> & z.infer<typeof filtersZod>
+    pagination?: z.infer<typeof paginationFiltersZod>
+  }): Promise<z.infer<ReturnType<typeof getPaginatedZod<TEntity>>>>
 }
 type ApiService<
   TEntity extends ZodRawShape,
   TCreate extends ZodRawShape,
   //extending from record makes it so that if you try to access anything it would not error, we want to actually error if there is no key in TCustomEndpoints that does not belong to it
   TCustomEndpoints extends object,
-  TExtraFilters extends ZodRawShape = Record<string, ZodTypeAny>
+  TExtraFilters extends ZodRawShape = never
 > = BareApiService<TEntity, TCreate, TExtraFilters> & {
   customEndpoints: ExtractCamelCaseValue<TCustomEndpoints>
 }
@@ -90,7 +90,7 @@ type ApiBaseParams<
   TApiEntity extends ZodRawShape,
   TApiCreate extends ZodRawShape,
   TApiUpdate extends ZodRawShape,
-  TExtraFilters extends ZodRawShape = Record<string, ZodTypeAny>
+  TExtraFilters extends ZodRawShape = never
 > = {
   /**
    * Zod raw shapes to use as models. All these should be the frontend camelCased version
@@ -139,7 +139,7 @@ export function createApi<
   TApiCreate extends ZodRawShape,
   TApiUpdate extends ZodRawShape,
   TCustomEndpoints extends Record<string, CustomServiceCall>,
-  TExtraFilters extends ZodRawShape = Record<string, ZodTypeAny>
+  TExtraFilters extends ZodRawShape = never
 >(
   base: ApiBaseParams<TApiEntity, TApiCreate, TApiUpdate, TExtraFilters>,
   /**
@@ -153,7 +153,7 @@ export function createApi<
   TApiEntity extends ZodRawShape,
   TApiCreate extends ZodRawShape,
   TApiUpdate extends ZodRawShape,
-  TExtraFilters extends ZodRawShape = Record<string, ZodTypeAny>
+  TExtraFilters extends ZodRawShape = never
 >(
   base: ApiBaseParams<TApiEntity, TApiCreate, TApiUpdate, TExtraFilters>
 ): BareApiService<TApiEntity, TApiCreate, TExtraFilters>
@@ -204,11 +204,17 @@ export function createApi({ models, client, endpoint }, customEndpoints = undefi
     )
   }
 
-  const list = async (filters) => {
+  const list = async (params) => {
+    const filters = params ? params.filters : undefined
+    const pagination = params ? params.pagination : undefined
     // Filters parsing, throws if the fields do not comply with the zod schema
+    const allFilters = {
+      ...(filters ?? {}),
+      ...(pagination ? { page: pagination.page, pageSize: pagination.size } : {}),
+    }
     const parsed = models.extraFilters
-      ? z.object(models.extraFilters).and(filtersZod).parse(filters)
-      : filtersZod.parse(filters)
+      ? z.object(models.extraFilters).and(filtersZod).and(paginationFiltersZod).parse(allFilters)
+      : filtersZod.and(paginationFiltersZod).parse(allFilters)
     const snaked = parsed ? objectToSnakeCase(parsed) : undefined
     const snakedCleanParsed = snaked
       ? Object.fromEntries(

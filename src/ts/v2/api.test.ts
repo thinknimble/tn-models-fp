@@ -3,6 +3,7 @@ import axios from "axios"
 import { z } from "zod"
 import { createApi, GetZodInferredTypeFromRaw } from "./api"
 import assert from "assert"
+import { createCollectionManager } from "./collection-manager"
 
 describe("v2 api tests", async () => {
   const updateZodShape = {
@@ -23,8 +24,7 @@ describe("v2 api tests", async () => {
         },
         update: { name: z.string(), age: z.number() },
         extraFilters: {
-          myFilter: z.string().optional(),
-          yetAnotherFilter: z.number().optional(),
+          anExtraFilter: z.string(),
         },
       },
     },
@@ -39,20 +39,33 @@ describe("v2 api tests", async () => {
       },
     }
   )
+
   const result = await testApi.customEndpoints.helloViper({
     age: 10,
     name: "lala",
   })
-
   assert.notEqual(result.thisIsAViper, undefined)
   assert.equal(result.thisIsAViper, "Una vibora")
 
-  const listed = await testApi.list({
-    yetAnotherFilter: 4,
-  })
-  const stringparam = await testApi.customEndpoints.test("hello")
+  //customEndpoints ts tests
+  //@ts-expect-error expects string rather than number
+  const stringparam = await testApi.customEndpoints.test(5)
   const noparams = await testApi.customEndpoints.testNoParams()
   const listTest = await testApi.customEndpoints.list()
-  const list = await testApi.list()
-  const listResults = list.results
+
+  // list ts tests
+  const list = await testApi.list({ filters: { anExtraFilter: "ok funciona" } })
+  const listError = await testApi.list()
+  const listError2 = await testApi.list({
+    filters: {
+      //@ts-expect-error Do not allow passing any key
+      nonExistant: "error",
+    },
+  })
+
+  const collectionManager = createCollectionManager({
+    fetchList: testApi.list,
+    entityZodShape: updateZodShape,
+    list: [],
+  })
 })
