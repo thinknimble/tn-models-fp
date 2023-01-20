@@ -35,8 +35,8 @@ export default class Pagination implements IPagination {
     next: null | string;
     previous: null | string;
     size: number;
-    constructor(opts?: {});
-    static create(opts?: {}): Pagination;
+    constructor(opts?: Partial<PaginationKwargs>);
+    static create(opts?: Partial<PaginationKwargs>): Pagination;
     copy(): IPagination;
     update(data?: {}): Pagination;
     calcTotalPages(pagination: IPagination): number;

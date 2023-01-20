@@ -37,8 +37,8 @@ export default class Pagination implements IPagination {
   next: null | string
   previous: null | string
   size: number
-  constructor(opts = {}) {
-    const options = { ...PaginationDefaults, ...opts }
+  constructor(opts?: Partial<PaginationKwargs>) {
+    const options = { ...PaginationDefaults, ...(opts ?? {}) }
     this.page = options.page
     this.totalCount = options.totalCount
     this.next = options.next
@@ -46,7 +46,7 @@ export default class Pagination implements IPagination {
     this.size = options.size
   }
 
-  static create(opts = {}) {
+  static create(opts?: Partial<PaginationKwargs>) {
     return new Pagination(opts)
   }
 

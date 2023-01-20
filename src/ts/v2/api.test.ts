@@ -4,6 +4,7 @@ import { z } from "zod"
 import { createApi, GetZodInferredTypeFromRaw } from "./api"
 import assert from "assert"
 import { createCollectionManager } from "./collection-manager"
+import Pagination from "../pagination"
 
 describe("v2 api tests", async () => {
   const updateZodShape = {
@@ -67,5 +68,30 @@ describe("v2 api tests", async () => {
     fetchList: testApi.list,
     entityZodShape: updateZodShape,
     list: [],
+    filters: {
+      anExtraFilter: "my filter",
+    },
+    pagination: Pagination.create({
+      page: 1,
+      size: 25,
+    }),
+  })
+
+  const collectionManager2 = createCollectionManager({
+    entityZodShape: updateZodShape,
+    fetchList: testApi.list,
+    filters: {
+      //@ts-expect-error should error if passing a wrong filter
+      myPersonalFilter: "hola",
+    },
+  })
+
+  const collectionManager3 = createCollectionManager({
+    entityZodShape: updateZodShape,
+    //@ts-expect-error should not allow passing a function that does not comply with our list api call
+    fetchList: () => Promise.resolve("My promise"),
+    filters: {
+      anExtraFilter: "filter",
+    },
   })
 })

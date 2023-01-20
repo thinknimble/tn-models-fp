@@ -1,6 +1,6 @@
-import { z, ZodRawShape } from "zod"
+import { ZodRawShape } from "zod"
 import Pagination, { IPagination } from "../pagination"
-import { GetZodInferredTypeFromRaw, PaginationFilters } from "./api"
+import { GetZodInferredTypeFromRaw } from "./api"
 import { getPaginatedZod } from "./pagination"
 
 type PaginationResult<TEntity> = {
@@ -14,12 +14,6 @@ type FilterFn<TFilter, TEntity> = (params?: {
   filters?: TFilter
   pagination?: IPagination
 }) => Promise<PaginationResult<TEntity>>
-
-type PaginationResultFromFilterFn<T extends FilterFn<any, any>> = T extends FilterFn<any, infer TEntity>
-  ? Awaited<ReturnType<FilterFn<any, TEntity>>>
-  : never
-
-type EntityItem<T extends FilterFn<any, any>> = T extends FilterFn<any, infer TResult> ? TResult : never
 
 type FilterParam<T extends FilterFn<any, any>> = T extends FilterFn<infer TFilters, any> ? TFilters : never
 
@@ -35,14 +29,14 @@ export const createCollectionManager = <TFetchList extends FilterFn<any, any>, T
   loadingNextPage: feedLoadingNextPage = false,
 }: {
   fetchList: TFetchList
-  list: GetZodInferredTypeFromRaw<TEntity>[]
+  list?: GetZodInferredTypeFromRaw<TEntity>[]
   entityZodShape: TEntity
   refreshing?: boolean
   loadingNextPage?: boolean
   filters?: FilterParam<TFetchList>
   pagination?: IPagination
 }) => {
-  let list: GetZodInferredTypeFromRaw<TEntity>[] = feedList
+  let list: GetZodInferredTypeFromRaw<TEntity>[] = feedList ?? []
   let pagination: IPagination = feedPagination
   //? how to manage state here and make it persistable? I am not sure whether primitives are going to work?
   let refreshing: boolean = feedRefreshing
