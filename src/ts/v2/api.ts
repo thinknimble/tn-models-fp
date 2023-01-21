@@ -195,13 +195,12 @@ export function createApi({ models, client, endpoint }, customEndpoints = undefi
     const snaked = objectToSnakeCase(inputs)
     const res = await axiosClient.post(endpoint, snaked)
     const snakedEntityShape = getSnakeCasedZodRawShape(models.entity)
-    return objectToCamelCase(
-      parseResponse({
-        uri: endpoint,
-        data: res.data,
-        zod: z.object(snakedEntityShape),
-      })
-    )
+    const parsed = parseResponse({
+      uri: endpoint,
+      data: res.data,
+      zod: z.object(snakedEntityShape),
+    })
+    return objectToCamelCase(parsed)
   }
 
   const list = async (params) => {
