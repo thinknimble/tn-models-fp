@@ -4,7 +4,9 @@ import axios from "axios"
 import { v4 as uuid } from "uuid"
 import { beforeEach, describe, expect, it, Mocked, vi } from "vitest"
 import { z } from "zod"
-import { createApi, GetZodInferredTypeFromRaw } from "./api"
+import Pagination from "../pagination"
+import { createApi, getPaginatedSnakeCasedZod, GetZodInferredTypeFromRaw } from "./api"
+import { getPaginatedZod } from "./pagination"
 
 vi.mock("axios")
 
@@ -21,9 +23,10 @@ const entityZodShape = {
 }
 
 describe("v2 api tests", async () => {
+  const testEndpoint = "users"
   const testApi = createApi({
     client: mockedAxios,
-    endpoint: "users",
+    endpoint: testEndpoint,
     models: {
       create: createZodShape,
       entity: entityZodShape,
@@ -59,7 +62,7 @@ describe("v2 api tests", async () => {
       //assess
       await testApi.create(createInput)
       //assert
-      expect(postSpy).toHaveBeenCalledWith("users", {
+      expect(postSpy).toHaveBeenCalledWith(testEndpoint, {
         age: createInput.age,
         last_name: createInput.lastName,
         first_name: createInput.firstName,
@@ -94,12 +97,83 @@ describe("v2 api tests", async () => {
       //assess
       const response = await testApi.retrieve(randomUuid)
       //assert
-      expect(getSpy).toHaveBeenCalledWith(`users/${randomUuid}`)
+      expect(getSpy).toHaveBeenCalledWith(`${testEndpoint}/${randomUuid}`)
       expect(response).toEqual({
         age: entityResponse.age,
         firstName: entityResponse.first_name,
         lastName: entityResponse.last_name,
         id: randomUuid,
+      })
+    })
+  })
+
+  describe("list", () => {
+    beforeEach(() => {
+      mockedAxios.get.mockReset()
+    })
+    const josephId = uuid()
+    const jotaroId = uuid()
+    const listResponse: z.infer<ReturnType<typeof getPaginatedSnakeCasedZod<typeof entityZodShape>>> = {
+      count: 10,
+      next: null,
+      previous: null,
+      results: [
+        { age: 68, first_name: "Joseph", last_name: "Joestar", id: josephId },
+        {
+          age: 28,
+          first_name: "Jotaro",
+          last_name: "Kujo",
+          id: jotaroId,
+        },
+      ],
+    }
+    const [joseph, jotaro] = listResponse.results
+    it("returns camelCased paginated result", async () => {
+      //arrange
+      mockedAxios.get.mockResolvedValueOnce({ data: listResponse })
+      //assess
+      const response = await testApi.list()
+      //assert
+      expect(response).toBeTruthy()
+      expect(response.results).toHaveLength(2)
+      expect(response).toEqual({
+        ...listResponse,
+        results: [
+          {
+            age: joseph.age,
+            firstName: joseph.first_name,
+            lastName: joseph.last_name,
+            id: joseph.id,
+          },
+          {
+            age: jotaro.age,
+            firstName: jotaro.first_name,
+            lastName: jotaro.last_name,
+            id: jotaro.id,
+          },
+        ],
+      })
+    })
+    it("uses snake case for sending filters to api", async () => {
+      //arrange
+      const filters = {
+        anExtraFilter: "extra-filter",
+      }
+      const pagination = new Pagination({ page: 5, size: 8 })
+      mockedAxios.get.mockResolvedValueOnce({ data: listResponse })
+      const getSpy = vi.spyOn(mockedAxios, "get")
+      //assess
+      await testApi.list({
+        filters,
+        pagination,
+      })
+      //assert
+      expect(getSpy).toHaveBeenCalledWith(testEndpoint, {
+        params: {
+          an_extra_filter: filters.anExtraFilter,
+          page: pagination.page.toString(),
+          page_size: pagination.size.toString(),
+        },
       })
     })
   })

@@ -7,6 +7,7 @@ import {
 } from "@thinknimble/tn-utils"
 import { AxiosInstance } from "axios"
 import { z, ZodRawShape } from "zod"
+import { IPagination } from "../pagination"
 import { getPaginatedZod } from "./pagination"
 import { parseResponse } from "./utils"
 
@@ -16,7 +17,6 @@ const paginationFiltersZod = z
     pageSize: z.number(),
   })
   .partial()
-  .strict()
   .optional()
 
 export type PaginationFilters = z.infer<typeof paginationFiltersZod>
@@ -27,8 +27,6 @@ const filtersZod = z
     ordering: z.string(),
   })
   .partial()
-  //prevent over passing values
-  .strict()
   .optional()
 
 const uuidZod = z.string().uuid()
@@ -57,7 +55,7 @@ const getSnakeCasedZodRawShape = <T extends ZodRawShape>(zodShape: T) => {
   )
   return unknownSnakeCasedZod as ZodRawShapeSnakeCased<T>
 }
-const getPaginatedSnakeCasedZod = <T extends ZodRawShape>(zodShape: T) => {
+export const getPaginatedSnakeCasedZod = <T extends ZodRawShape>(zodShape: T) => {
   return getPaginatedZod(getSnakeCasedZodRawShape(zodShape))
 }
 
@@ -73,7 +71,7 @@ type BareApiService<
   create(inputs: GetZodInferredTypeFromRaw<TCreate>): Promise<GetZodInferredTypeFromRaw<TEntity>>
   list(params?: {
     filters?: GetZodInferredTypeFromRaw<TExtraFilters> & z.infer<typeof filtersZod>
-    pagination?: z.infer<typeof paginationFiltersZod>
+    pagination?: IPagination
   }): Promise<z.infer<ReturnType<typeof getPaginatedZod<TEntity>>>>
 }
 type ApiService<
@@ -211,25 +209,26 @@ export function createApi({ models, client, endpoint }, customEndpoints = undefi
       ...(filters ?? {}),
       ...(pagination ? { page: pagination.page, pageSize: pagination.size } : {}),
     }
-    const parsed = models.extraFilters
-      ? z.object(models.extraFilters).and(filtersZod).and(paginationFiltersZod).parse(allFilters)
+    const filtersParsed = models.extraFilters
+      ? z.object(models.extraFilters).partial().and(filtersZod).and(paginationFiltersZod).parse(allFilters)
       : filtersZod.and(paginationFiltersZod).parse(allFilters)
-    const snaked = parsed ? objectToSnakeCase(parsed) : undefined
-    const snakedCleanParsed = snaked
+    const snakedFilters = filtersParsed ? objectToSnakeCase(filtersParsed) : undefined
+    const snakedCleanParsedFilters = snakedFilters
       ? Object.fromEntries(
-          Object.entries(snaked).flatMap(([k, v]) => {
+          Object.entries(snakedFilters).flatMap(([k, v]) => {
             if (typeof v === "number") return [[k, v.toString()]]
             if (!v) return []
             return [[k, v]]
           })
         )
       : undefined
-    const apiFilters = snakedCleanParsed ? new URLSearchParams(snakedCleanParsed) : undefined
 
     const paginatedZod = getPaginatedSnakeCasedZod(models.entity)
-    //TODO: check whether this needs the slash or we just append the params
-    const res = await axiosClient.get(`${endpoint}${apiFilters ? "/?" + apiFilters.toString() : "/"}`)
-    const rawResponse = paginatedZod.parse(res)
+
+    const res = await axiosClient.get(endpoint, {
+      params: snakedCleanParsedFilters,
+    })
+    const rawResponse = paginatedZod.parse(res.data)
     return { ...rawResponse, results: rawResponse.results.map((r) => objectToCamelCase(r)) }
   }
 
