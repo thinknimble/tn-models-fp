@@ -1,12 +1,10 @@
-//! using this file as a rubber duck and check types. Probably I'll remove it or find a way to test this properly
 import { SnakeCasedPropertiesDeep } from "@thinknimble/tn-utils"
 import axios from "axios"
 import { v4 as uuid } from "uuid"
 import { beforeEach, describe, expect, it, Mocked, vi } from "vitest"
 import { z } from "zod"
 import Pagination from "../pagination"
-import { createApi, getPaginatedSnakeCasedZod, GetZodInferredTypeFromRaw } from "./api"
-import { getPaginatedZod } from "./pagination"
+import { createApi, createCustomServiceCall, getPaginatedSnakeCasedZod, GetZodInferredTypeFromRaw } from "./api"
 
 vi.mock("axios")
 
@@ -24,18 +22,49 @@ const entityZodShape = {
 
 describe("v2 api tests", async () => {
   const testEndpoint = "users"
-  const testApi = createApi({
-    client: mockedAxios,
-    endpoint: testEndpoint,
-    models: {
-      create: createZodShape,
-      entity: entityZodShape,
-      update: createZodShape,
-      extraFilters: {
-        anExtraFilter: z.string(),
+  const testApi = createApi(
+    {
+      client: mockedAxios,
+      endpoint: testEndpoint,
+      models: {
+        create: createZodShape,
+        entity: entityZodShape,
+        update: createZodShape,
+        extraFilters: {
+          anExtraFilter: z.string(),
+        },
       },
     },
-  })
+    {
+      customCall: createCustomServiceCall({
+        inputShape: { myInput: z.string() },
+        outputShape: {
+          givenInput: z.string(),
+          inputLength: z.number(),
+        },
+        callback: async ({ client, input, utils }) => {
+          return {
+            givenInput: input.myInput,
+            inputLength: input.myInput.length,
+          }
+        },
+      }),
+      testPost: createCustomServiceCall({
+        inputShape: {
+          anotherInput: z.string(),
+        },
+        outputShape: {
+          justAny: z.any(),
+        },
+        callback: async ({ client, input, utils }) => {
+          const toApiInput = utils.toApi(input)
+          const res = await client.post(testEndpoint, toApiInput)
+          const parsed = utils.fromApi(res.data)
+          return parsed
+        },
+      }),
+    }
+  )
 
   describe("create", () => {
     beforeEach(() => {
@@ -120,7 +149,7 @@ describe("v2 api tests", async () => {
       results: [
         { age: 68, first_name: "Joseph", last_name: "Joestar", id: josephId },
         {
-          age: 28,
+          age: 17,
           first_name: "Jotaro",
           last_name: "Kujo",
           id: jotaroId,
@@ -175,6 +204,37 @@ describe("v2 api tests", async () => {
           page_size: pagination.size.toString(),
         },
       })
+    })
+  })
+
+  describe("custom api calls", () => {
+    it("calls api with snake case", async () => {
+      //arrange
+      const postSpy = vi.spyOn(mockedAxios, "post")
+      mockedAxios.post.mockResolvedValueOnce({
+        data: { justAny: "any" },
+      })
+      const input = { anotherInput: "testing" }
+      //assess
+      await testApi.customServiceCalls.testPost(input)
+      //assert
+      expect(postSpy).toHaveBeenCalledWith(testEndpoint, {
+        another_input: input.anotherInput,
+      })
+    })
+    it("returns camel cased response", async () => {
+      //arrange
+      const myInput = "Hello there"
+      const expected: Awaited<ReturnType<typeof testApi.customServiceCalls.customCall>> = {
+        givenInput: myInput,
+        inputLength: myInput.length,
+      }
+      //assess
+      const res = await testApi.customServiceCalls.customCall({
+        myInput,
+      })
+      //assert
+      expect(res).toEqual(expected)
     })
   })
 })

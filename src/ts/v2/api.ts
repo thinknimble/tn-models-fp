@@ -3,10 +3,11 @@ import {
   objectToCamelCase,
   objectToSnakeCase,
   SnakeCase,
+  SnakeCasedPropertiesDeep,
   toSnakeCase,
 } from "@thinknimble/tn-utils"
 import { AxiosInstance } from "axios"
-import { z, ZodRawShape } from "zod"
+import { z, ZodRawShape, ZodTypeAny } from "zod"
 import { IPagination } from "../pagination"
 import { getPaginatedZod } from "./pagination"
 import { parseResponse } from "./utils"
@@ -31,17 +32,36 @@ const filtersZod = z
 
 const uuidZod = z.string().uuid()
 
-export type CustomServiceCall = (inputs: any) => Promise<unknown>
-
-type ExtractCamelCaseValue<T extends object> = T extends undefined
-  ? never
-  : {
-      [TKey in keyof T]: T[TKey] extends () => Promise<infer TResult>
-        ? () => Promise<CamelCasedPropertiesDeep<TResult>>
-        : T[TKey] extends (input: infer TInput) => Promise<infer TResult>
-        ? (input: TInput) => Promise<CamelCasedPropertiesDeep<TResult>>
-        : never
+type CustomServiceCallOpts<TInput extends ZodRawShape, TOutput extends ZodRawShape> = {
+  inputShape: TInput
+  outputShape: TOutput
+  callback: (params: {
+    client: AxiosInstance
+    input: GetZodInferredTypeFromRaw<TInput>
+    utils: {
+      fromApi: (obj: object) => GetZodInferredTypeFromRaw<TOutput>
+      toApi: (obj: object) => SnakeCasedPropertiesDeep<GetZodInferredTypeFromRaw<TInput>>
     }
+  }) => Promise<GetZodInferredTypeFromRaw<TOutput>>
+}
+
+//! Needing this guy has a bitter taste. This is only for type inference sake. I could not type a Record so that it would properly infer the callback's input from the inputShape and the outputShape so this is a type-safe entrypoint to create customServiceCalls.
+/**
+ * Use this method to get the right type inference when creating a customApiCall
+ */
+export const createCustomServiceCall = <TInput extends ZodRawShape, TOutput extends ZodRawShape>(
+  opts: CustomServiceCallOpts<TInput, TOutput>
+) => {
+  return opts
+}
+
+type CustomServiceCall<TOpts extends object> = TOpts extends Record<string, CustomServiceCallOpts<any, any>>
+  ? {
+      [TKey in keyof TOpts]: (
+        inputs: GetZodInferredTypeFromRaw<TOpts[TKey]["inputShape"]>
+      ) => Promise<GetZodInferredTypeFromRaw<TOpts[TKey]["outputShape"]>>
+    }
+  : never
 
 type ZodRawShapeSnakeCased<T extends ZodRawShape> = {
   [TKey in keyof T as SnakeCase<TKey>]: T[TKey]
@@ -77,11 +97,11 @@ type BareApiService<
 type ApiService<
   TEntity extends ZodRawShape,
   TCreate extends ZodRawShape,
-  //extending from record makes it so that if you try to access anything it would not error, we want to actually error if there is no key in TCustomEndpoints that does not belong to it
-  TCustomEndpoints extends object,
+  //extending from record makes it so that if you try to access anything it would not error, we want to actually error if there is no key in TCustomServiceCalls that does not belong to it
+  TCustomServiceCalls extends object,
   TExtraFilters extends ZodRawShape = never
 > = BareApiService<TEntity, TCreate, TExtraFilters> & {
-  customEndpoints: ExtractCamelCaseValue<TCustomEndpoints>
+  customServiceCalls: CustomServiceCall<TCustomServiceCalls>
 }
 
 type ApiBaseParams<
@@ -136,16 +156,15 @@ export function createApi<
   TApiEntity extends ZodRawShape,
   TApiCreate extends ZodRawShape,
   TApiUpdate extends ZodRawShape,
-  TCustomEndpoints extends Record<string, CustomServiceCall>,
+  TCustomServiceCalls extends Record<string, CustomServiceCallOpts<any, any>>,
   TExtraFilters extends ZodRawShape = never
 >(
   base: ApiBaseParams<TApiEntity, TApiCreate, TApiUpdate, TExtraFilters>,
   /**
-   * Create your own custom endpoints to use with this API. We take care of camel and snake casing on the way in and out.
-   * You will need to handle errors and reuse the same client passed in previous parameter as well as append the endpoint.
+   * Create your own custom service calls to use with this API. Tools for case conversion are provided.
    */
-  customEndpoints: TCustomEndpoints
-): ApiService<TApiEntity, TApiCreate, TCustomEndpoints, TExtraFilters>
+  customServiceCalls: TCustomServiceCalls
+): ApiService<TApiEntity, TApiCreate, TCustomServiceCalls, TExtraFilters>
 
 export function createApi<
   TApiEntity extends ZodRawShape,
@@ -157,18 +176,20 @@ export function createApi<
 ): BareApiService<TApiEntity, TApiCreate, TExtraFilters>
 
 //! doing overloads to improve UX is a bit of a double-edged sword here. We are risking the type safety within this method! We'd still get errors if we don't match the declared input-outputs from overloads so that's something.
-export function createApi({ models, client, endpoint }, customEndpoints = undefined) {
+export function createApi({ models, client, endpoint }, customServiceCalls = undefined) {
   const axiosClient: AxiosInstance = client
-  const createCustomServiceCallHandler = (serviceCall: CustomServiceCall) => async (inputs: unknown) => {
-    const snaked = typeof inputs !== "object" || !inputs ? inputs : objectToSnakeCase(inputs)
-    const result = await serviceCall(snaked)
-    if (Array.isArray(result) || typeof result !== "object" || result === null) return result
-    return objectToCamelCase(result)
+
+  const createCustomServiceCallHandler = (serviceCallOpts: CustomServiceCallOpts<any, any>) => async (inputs: any) => {
+    const fromApi = (obj: object) => z.object(serviceCallOpts.outputShape).parse(objectToCamelCase(obj))
+    const toApi = (obj: object) =>
+      z.object(getSnakeCasedZodRawShape(serviceCallOpts.inputShape)).parse(objectToSnakeCase(obj))
+
+    return serviceCallOpts.callback({ client, input: inputs, utils: { fromApi, toApi } })
   }
 
-  const modifiedCustomServiceCalls = customEndpoints
+  const modifiedCustomServiceCalls = customServiceCalls
     ? Object.fromEntries(
-        Object.entries(customEndpoints as Record<string, CustomServiceCall>).map(([k, v]) => [
+        Object.entries(customServiceCalls as Record<string, CustomServiceCallOpts<any, any>>).map(([k, v]) => [
           k,
           createCustomServiceCallHandler(v),
         ])
@@ -238,6 +259,6 @@ export function createApi({ models, client, endpoint }, customEndpoints = undefi
 
   return {
     ...baseReturn,
-    customEndpoints: modifiedCustomServiceCalls,
+    customServiceCalls: modifiedCustomServiceCalls,
   }
 }
