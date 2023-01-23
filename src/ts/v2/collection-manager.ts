@@ -60,14 +60,14 @@ export const createCollectionManager = <TFetchList extends FilterFn<any, any>, T
     }
   }
 
-  const nextPage = () => {
+  const nextPage = async () => {
     pagination.setNextPage()
-    refresh()
+    return refresh()
   }
 
-  const prevPage = () => {
+  const prevPage = async () => {
     pagination.setPrevPage()
-    refresh()
+    return refresh()
   }
   const addNextPage = async () => {
     if (pagination.next === null) {

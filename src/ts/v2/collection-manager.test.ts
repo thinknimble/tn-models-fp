@@ -25,7 +25,6 @@ const entityZodShape = {
 const paginatedZod = getPaginatedSnakeCasedZod(entityZodShape)
 
 type PaginatedEntity = z.infer<typeof paginatedZod>
-type PaginatedEntityitem = PaginatedEntity["results"]
 
 const createFakeUser = () => ({
   age: faker.datatype.number({ min: 16, max: 60 }),
@@ -102,7 +101,7 @@ describe("collection manager v2 tests", () => {
       //arrange
       const oldListLength = collectionManager.list.length
       const currentList = collectionManager.list
-      //assess
+      //act
       collectionManager.update(mockedPaginatedEntity, true)
       //assert
       expect(collectionManager.list.length).not.toEqual(oldListLength)
@@ -110,13 +109,13 @@ describe("collection manager v2 tests", () => {
       expect(collectionManager.list).toEqual([...currentList, ...mockedPaginatedEntity.results])
     })
     it("replaces list with new data if omitting append param", () => {
-      //assess
+      //act
       collectionManager.update(mockedPaginatedEntity)
       //assert
       expect(collectionManager.list).toEqual(mockedPaginatedEntity.results)
     })
     it("properly modifies pagination object with new values of pagination results", () => {
-      //assess
+      //act
       collectionManager.update(mockedPaginatedEntity)
       //assert
       expect(collectionManager.pagination.next).toEqual(mockedPaginatedEntity.next)
@@ -130,7 +129,7 @@ describe("collection manager v2 tests", () => {
       //arrange
       const getSpy = vi.spyOn(mockedAxios, "get")
       mockedAxios.get.mockResolvedValueOnce({ data: mockedPaginatedEntitySnakeCased })
-      //assess
+      //act
       await collectionManager.refresh()
       //assert
       expect(getSpy).toHaveBeenCalledWith(testEndpoint, {
@@ -144,7 +143,7 @@ describe("collection manager v2 tests", () => {
     it("sets refreshing true and false during fetch", async () => {
       //arrange
       mockedAxios.get.mockResolvedValueOnce({ data: mockedPaginatedEntitySnakeCased })
-      //assess
+      //act
       const promise = collectionManager.refresh()
       expect(collectionManager.refreshing).toEqual(true)
       await promise
@@ -153,14 +152,43 @@ describe("collection manager v2 tests", () => {
   })
 
   describe("pagination", () => {
-    it("goes to next page", () => {
-      //TODO:
+    it("goes to next page and refreshes (list changes)", async () => {
+      //arrange
+      const previousPage = feedPagination.page
+      const previousList = collectionManager.list
+      mockedAxios.get.mockResolvedValueOnce({ data: mockedPaginatedEntitySnakeCased })
+      //act
+      await collectionManager.nextPage()
+      //assert
+      expect(collectionManager.pagination.page).toEqual(previousPage + 1)
+      expect(collectionManager.list).not.toEqual(previousList)
+      // both nextPage and prevPage do a refresh so lists are completely replaced with whatever the return from api is
+      expect(collectionManager.list).toEqual(mockedPaginatedEntity.results)
     })
-    it("goes to previous page", () => {
-      //TODO:
+    it("goes to previous page and refreshes (list changes)", async () => {
+      //arrange
+      const previousPage = feedPagination.page
+      const previousList = collectionManager.list
+      mockedAxios.get.mockResolvedValueOnce({ data: mockedPaginatedEntitySnakeCased })
+      //act
+      await collectionManager.prevPage()
+      //assert
+      expect(collectionManager.pagination.page).toEqual(previousPage - 1)
+      expect(collectionManager.list).not.toEqual(previousList)
+      expect(collectionManager.list).toEqual(mockedPaginatedEntity.results)
     })
-    it("adds next page", () => {
-      //TODO:
+    it("adds next page, calls api and appends new data to list", async () => {
+      //arrange
+      const currentList = collectionManager.list
+      mockedAxios.get.mockResolvedValueOnce({ data: mockedPaginatedEntitySnakeCased })
+      //act
+      const promise = collectionManager.addNextPage()
+      //assert
+      expect(collectionManager.loadingNextPage).toEqual(true)
+      await promise
+      expect(collectionManager.loadingNextPage).toEqual(false)
+      expect(collectionManager.pagination.page).toEqual(feedPagination.page + 1)
+      expect(collectionManager.list).toEqual([...currentList, ...mockedPaginatedEntity.results])
     })
   })
 })

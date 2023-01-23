@@ -95,7 +95,7 @@ describe("v2 api tests", async () => {
       //arrange
       const postSpy = vi.spyOn(mockedAxios, "post")
       mockedAxios.post.mockResolvedValueOnce({ data: createResponse })
-      //assess
+      //act
       await testApi.create(createInput)
       //assert
       expect(postSpy).toHaveBeenCalledWith(testEndpoint, {
@@ -107,7 +107,7 @@ describe("v2 api tests", async () => {
     it("returns camelCased response", async () => {
       //arrange
       mockedAxios.post.mockResolvedValueOnce({ data: createResponse })
-      //assess
+      //act
       const response = await testApi.create(createInput)
       //assert
       expect(response).toEqual({ ...createInput, id: randomId })
@@ -130,7 +130,7 @@ describe("v2 api tests", async () => {
       }
       mockedAxios.get.mockResolvedValue({ data: entityResponse })
       const getSpy = vi.spyOn(mockedAxios, "get")
-      //assess
+      //act
       const response = await testApi.retrieve(randomUuid)
       //assert
       expect(getSpy).toHaveBeenCalledWith(`${testEndpoint}/${randomUuid}`)
@@ -167,7 +167,7 @@ describe("v2 api tests", async () => {
     it("returns camelCased paginated result", async () => {
       //arrange
       mockedAxios.get.mockResolvedValueOnce({ data: listResponse })
-      //assess
+      //act
       const response = await testApi.list()
       //assert
       expect(response).toBeTruthy()
@@ -198,7 +198,7 @@ describe("v2 api tests", async () => {
       const pagination = new Pagination({ page: 5, size: 8 })
       mockedAxios.get.mockResolvedValueOnce({ data: listResponse })
       const getSpy = vi.spyOn(mockedAxios, "get")
-      //assess
+      //act
       await testApi.list({
         filters,
         pagination,
@@ -238,7 +238,7 @@ describe("v2 api tests", async () => {
         data: { justAny: "any" },
       })
       const input = { anotherInput: "testing" }
-      //assess
+      //act
       await testApi.customServiceCalls.testPost(input)
       //assert
       expect(postSpy).toHaveBeenCalledWith(testEndpoint, {
@@ -252,7 +252,7 @@ describe("v2 api tests", async () => {
         givenInput: myInput,
         inputLength: myInput.length,
       }
-      //assess
+      //act
       const res = await testApi.customServiceCalls.customCall({
         myInput,
       })
