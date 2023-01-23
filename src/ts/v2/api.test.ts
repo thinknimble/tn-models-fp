@@ -63,6 +63,13 @@ describe("v2 api tests", async () => {
           return parsed
         },
       }),
+      test: createCustomServiceCall({
+        inputShape: z.string(),
+        outputShape: z.number(),
+        callback: async ({ client, input, utils }) => {
+          return 10
+        },
+      }),
     }
   )
 
@@ -205,6 +212,22 @@ describe("v2 api tests", async () => {
         },
       })
     })
+    it("verifies these ts tests", async () => {
+      try {
+        //use existing filter
+        await testApi.list({ filters: { anExtraFilter: "no ts errors" } })
+        //call with no filters/pagination
+        await testApi.list()
+        await testApi.list({
+          filters: {
+            //@ts-expect-error Do not allow passing any key as filter
+            nonExistant: "error",
+          },
+        })
+      } catch {
+        //ignore
+      }
+    })
   })
 
   describe("custom api calls", () => {
@@ -235,6 +258,17 @@ describe("v2 api tests", async () => {
       })
       //assert
       expect(res).toEqual(expected)
+    })
+    it("verifies these ts tests", async () => {
+      //customEndpoints ts tests
+      try {
+        //@ts-expect-error expects string rather than number
+        const stringparam = await testApi.customServiceCalls.test(5)
+        //@ts-expect-error error on nonexisting custom service call method
+        const listTest = await testApi.customServiceCalls.nonExisting()
+      } catch {
+        //ignore
+      }
     })
   })
 })

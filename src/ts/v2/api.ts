@@ -32,24 +32,51 @@ const filtersZod = z
 
 const uuidZod = z.string().uuid()
 
-type CustomServiceCallOpts<TInput extends ZodRawShape, TOutput extends ZodRawShape> = {
+type CustomServiceCallOpts<TInput extends ZodRawShape | ZodTypeAny, TOutput extends ZodRawShape | ZodTypeAny> = {
   inputShape: TInput
   outputShape: TOutput
   callback: (params: {
     client: AxiosInstance
-    input: GetZodInferredTypeFromRaw<TInput>
+    input: TInput extends ZodRawShape
+      ? GetZodInferredTypeFromRaw<TInput>
+      : TInput extends ZodTypeAny
+      ? z.infer<TInput>
+      : never
     utils: {
-      fromApi: (obj: object) => GetZodInferredTypeFromRaw<TOutput>
-      toApi: (obj: object) => SnakeCasedPropertiesDeep<GetZodInferredTypeFromRaw<TInput>>
+      fromApi: (
+        obj: object
+      ) => TOutput extends ZodRawShape
+        ? GetZodInferredTypeFromRaw<TOutput>
+        : TOutput extends ZodTypeAny
+        ? z.infer<TOutput>
+        : never
+      toApi: (
+        obj: object
+      ) => TInput extends ZodRawShape
+        ? SnakeCasedPropertiesDeep<GetZodInferredTypeFromRaw<TInput>>
+        : TInput extends ZodTypeAny
+        ? z.infer<TInput>
+        : never
     }
-  }) => Promise<GetZodInferredTypeFromRaw<TOutput>>
+  }) => Promise<
+    TOutput extends ZodRawShape
+      ? GetZodInferredTypeFromRaw<TOutput>
+      : TOutput extends ZodTypeAny
+      ? z.infer<TOutput>
+      : never
+  >
 }
+
+type ZodPrimitives = z.ZodString | z.ZodNumber | z.ZodDate | z.ZodBigInt | z.ZodBoolean
 
 //! Needing this guy has a bitter taste. This is only for type inference sake. I could not type a Record so that it would properly infer the callback's input from the inputShape and the outputShape so this is a type-safe entrypoint to create customServiceCalls.
 /**
  * Use this method to get the right type inference when creating a customApiCall
  */
-export const createCustomServiceCall = <TInput extends ZodRawShape, TOutput extends ZodRawShape>(
+export const createCustomServiceCall = <
+  TInput extends ZodRawShape | ZodPrimitives,
+  TOutput extends ZodRawShape | ZodPrimitives
+>(
   opts: CustomServiceCallOpts<TInput, TOutput>
 ) => {
   return opts
@@ -58,8 +85,18 @@ export const createCustomServiceCall = <TInput extends ZodRawShape, TOutput exte
 type CustomServiceCall<TOpts extends object> = TOpts extends Record<string, CustomServiceCallOpts<any, any>>
   ? {
       [TKey in keyof TOpts]: (
-        inputs: GetZodInferredTypeFromRaw<TOpts[TKey]["inputShape"]>
-      ) => Promise<GetZodInferredTypeFromRaw<TOpts[TKey]["outputShape"]>>
+        inputs: TOpts[TKey]["inputShape"] extends ZodRawShape
+          ? GetZodInferredTypeFromRaw<TOpts[TKey]["inputShape"]>
+          : TOpts[TKey]["inputShape"] extends ZodTypeAny
+          ? z.infer<TOpts[TKey]["inputShape"]>
+          : never
+      ) => Promise<
+        TOpts[TKey]["outputShape"] extends ZodRawShape
+          ? GetZodInferredTypeFromRaw<TOpts[TKey]["outputShape"]>
+          : TOpts[TKey]["outputShape"] extends ZodTypeAny
+          ? z.infer<TOpts[TKey]["outputShape"]>
+          : never
+      >
     }
   : never
 
@@ -180,9 +217,16 @@ export function createApi({ models, client, endpoint }, customServiceCalls = und
   const axiosClient: AxiosInstance = client
 
   const createCustomServiceCallHandler = (serviceCallOpts: CustomServiceCallOpts<any, any>) => async (inputs: any) => {
-    const fromApi = (obj: object) => z.object(serviceCallOpts.outputShape).parse(objectToCamelCase(obj))
+    const isInputZod = serviceCallOpts.inputShape instanceof z.ZodSchema
+    const isOutputZod = serviceCallOpts.outputShape instanceof z.ZodSchema
+    const fromApi = (obj: object) =>
+      isOutputZod
+        ? serviceCallOpts.outputShape.parse(obj)
+        : z.object(serviceCallOpts.outputShape).parse(objectToCamelCase(obj))
     const toApi = (obj: object) =>
-      z.object(getSnakeCasedZodRawShape(serviceCallOpts.inputShape)).parse(objectToSnakeCase(obj))
+      isInputZod
+        ? serviceCallOpts.inputShape.parse(obj)
+        : z.object(getSnakeCasedZodRawShape(serviceCallOpts.inputShape)).parse(objectToSnakeCase(obj))
 
     return serviceCallOpts.callback({ client, input: inputs, utils: { fromApi, toApi } })
   }
