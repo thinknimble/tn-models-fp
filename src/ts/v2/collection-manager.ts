@@ -17,7 +17,7 @@ type FilterFn<TFilter, TEntity> = (params?: {
 
 type FilterParam<T extends FilterFn<any, any>> = T extends FilterFn<infer TFilters, any> ? TFilters : never
 
-export const createCollectionManager = <TFetchList extends FilterFn<any, any>, TEntity extends ZodRawShape>({
+export const createCollectionManager = <TFetchList extends FilterFn<any, any>, TEntityZodShape extends ZodRawShape>({
   fetchList,
   list: feedList,
   filters,
@@ -27,19 +27,19 @@ export const createCollectionManager = <TFetchList extends FilterFn<any, any>, T
   loadingNextPage: feedLoadingNextPage = false,
 }: {
   fetchList: TFetchList
-  list?: GetZodInferredTypeFromRaw<TEntity>[]
-  entityZodShape: TEntity
+  entityZodShape: TEntityZodShape
+  list?: GetZodInferredTypeFromRaw<TEntityZodShape>[]
   refreshing?: boolean
   loadingNextPage?: boolean
   filters?: FilterParam<TFetchList>
   pagination?: IPagination
 }) => {
-  let list: GetZodInferredTypeFromRaw<TEntity>[] = feedList ?? []
+  let list: GetZodInferredTypeFromRaw<TEntityZodShape>[] = feedList ?? []
   let pagination: IPagination = feedPagination
   let refreshing: boolean = feedRefreshing
   let loadingNextPage: boolean = feedLoadingNextPage
 
-  const update = (data: PaginationResult<GetZodInferredTypeFromRaw<TEntity>>, append = false) => {
+  const update = (data: PaginationResult<GetZodInferredTypeFromRaw<TEntityZodShape>>, append = false) => {
     list = [...(append ? list : []), ...data.results]
     pagination = Pagination.create({
       ...pagination,
@@ -47,7 +47,6 @@ export const createCollectionManager = <TFetchList extends FilterFn<any, any>, T
       previous: data.previous,
       totalCount: data.count,
     })
-    return
   }
 
   const refresh = async (): Promise<void> => {
@@ -95,17 +94,25 @@ export const createCollectionManager = <TFetchList extends FilterFn<any, any>, T
     prevPage,
     addNextPage,
     //TODO: I'd like someone to give this a shot in a vue app so that we can tell whether it works as expected (as a piece of state?)
+    get list() {
+      return list
+    },
     get refreshing() {
       return refreshing
     },
+    //? do we need a setter for this or should it just be changeable from within
     set refreshing(newValue: boolean) {
       refreshing = newValue
     },
     get loadingNextPage() {
       return loadingNextPage
     },
+    //? same question for this setter
     set loadingNextPage(newValue: boolean) {
       loadingNextPage = newValue
+    },
+    get pagination() {
+      return pagination
     },
   }
 }

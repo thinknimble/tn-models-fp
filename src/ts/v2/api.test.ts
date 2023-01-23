@@ -1,10 +1,10 @@
 import { SnakeCasedPropertiesDeep } from "@thinknimble/tn-utils"
 import axios from "axios"
-import { v4 as uuid } from "uuid"
 import { beforeEach, describe, expect, it, Mocked, vi } from "vitest"
 import { z } from "zod"
 import Pagination from "../pagination"
 import { createApi, createCustomServiceCall, getPaginatedSnakeCasedZod, GetZodInferredTypeFromRaw } from "./api"
+import { faker } from "@faker-js/faker"
 
 vi.mock("axios")
 
@@ -83,7 +83,7 @@ describe("v2 api tests", async () => {
       lastName: "Doe",
       firstName: "Jane",
     }
-    const randomId: string = uuid()
+    const randomId: string = faker.datatype.uuid()
     const createResponse: SnakeCasedPropertiesDeep<GetZodInferredTypeFromRaw<typeof entityZodShape>> = {
       age: createInput.age,
       last_name: createInput.lastName,
@@ -121,7 +121,7 @@ describe("v2 api tests", async () => {
 
     it("returns camelCased entity", async () => {
       //arrange
-      const randomUuid = uuid()
+      const randomUuid = faker.datatype.uuid()
       const entityResponse: SnakeCasedPropertiesDeep<GetZodInferredTypeFromRaw<typeof entityZodShape>> = {
         age: 18,
         first_name: "John",
@@ -147,8 +147,8 @@ describe("v2 api tests", async () => {
     beforeEach(() => {
       mockedAxios.get.mockReset()
     })
-    const josephId = uuid()
-    const jotaroId = uuid()
+    const josephId = faker.datatype.uuid()
+    const jotaroId = faker.datatype.uuid()
     const listResponse: z.infer<ReturnType<typeof getPaginatedSnakeCasedZod<typeof entityZodShape>>> = {
       count: 10,
       next: null,
@@ -230,7 +230,7 @@ describe("v2 api tests", async () => {
     })
   })
 
-  describe("custom api calls", () => {
+  describe("custom service calls", () => {
     it("calls api with snake case", async () => {
       //arrange
       const postSpy = vi.spyOn(mockedAxios, "post")
