@@ -162,6 +162,7 @@ export function createCustomServiceCall(
   opts: CustomServiceCallback<z.ZodVoid, z.ZodVoid>
 ): CustomServiceCallOpts<z.ZodVoid, z.ZodVoid>
 
+//TODO: As a user I think it would be more ergonomic to just pass the callback as a callback rather than having to name it callback within the opts it may even have better inference.
 export function createCustomServiceCall(opts) {
   if (!opts.inputShape && !opts.outputShape) {
     // no input nor output
