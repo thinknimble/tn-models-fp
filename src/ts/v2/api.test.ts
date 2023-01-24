@@ -66,8 +66,25 @@ describe("v2 api tests", async () => {
       test: createCustomServiceCall({
         inputShape: z.string(),
         outputShape: z.number(),
-        callback: async ({ client, input, utils }) => {
+        callback: async () => {
           return 10
+        },
+      }),
+      testNoInput: createCustomServiceCall({
+        outputShape: z.string(),
+        callback: async () => {
+          return "overloads ftw"
+        },
+      }),
+      testNoOutput: createCustomServiceCall({
+        inputShape: z.number(),
+        callback: async () => {
+          return
+        },
+      }),
+      testNoInputNorOutput: createCustomServiceCall({
+        callback: async () => {
+          return
         },
       }),
     }
@@ -231,6 +248,7 @@ describe("v2 api tests", async () => {
   })
 
   describe("custom service calls", () => {
+    testApi.customServiceCalls.testNoInput()
     it("calls api with snake case", async () => {
       //arrange
       const postSpy = vi.spyOn(mockedAxios, "post")
@@ -258,6 +276,18 @@ describe("v2 api tests", async () => {
       })
       //assert
       expect(res).toEqual(expected)
+    })
+    it("checks output only overload", async () => {
+      const res = await testApi.customServiceCalls.testNoInput()
+      expect(res).toEqual("overloads ftw")
+    })
+    it("checks input only overload", async () => {
+      const res = await testApi.customServiceCalls.testNoOutput(10)
+      expect(res).toBeUndefined()
+    })
+    it("checks no input no output overload", async () => {
+      const res = await testApi.customServiceCalls.testNoInputNorOutput()
+      expect(res).toBeUndefined()
     })
     it("verifies these ts tests", async () => {
       //customEndpoints ts tests

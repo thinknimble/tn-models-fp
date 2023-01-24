@@ -1,5 +1,4 @@
 import {
-  CamelCasedPropertiesDeep,
   objectToCamelCase,
   objectToSnakeCase,
   SnakeCase,
@@ -7,7 +6,7 @@ import {
   toSnakeCase,
 } from "@thinknimble/tn-utils"
 import { AxiosInstance } from "axios"
-import { z, ZodRawShape, ZodTypeAny } from "zod"
+import { z } from "zod"
 import { IPagination } from "../pagination"
 import { getPaginatedZod } from "./pagination"
 import { parseResponse } from "./utils"
@@ -32,79 +31,187 @@ const filtersZod = z
 
 const uuidZod = z.string().uuid()
 
-type CustomServiceCallOpts<TInput extends ZodRawShape | ZodTypeAny, TOutput extends ZodRawShape | ZodTypeAny> = {
+type CustomServiceCallInputOutputs<
+  TInput extends z.ZodRawShape | ZodPrimitives = z.ZodUndefined,
+  TOutput extends z.ZodRawShape | ZodPrimitives = z.ZodUndefined
+> = {
   inputShape: TInput
   outputShape: TOutput
+}
+
+type CustomServiceCallback<
+  TInput extends z.ZodRawShape | ZodPrimitives = z.ZodUndefined,
+  TOutput extends z.ZodRawShape | ZodPrimitives = z.ZodUndefined
+> = {
+  //TODO: I want this to infer even further, if TInput and+or+nor TOutput is void it should have different params exposed, this was my shot but failed, I don't know exactly why it did not work. My guess is that I have some inference attached to this which is not happy at all with this change in the fields
+  // callback: (
+  //   params: { client: AxiosInstance } & TInput extends z.ZodVoid
+  //     ? TOutput extends z.ZodVoid
+  //       ? //both are void, then unknown would coalesce the type to just { client }
+  //         unknown
+  //       : TInput extends z.ZodVoid
+  //       ? //only TInput is void so we need a fromApi to parse the output
+  //         {
+  //           utils: {
+  //             fromApi: (
+  //               obj: object
+  //             ) => TOutput extends z.ZodRawShape
+  //               ? GetZodInferredTypeFromRaw<TOutput>
+  //               : TOutput extends z.ZodTypeAny
+  //               ? z.infer<TOutput>
+  //               : never
+  //           }
+  //         }
+  //       : TOutput extends z.ZodVoid
+  //       ? //only TOutput is void so we need the input param and the toApi util
+  //         {
+  //           input: TInput extends z.ZodRawShape
+  //             ? GetZodInferredTypeFromRaw<TInput>
+  //             : TInput extends z.ZodTypeAny
+  //             ? z.infer<TInput>
+  //             : never
+  //           utils: {
+  //             toApi: (
+  //               obj: object
+  //             ) => TInput extends z.ZodRawShape
+  //               ? SnakeCasedPropertiesDeep<GetZodInferredTypeFromRaw<TInput>>
+  //               : TInput extends z.ZodTypeAny
+  //               ? z.infer<TInput>
+  //               : never
+  //           }
+  //         }
+  //       : {
+  //           input: TInput extends z.ZodRawShape
+  //             ? GetZodInferredTypeFromRaw<TInput>
+  //             : TInput extends z.ZodTypeAny
+  //             ? z.infer<TInput>
+  //             : never
+  //           utils: {
+  //             fromApi: (
+  //               obj: object
+  //             ) => TOutput extends z.ZodRawShape
+  //               ? GetZodInferredTypeFromRaw<TOutput>
+  //               : TOutput extends z.ZodTypeAny
+  //               ? z.infer<TOutput>
+  //               : never
+  //             toApi: (
+  //               obj: object
+  //             ) => TInput extends z.ZodRawShape
+  //               ? SnakeCasedPropertiesDeep<GetZodInferredTypeFromRaw<TInput>>
+  //               : TInput extends z.ZodTypeAny
+  //               ? z.infer<TInput>
+  //               : never
+  //           }
+  //         }
+  //     : never
+  // )
   callback: (params: {
     client: AxiosInstance
-    input: TInput extends ZodRawShape
+    input: TInput extends z.ZodRawShape
       ? GetZodInferredTypeFromRaw<TInput>
-      : TInput extends ZodTypeAny
+      : TInput extends z.ZodTypeAny
       ? z.infer<TInput>
       : never
     utils: {
       fromApi: (
         obj: object
-      ) => TOutput extends ZodRawShape
+      ) => TOutput extends z.ZodRawShape
         ? GetZodInferredTypeFromRaw<TOutput>
-        : TOutput extends ZodTypeAny
+        : TOutput extends z.ZodTypeAny
         ? z.infer<TOutput>
         : never
       toApi: (
         obj: object
-      ) => TInput extends ZodRawShape
+      ) => TInput extends z.ZodRawShape
         ? SnakeCasedPropertiesDeep<GetZodInferredTypeFromRaw<TInput>>
-        : TInput extends ZodTypeAny
+        : TInput extends z.ZodTypeAny
         ? z.infer<TInput>
         : never
     }
   }) => Promise<
-    TOutput extends ZodRawShape
+    TOutput extends z.ZodRawShape
       ? GetZodInferredTypeFromRaw<TOutput>
-      : TOutput extends ZodTypeAny
+      : TOutput extends z.ZodTypeAny
       ? z.infer<TOutput>
       : never
   >
 }
 
-type ZodPrimitives = z.ZodString | z.ZodNumber | z.ZodDate | z.ZodBigInt | z.ZodBoolean
+type CustomServiceCallOpts<
+  TInput extends z.ZodRawShape | ZodPrimitives = z.ZodUndefined,
+  TOutput extends z.ZodRawShape | ZodPrimitives = z.ZodUndefined
+> = CustomServiceCallInputOutputs<TInput, TOutput> & CustomServiceCallback<TInput, TOutput>
 
-//! Needing this guy has a bitter taste. This is only for type inference sake. I could not type a Record so that it would properly infer the callback's input from the inputShape and the outputShape so this is a type-safe entrypoint to create customServiceCalls.
+type ZodPrimitives = z.ZodString | z.ZodNumber | z.ZodDate | z.ZodBigInt | z.ZodBoolean | z.ZodUndefined | z.ZodVoid
+
+//! The order of overloads MATTER. This was quite a foot-gun-ish thing to discover. Lesson is: declare overloads from more num of params > less num of params. It kind of makes sense to go narrowing down the parameter possibilities
 /**
- * Use this method to get the right type inference when creating a customApiCall
+ * Use this method to get the right type inference when creating a custom service call
  */
-export const createCustomServiceCall = <
-  TInput extends ZodRawShape | ZodPrimitives,
-  TOutput extends ZodRawShape | ZodPrimitives
->(
-  opts: CustomServiceCallOpts<TInput, TOutput>
-) => {
-  return opts
+export function createCustomServiceCall<
+  TInput extends z.ZodRawShape | ZodPrimitives,
+  TOutput extends z.ZodRawShape | ZodPrimitives
+>(opts: CustomServiceCallOpts<TInput, TOutput>): CustomServiceCallOpts<TInput, TOutput>
+export function createCustomServiceCall<TInput extends z.ZodRawShape | ZodPrimitives>(
+  opts: { inputShape: TInput } & CustomServiceCallback<TInput, z.ZodVoid>
+): CustomServiceCallOpts<TInput, z.ZodVoid>
+export function createCustomServiceCall<TOutput extends z.ZodRawShape | ZodPrimitives>(
+  opts: { outputShape: TOutput } & CustomServiceCallback<z.ZodVoid, TOutput>
+): CustomServiceCallOpts<z.ZodVoid, TOutput>
+export function createCustomServiceCall(
+  opts: CustomServiceCallback<z.ZodVoid, z.ZodVoid>
+): CustomServiceCallOpts<z.ZodVoid, z.ZodVoid>
+
+export function createCustomServiceCall(opts) {
+  if (!opts.inputShape && !opts.outputShape) {
+    // no input nor output
+    return {
+      ...opts,
+      inputShape: z.void(),
+      outputShape: z.void(),
+    }
+  }
+  if (opts.inputShape && opts.outputShape) {
+    // both input n output
+    return opts
+  }
+  if (opts.inputShape) {
+    // only input
+    return {
+      ...opts,
+      outputShape: z.void(),
+    }
+  }
+  // only output
+  return {
+    ...opts,
+    inputShape: z.void(),
+  }
 }
 
 type CustomServiceCall<TOpts extends object> = TOpts extends Record<string, CustomServiceCallOpts<any, any>>
   ? {
       [TKey in keyof TOpts]: (
-        inputs: TOpts[TKey]["inputShape"] extends ZodRawShape
+        inputs: TOpts[TKey]["inputShape"] extends z.ZodRawShape
           ? GetZodInferredTypeFromRaw<TOpts[TKey]["inputShape"]>
-          : TOpts[TKey]["inputShape"] extends ZodTypeAny
+          : TOpts[TKey]["inputShape"] extends z.ZodTypeAny
           ? z.infer<TOpts[TKey]["inputShape"]>
           : never
       ) => Promise<
-        TOpts[TKey]["outputShape"] extends ZodRawShape
+        TOpts[TKey]["outputShape"] extends z.ZodRawShape
           ? GetZodInferredTypeFromRaw<TOpts[TKey]["outputShape"]>
-          : TOpts[TKey]["outputShape"] extends ZodTypeAny
+          : TOpts[TKey]["outputShape"] extends z.ZodTypeAny
           ? z.infer<TOpts[TKey]["outputShape"]>
           : never
       >
     }
   : never
 
-type ZodRawShapeSnakeCased<T extends ZodRawShape> = {
+type ZodRawShapeSnakeCased<T extends z.ZodRawShape> = {
   [TKey in keyof T as SnakeCase<TKey>]: T[TKey]
 }
 
-const getSnakeCasedZodRawShape = <T extends ZodRawShape>(zodShape: T) => {
+const getSnakeCasedZodRawShape = <T extends z.ZodRawShape>(zodShape: T) => {
   const unknownSnakeCasedZod: unknown = Object.fromEntries(
     Object.entries(zodShape).map(([k, v]) => {
       return [toSnakeCase(k), v]
@@ -112,16 +219,16 @@ const getSnakeCasedZodRawShape = <T extends ZodRawShape>(zodShape: T) => {
   )
   return unknownSnakeCasedZod as ZodRawShapeSnakeCased<T>
 }
-export const getPaginatedSnakeCasedZod = <T extends ZodRawShape>(zodShape: T) => {
+export const getPaginatedSnakeCasedZod = <T extends z.ZodRawShape>(zodShape: T) => {
   return getPaginatedZod(getSnakeCasedZodRawShape(zodShape))
 }
 
-export type GetZodInferredTypeFromRaw<T extends ZodRawShape> = z.infer<ReturnType<typeof z.object<T>>>
+export type GetZodInferredTypeFromRaw<T extends z.ZodRawShape> = z.infer<ReturnType<typeof z.object<T>>>
 
 type BareApiService<
-  TEntity extends ZodRawShape,
-  TCreate extends ZodRawShape,
-  TExtraFilters extends ZodRawShape = never
+  TEntity extends z.ZodRawShape,
+  TCreate extends z.ZodRawShape,
+  TExtraFilters extends z.ZodRawShape = never
 > = {
   client: AxiosInstance
   retrieve(id: string): Promise<GetZodInferredTypeFromRaw<TEntity>>
@@ -132,20 +239,20 @@ type BareApiService<
   }): Promise<z.infer<ReturnType<typeof getPaginatedZod<TEntity>>>>
 }
 type ApiService<
-  TEntity extends ZodRawShape,
-  TCreate extends ZodRawShape,
+  TEntity extends z.ZodRawShape,
+  TCreate extends z.ZodRawShape,
   //extending from record makes it so that if you try to access anything it would not error, we want to actually error if there is no key in TCustomServiceCalls that does not belong to it
   TCustomServiceCalls extends object,
-  TExtraFilters extends ZodRawShape = never
+  TExtraFilters extends z.ZodRawShape = never
 > = BareApiService<TEntity, TCreate, TExtraFilters> & {
   customServiceCalls: CustomServiceCall<TCustomServiceCalls>
 }
 
 type ApiBaseParams<
-  TApiEntity extends ZodRawShape,
-  TApiCreate extends ZodRawShape,
-  TApiUpdate extends ZodRawShape,
-  TExtraFilters extends ZodRawShape = never
+  TApiEntity extends z.ZodRawShape,
+  TApiCreate extends z.ZodRawShape,
+  TApiUpdate extends z.ZodRawShape,
+  TExtraFilters extends z.ZodRawShape = never
 > = {
   /**
    * Zod raw shapes to use as models. All these should be the frontend camelCased version
@@ -190,11 +297,11 @@ type ApiBaseParams<
 }
 
 export function createApi<
-  TApiEntity extends ZodRawShape,
-  TApiCreate extends ZodRawShape,
-  TApiUpdate extends ZodRawShape,
+  TApiEntity extends z.ZodRawShape,
+  TApiCreate extends z.ZodRawShape,
+  TApiUpdate extends z.ZodRawShape,
   TCustomServiceCalls extends Record<string, CustomServiceCallOpts<any, any>>,
-  TExtraFilters extends ZodRawShape = never
+  TExtraFilters extends z.ZodRawShape = never
 >(
   base: ApiBaseParams<TApiEntity, TApiCreate, TApiUpdate, TExtraFilters>,
   /**
@@ -204,10 +311,10 @@ export function createApi<
 ): ApiService<TApiEntity, TApiCreate, TCustomServiceCalls, TExtraFilters>
 
 export function createApi<
-  TApiEntity extends ZodRawShape,
-  TApiCreate extends ZodRawShape,
-  TApiUpdate extends ZodRawShape,
-  TExtraFilters extends ZodRawShape = never
+  TApiEntity extends z.ZodRawShape,
+  TApiCreate extends z.ZodRawShape,
+  TApiUpdate extends z.ZodRawShape,
+  TExtraFilters extends z.ZodRawShape = never
 >(
   base: ApiBaseParams<TApiEntity, TApiCreate, TApiUpdate, TExtraFilters>
 ): BareApiService<TApiEntity, TApiCreate, TExtraFilters>
