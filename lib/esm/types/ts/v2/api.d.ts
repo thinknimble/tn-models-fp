@@ -27,6 +27,7 @@ declare type CustomServiceCallInputOutputs<TInput extends z.ZodRawShape | ZodPri
 };
 declare type CustomServiceCallback<TInput extends z.ZodRawShape | ZodPrimitives = z.ZodVoid, TOutput extends z.ZodRawShape | ZodPrimitives = z.ZodVoid> = (params: {
     client: AxiosInstance;
+    endpoint: string;
 } & (TInput extends z.ZodVoid ? TOutput extends z.ZodVoid ? unknown : {
     utils: {
         fromApi: (obj: object) => TOutput extends z.ZodRawShape ? GetZodInferredTypeFromRaw<TOutput> : TOutput extends z.ZodTypeAny ? z.infer<TOutput> : never;
@@ -61,6 +62,7 @@ declare type CustomServiceCallPlaceholder = {
     inputShape: any;
     outputShape: any;
     callback: (params: {
+        endpoint: string;
         client: AxiosInstance;
         input: any;
         utils: {
@@ -135,7 +137,7 @@ declare type ApiBaseParams<TApiEntity extends z.ZodRawShape, TApiCreate extends 
     /**
      * The base endpoint for te api to hit. We append this to request's uris for listing, retrieving and creating
      */
-    endpoint: string;
+    readonly endpoint: string;
     /**
      * The axios instance created for the app.
      */
