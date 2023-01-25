@@ -10,14 +10,14 @@ type PaginationResult<TEntity> = {
   results: TEntity[]
 }
 
-type FilterFn<TFilter, TEntity> = (params?: {
+type FilterFn<TFilter = any, TEntity = unknown> = (params?: {
   filters?: TFilter
   pagination?: IPagination
 }) => Promise<PaginationResult<TEntity>>
 
-type FilterParam<T extends FilterFn<any, any>> = T extends FilterFn<infer TFilters, any> ? TFilters : never
+type FilterParam<T extends FilterFn<unknown, unknown>> = T extends FilterFn<infer TFilters, unknown> ? TFilters : never
 
-export const createCollectionManager = <TFetchList extends FilterFn<any, any>, TEntityZodShape extends ZodRawShape>({
+export const createCollectionManager = <TFetchList extends FilterFn, TEntityZodShape extends ZodRawShape>({
   fetchList,
   list: feedList,
   filters,

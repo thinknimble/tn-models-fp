@@ -7,12 +7,12 @@ declare type PaginationResult<TEntity> = {
     previous: string | null;
     results: TEntity[];
 };
-declare type FilterFn<TFilter, TEntity> = (params?: {
+declare type FilterFn<TFilter = any, TEntity = unknown> = (params?: {
     filters?: TFilter;
     pagination?: IPagination;
 }) => Promise<PaginationResult<TEntity>>;
-declare type FilterParam<T extends FilterFn<any, any>> = T extends FilterFn<infer TFilters, any> ? TFilters : never;
-export declare const createCollectionManager: <TFetchList extends FilterFn<any, any>, TEntityZodShape extends ZodRawShape>({ fetchList, list: feedList, filters, pagination: feedPagination, entityZodShape, refreshing: feedRefreshing, loadingNextPage: feedLoadingNextPage, }: {
+declare type FilterParam<T extends FilterFn<unknown, unknown>> = T extends FilterFn<infer TFilters, unknown> ? TFilters : never;
+export declare const createCollectionManager: <TFetchList extends FilterFn<any, unknown>, TEntityZodShape extends ZodRawShape>({ fetchList, list: feedList, filters, pagination: feedPagination, entityZodShape, refreshing: feedRefreshing, loadingNextPage: feedLoadingNextPage, }: {
     fetchList: TFetchList;
     entityZodShape: TEntityZodShape;
     list?: (import("zod").objectUtil.addQuestionMarks<{ [k_2 in keyof TEntityZodShape]: TEntityZodShape[k_2]["_output"]; }> extends infer T ? { [k_1 in keyof T]: import("zod").objectUtil.addQuestionMarks<{ [k in keyof TEntityZodShape]: TEntityZodShape[k]["_output"]; }>[k_1]; } : never)[] | undefined;

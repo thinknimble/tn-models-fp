@@ -1,12 +1,11 @@
-import { describe, it, vi, expect, Mocked, beforeEach } from "vitest"
-import axios from "axios"
-import { z } from "zod"
-import { createApi, getPaginatedSnakeCasedZod, GetZodInferredTypeFromRaw } from "./api"
-import { createCollectionManager } from "./collection-manager"
-import { getPaginatedZod } from "./pagination"
 import { faker } from "@faker-js/faker"
 import { objectToCamelCase, objectToSnakeCase } from "@thinknimble/tn-utils"
+import axios from "axios"
+import { beforeEach, describe, expect, it, Mocked, vi } from "vitest"
+import { z } from "zod"
 import Pagination from "../pagination"
+import { createApi, getPaginatedSnakeCasedZod } from "./api"
+import { createCollectionManager } from "./collection-manager"
 
 vi.mock("axios")
 
@@ -52,7 +51,6 @@ describe("collection manager v2 tests", () => {
     models: {
       create: createZodShape,
       entity: entityZodShape,
-      update: createZodShape,
       extraFilters: {
         anExtraFilter: z.string(),
       },

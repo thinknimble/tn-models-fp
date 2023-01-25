@@ -1,10 +1,10 @@
+import { faker } from "@faker-js/faker"
 import { SnakeCasedPropertiesDeep } from "@thinknimble/tn-utils"
 import axios from "axios"
 import { beforeEach, describe, expect, it, Mocked, vi } from "vitest"
 import { z } from "zod"
 import Pagination from "../pagination"
 import { createApi, createCustomServiceCall, getPaginatedSnakeCasedZod, GetZodInferredTypeFromRaw } from "./api"
-import { faker } from "@faker-js/faker"
 
 vi.mock("axios")
 
