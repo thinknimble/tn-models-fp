@@ -29,7 +29,6 @@ describe("v2 api tests", async () => {
       models: {
         create: createZodShape,
         entity: entityZodShape,
-        update: createZodShape,
         extraFilters: {
           anExtraFilter: z.string(),
         },

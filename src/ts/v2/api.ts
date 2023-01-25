@@ -217,7 +217,6 @@ type ApiService<
 type ApiBaseParams<
   TApiEntity extends z.ZodRawShape,
   TApiCreate extends z.ZodRawShape,
-  TApiUpdate extends z.ZodRawShape,
   TExtraFilters extends z.ZodRawShape = never
 > = {
   /**
@@ -242,11 +241,6 @@ type ApiBaseParams<
      * Zod raw shape of the input for creating an entity
      */
     create: TApiCreate
-    //TODO: not being used nor I'm sure whether we need this since it is not included in old api
-    /**
-     * Zod raw shape of input for updating an entity
-     */
-    update: TApiUpdate
     /**
      * Zod raw shape of extra filters if any
      */
@@ -275,11 +269,10 @@ type CustomServiceCallPlaceholder = {
 export function createApi<
   TApiEntity extends z.ZodRawShape,
   TApiCreate extends z.ZodRawShape,
-  TApiUpdate extends z.ZodRawShape,
   TCustomServiceCalls extends Record<string, CustomServiceCallPlaceholder>,
   TExtraFilters extends z.ZodRawShape = never
 >(
-  base: ApiBaseParams<TApiEntity, TApiCreate, TApiUpdate, TExtraFilters>,
+  base: ApiBaseParams<TApiEntity, TApiCreate, TExtraFilters>,
   /**
    * Create your own custom service calls to use with this API. Tools for case conversion are provided.
    */
@@ -291,9 +284,7 @@ export function createApi<
   TApiCreate extends z.ZodRawShape,
   TApiUpdate extends z.ZodRawShape,
   TExtraFilters extends z.ZodRawShape = never
->(
-  base: ApiBaseParams<TApiEntity, TApiCreate, TApiUpdate, TExtraFilters>
-): BareApiService<TApiEntity, TApiCreate, TExtraFilters>
+>(base: ApiBaseParams<TApiEntity, TApiCreate, TExtraFilters>): BareApiService<TApiEntity, TApiCreate, TExtraFilters>
 
 //! doing overloads to improve UX is a bit of a double-edged sword here. We are risking the type safety within this method! We'd still get errors if we don't match the declared input-outputs from overloads so that's something.
 export function createApi({ models, client, endpoint }, customServiceCalls = undefined) {
