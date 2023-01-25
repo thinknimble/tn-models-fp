@@ -71,7 +71,6 @@ describe("collection manager v2 tests", () => {
 
   const resetCollectionManager = () => {
     return createCollectionManager({
-      entityZodShape,
       fetchList: testApi.list,
       list: [
         {

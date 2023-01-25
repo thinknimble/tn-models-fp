@@ -1,7 +1,4 @@
-import { ZodRawShape } from "zod"
 import Pagination, { IPagination } from "../pagination"
-import { GetZodInferredTypeFromRaw } from "./api"
-import { getPaginatedZod } from "./pagination"
 
 type PaginationResult<TEntity> = {
   count: number
@@ -17,29 +14,29 @@ type FilterFn<TFilter = any, TEntity = unknown> = (params?: {
 
 type FilterParam<T extends FilterFn<unknown, unknown>> = T extends FilterFn<infer TFilters, unknown> ? TFilters : never
 
-export const createCollectionManager = <TFetchList extends FilterFn, TEntityZodShape extends ZodRawShape>({
+type GetListType<T extends FilterFn> = T extends FilterFn<never, infer TEntity> ? TEntity : never
+
+export const createCollectionManager = <TFetchList extends FilterFn>({
   fetchList,
   list: feedList,
   filters,
   pagination: feedPagination = Pagination.create(),
-  entityZodShape,
   refreshing: feedRefreshing = false,
   loadingNextPage: feedLoadingNextPage = false,
 }: {
   fetchList: TFetchList
-  entityZodShape: TEntityZodShape
-  list?: GetZodInferredTypeFromRaw<TEntityZodShape>[]
+  list?: GetListType<TFetchList>[]
   refreshing?: boolean
   loadingNextPage?: boolean
   filters?: FilterParam<TFetchList>
   pagination?: IPagination
 }) => {
-  let list: GetZodInferredTypeFromRaw<TEntityZodShape>[] = feedList ?? []
+  let list: GetListType<TFetchList>[] = feedList ?? []
   let pagination: IPagination = feedPagination
   let refreshing: boolean = feedRefreshing
   let loadingNextPage: boolean = feedLoadingNextPage
 
-  const update = (data: PaginationResult<GetZodInferredTypeFromRaw<TEntityZodShape>>, append = false) => {
+  const update = (data: PaginationResult<GetListType<TFetchList>>, append = false) => {
     list = [...(append ? list : []), ...data.results]
     pagination = Pagination.create({
       ...pagination,
@@ -52,9 +49,9 @@ export const createCollectionManager = <TFetchList extends FilterFn, TEntityZodS
   const refresh = async (): Promise<void> => {
     refreshing = true
     try {
-      const res = await fetchList({ filters, pagination: pagination })
-      const parsed = getPaginatedZod(entityZodShape).parse(res)
-      update(parsed)
+      // we know better here that this is what it returns, otherwise we're left with unknown or having to do some workaround (like parsing, which btw is already done within fetchList so there's no point in doing it again)
+      const res = (await fetchList({ filters, pagination: pagination })) as PaginationResult<GetListType<TFetchList>>
+      update(res)
     } finally {
       refreshing = false
     }
@@ -80,9 +77,8 @@ export const createCollectionManager = <TFetchList extends FilterFn, TEntityZodS
     })
 
     try {
-      const res = await fetchList({ filters, pagination })
-      const parsed = getPaginatedZod(entityZodShape).parse(res)
-      update(parsed, true)
+      const res = (await fetchList({ filters, pagination })) as PaginationResult<GetListType<TFetchList>>
+      update(res, true)
     } finally {
       loadingNextPage = false
     }
