@@ -43,7 +43,7 @@ type CustomServiceCallback<
   TInput extends z.ZodRawShape | ZodPrimitives = z.ZodVoid,
   TOutput extends z.ZodRawShape | ZodPrimitives = z.ZodVoid
 > = (
-  params: { client: AxiosInstance } & (TInput extends z.ZodVoid
+  params: { client: AxiosInstance; endpoint: string } & (TInput extends z.ZodVoid
     ? TOutput extends z.ZodVoid
       ? unknown
       : {
@@ -107,7 +107,7 @@ type CustomServiceCallOpts<
 
 type ZodPrimitives = z.ZodString | z.ZodNumber | z.ZodDate | z.ZodBigInt | z.ZodBoolean | z.ZodUndefined | z.ZodVoid
 
-//! The order of overloads MATTER. This was quite a foot-gun-ish thing to discover. Lesson is: declare overloads from more num of params > less num of params. It kind of makes sense to go narrowing down the parameter possibilities
+//! The order of overloads MATTER. This was quite a foot-gun-ish thing to discover. Lesson is: declare overloads from more most generic > most narrowed. It kind of makes sense to go narrowing down the parameter possibilities. Seems like the first overload that matches is the one that is used.
 /**
  * Use this method to get the right type inference when creating a custom service call
  */
@@ -161,6 +161,7 @@ type CustomServiceCallPlaceholder = {
   inputShape
   outputShape
   callback: (params: {
+    endpoint: string
     client: AxiosInstance
     input
     utils: { fromApi: (obj: object) => never; toApi: (obj: object) => never }
@@ -261,7 +262,7 @@ type ApiBaseParams<
   /**
    * The base endpoint for te api to hit. We append this to request's uris for listing, retrieving and creating
    */
-  endpoint: string
+  readonly endpoint: string
   /**
    * The axios instance created for the app.
    */
@@ -291,7 +292,7 @@ export function createApi<
 export function createApi({ models, client, endpoint }, customServiceCalls = undefined) {
   const axiosClient: AxiosInstance = client
 
-  const createCustomServiceCallHandler = (serviceCallOpts) => async (inputs: unknown) => {
+  const createCustomServiceCallHandler = (serviceCallOpts) => async (input: unknown) => {
     const isInputZod = serviceCallOpts.inputShape instanceof z.ZodSchema
     const isOutputZod = serviceCallOpts.outputShape instanceof z.ZodSchema
     const fromApi = (obj: object) =>
@@ -303,7 +304,7 @@ export function createApi({ models, client, endpoint }, customServiceCalls = und
         ? serviceCallOpts.inputShape.parse(obj)
         : z.object(getSnakeCasedZodRawShape(serviceCallOpts.inputShape)).parse(objectToSnakeCase(obj))
 
-    return serviceCallOpts.callback({ client, input: inputs, utils: { fromApi, toApi } })
+    return serviceCallOpts.callback({ client, endpoint, input, utils: { fromApi, toApi } })
   }
 
   const modifiedCustomServiceCalls = customServiceCalls

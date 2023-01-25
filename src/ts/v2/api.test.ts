@@ -94,6 +94,9 @@ describe("v2 api tests", async () => {
       testNoInputNorOutput: createCustomServiceCall(async () => {
         return
       }),
+      testEndpointParam: createCustomServiceCall({ outputShape: z.string() }, async ({ endpoint }) => {
+        return endpoint
+      }),
     }
   )
 
@@ -255,7 +258,6 @@ describe("v2 api tests", async () => {
   })
 
   describe("custom service calls", () => {
-    testApi.customServiceCalls.testNoInput()
     it("calls api with snake case", async () => {
       //arrange
       const postSpy = vi.spyOn(mockedAxios, "post")
@@ -283,6 +285,10 @@ describe("v2 api tests", async () => {
       })
       //assert
       expect(res).toEqual(expected)
+    })
+    it("receives endpoint as parameter within the callback", async () => {
+      const res = await testApi.customServiceCalls.testEndpointParam()
+      expect(res).toEqual(testEndpoint)
     })
     it("checks output only overload", async () => {
       const res = await testApi.customServiceCalls.testNoInput()
