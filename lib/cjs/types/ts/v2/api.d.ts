@@ -25,38 +25,50 @@ declare type CustomServiceCallInputOutputs<TInput extends z.ZodRawShape | ZodPri
     inputShape: TInput;
     outputShape: TOutput;
 };
-declare type CustomServiceCallback<TInput extends z.ZodRawShape | ZodPrimitives = z.ZodVoid, TOutput extends z.ZodRawShape | ZodPrimitives = z.ZodVoid> = {
-    callback: (params: {
-        client: AxiosInstance;
-    } & (TInput extends z.ZodVoid ? TOutput extends z.ZodVoid ? unknown : {
-        utils: {
-            fromApi: (obj: object) => TOutput extends z.ZodRawShape ? GetZodInferredTypeFromRaw<TOutput> : TOutput extends z.ZodTypeAny ? z.infer<TOutput> : never;
-        };
-    } : TOutput extends z.ZodVoid ? {
-        utils: {
-            toApi: (obj: object) => TInput extends z.ZodRawShape ? SnakeCasedPropertiesDeep<GetZodInferredTypeFromRaw<TInput>> : TInput extends z.ZodTypeAny ? z.infer<TInput> : never;
-        };
-    } : {
-        input: TInput extends z.ZodRawShape ? GetZodInferredTypeFromRaw<TInput> : TInput extends z.ZodTypeAny ? z.infer<TInput> : never;
-        utils: {
-            fromApi: (obj: object) => TOutput extends z.ZodRawShape ? GetZodInferredTypeFromRaw<TOutput> : TOutput extends z.ZodTypeAny ? z.infer<TOutput> : never;
-            toApi: (obj: object) => TInput extends z.ZodRawShape ? SnakeCasedPropertiesDeep<GetZodInferredTypeFromRaw<TInput>> : TInput extends z.ZodTypeAny ? z.infer<TInput> : never;
-        };
-    })) => Promise<TOutput extends z.ZodRawShape ? GetZodInferredTypeFromRaw<TOutput> : TOutput extends z.ZodTypeAny ? z.infer<TOutput> : never>;
+declare type CustomServiceCallback<TInput extends z.ZodRawShape | ZodPrimitives = z.ZodVoid, TOutput extends z.ZodRawShape | ZodPrimitives = z.ZodVoid> = (params: {
+    client: AxiosInstance;
+} & (TInput extends z.ZodVoid ? TOutput extends z.ZodVoid ? unknown : {
+    utils: {
+        fromApi: (obj: object) => TOutput extends z.ZodRawShape ? GetZodInferredTypeFromRaw<TOutput> : TOutput extends z.ZodTypeAny ? z.infer<TOutput> : never;
+    };
+} : TOutput extends z.ZodVoid ? {
+    utils: {
+        toApi: (obj: object) => TInput extends z.ZodRawShape ? SnakeCasedPropertiesDeep<GetZodInferredTypeFromRaw<TInput>> : TInput extends z.ZodTypeAny ? z.infer<TInput> : never;
+    };
+} : {
+    input: TInput extends z.ZodRawShape ? GetZodInferredTypeFromRaw<TInput> : TInput extends z.ZodTypeAny ? z.infer<TInput> : never;
+    utils: {
+        fromApi: (obj: object) => TOutput extends z.ZodRawShape ? GetZodInferredTypeFromRaw<TOutput> : TOutput extends z.ZodTypeAny ? z.infer<TOutput> : never;
+        toApi: (obj: object) => TInput extends z.ZodRawShape ? SnakeCasedPropertiesDeep<GetZodInferredTypeFromRaw<TInput>> : TInput extends z.ZodTypeAny ? z.infer<TInput> : never;
+    };
+})) => Promise<TOutput extends z.ZodRawShape ? GetZodInferredTypeFromRaw<TOutput> : TOutput extends z.ZodTypeAny ? z.infer<TOutput> : never>;
+declare type CustomServiceCallOpts<TInput extends z.ZodRawShape | ZodPrimitives = z.ZodUndefined, TOutput extends z.ZodRawShape | ZodPrimitives = z.ZodUndefined> = CustomServiceCallInputOutputs<TInput, TOutput> & {
+    callback: CustomServiceCallback<TInput, TOutput>;
 };
-declare type CustomServiceCallOpts<TInput extends z.ZodRawShape | ZodPrimitives = z.ZodUndefined, TOutput extends z.ZodRawShape | ZodPrimitives = z.ZodUndefined> = CustomServiceCallInputOutputs<TInput, TOutput> & CustomServiceCallback<TInput, TOutput>;
 declare type ZodPrimitives = z.ZodString | z.ZodNumber | z.ZodDate | z.ZodBigInt | z.ZodBoolean | z.ZodUndefined | z.ZodVoid;
 /**
  * Use this method to get the right type inference when creating a custom service call
  */
-export declare function createCustomServiceCall<TInput extends z.ZodRawShape | ZodPrimitives, TOutput extends z.ZodRawShape | ZodPrimitives>(opts: CustomServiceCallOpts<TInput, TOutput>): CustomServiceCallOpts<TInput, TOutput>;
-export declare function createCustomServiceCall<TInput extends z.ZodRawShape | ZodPrimitives>(opts: {
+export declare function createCustomServiceCall<TInput extends z.ZodRawShape | ZodPrimitives, TOutput extends z.ZodRawShape | ZodPrimitives>(models: CustomServiceCallInputOutputs<TInput, TOutput>, cb: CustomServiceCallback<TInput, TOutput>): CustomServiceCallOpts<TInput, TOutput>;
+export declare function createCustomServiceCall<TInput extends z.ZodRawShape | ZodPrimitives>(models: {
     inputShape: TInput;
-} & CustomServiceCallback<TInput, z.ZodVoid>): CustomServiceCallOpts<TInput, z.ZodVoid>;
-export declare function createCustomServiceCall<TOutput extends z.ZodRawShape | ZodPrimitives>(opts: {
+}, cb: CustomServiceCallback<TInput, z.ZodVoid>): CustomServiceCallOpts<TInput, z.ZodVoid>;
+export declare function createCustomServiceCall<TOutput extends z.ZodRawShape | ZodPrimitives>(models: {
     outputShape: TOutput;
-} & CustomServiceCallback<z.ZodVoid, TOutput>): CustomServiceCallOpts<z.ZodVoid, TOutput>;
-export declare function createCustomServiceCall(opts: CustomServiceCallback<z.ZodVoid, z.ZodVoid>): CustomServiceCallOpts<z.ZodVoid, z.ZodVoid>;
+}, cb: CustomServiceCallback<z.ZodVoid, TOutput>): CustomServiceCallOpts<z.ZodVoid, TOutput>;
+export declare function createCustomServiceCall(cb: CustomServiceCallback<z.ZodVoid, z.ZodVoid>): CustomServiceCallOpts<z.ZodVoid, z.ZodVoid>;
+declare type CustomServiceCallPlaceholder = {
+    inputShape: any;
+    outputShape: any;
+    callback: (params: {
+        client: AxiosInstance;
+        input: any;
+        utils: {
+            fromApi: (obj: object) => never;
+            toApi: (obj: object) => never;
+        };
+    }) => Promise<unknown>;
+};
 declare type CustomServiceCall<TOpts extends object> = TOpts extends Record<string, CustomServiceCallPlaceholder> ? {
     [TKey in keyof TOpts]: (inputs: TOpts[TKey]["inputShape"] extends z.ZodRawShape ? GetZodInferredTypeFromRaw<TOpts[TKey]["inputShape"]> : TOpts[TKey]["inputShape"] extends z.ZodTypeAny ? z.infer<TOpts[TKey]["inputShape"]> : never) => Promise<TOpts[TKey]["outputShape"] extends z.ZodRawShape ? GetZodInferredTypeFromRaw<TOpts[TKey]["outputShape"]> : TOpts[TKey]["outputShape"] extends z.ZodTypeAny ? z.infer<TOpts[TKey]["outputShape"]> : never>;
 } : never;
@@ -129,23 +141,11 @@ declare type ApiBaseParams<TApiEntity extends z.ZodRawShape, TApiCreate extends 
      */
     client: AxiosInstance;
 };
-declare type CustomServiceCallPlaceholder = {
-    inputShape: any;
-    outputShape: any;
-    callback: (params: {
-        client: AxiosInstance;
-        input: any;
-        utils: {
-            fromApi: (obj: object) => never;
-            toApi: (obj: object) => never;
-        };
-    }) => Promise<unknown>;
-};
 export declare function createApi<TApiEntity extends z.ZodRawShape, TApiCreate extends z.ZodRawShape, TCustomServiceCalls extends Record<string, CustomServiceCallPlaceholder>, TExtraFilters extends z.ZodRawShape = never>(base: ApiBaseParams<TApiEntity, TApiCreate, TExtraFilters>, 
 /**
  * Create your own custom service calls to use with this API. Tools for case conversion are provided.
  */
 customServiceCalls: TCustomServiceCalls): ApiService<TApiEntity, TApiCreate, TCustomServiceCalls, TExtraFilters>;
-export declare function createApi<TApiEntity extends z.ZodRawShape, TApiCreate extends z.ZodRawShape, TApiUpdate extends z.ZodRawShape, TExtraFilters extends z.ZodRawShape = never>(base: ApiBaseParams<TApiEntity, TApiCreate, TExtraFilters>): BareApiService<TApiEntity, TApiCreate, TExtraFilters>;
+export declare function createApi<TApiEntity extends z.ZodRawShape, TApiCreate extends z.ZodRawShape, TExtraFilters extends z.ZodRawShape = never>(base: ApiBaseParams<TApiEntity, TApiCreate, TExtraFilters>): BareApiService<TApiEntity, TApiCreate, TExtraFilters>;
 export {};
 //# sourceMappingURL=api.d.ts.map

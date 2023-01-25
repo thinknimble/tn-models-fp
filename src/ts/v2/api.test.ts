@@ -35,56 +35,64 @@ describe("v2 api tests", async () => {
       },
     },
     {
-      customCall: createCustomServiceCall({
-        inputShape: { myInput: z.string() },
-        outputShape: {
-          givenInput: z.string(),
-          inputLength: z.number(),
+      customCall: createCustomServiceCall(
+        {
+          inputShape: { myInput: z.string() },
+          outputShape: {
+            givenInput: z.string(),
+            inputLength: z.number(),
+          },
         },
-        callback: async ({ input }) => {
+        async ({ input }) => {
           return {
             givenInput: input.myInput,
             inputLength: input.myInput.length,
           }
+        }
+      ),
+      testPost: createCustomServiceCall(
+        {
+          inputShape: {
+            anotherInput: z.string(),
+          },
+          outputShape: {
+            justAny: z.any(),
+          },
         },
-      }),
-      testPost: createCustomServiceCall({
-        inputShape: {
-          anotherInput: z.string(),
-        },
-        outputShape: {
-          justAny: z.any(),
-        },
-        callback: async ({ client, input, utils }) => {
+        async ({ client, input, utils }) => {
           const toApiInput = utils.toApi(input)
           const res = await client.post(testEndpoint, toApiInput)
           const parsed = utils.fromApi(res.data)
           return parsed
+        }
+      ),
+      test: createCustomServiceCall(
+        {
+          inputShape: z.string(),
+          outputShape: z.number(),
         },
-      }),
-      test: createCustomServiceCall({
-        inputShape: z.string(),
-        outputShape: z.number(),
-        callback: async () => {
+        async () => {
           return 10
+        }
+      ),
+      testNoInput: createCustomServiceCall(
+        {
+          outputShape: z.string(),
         },
-      }),
-      testNoInput: createCustomServiceCall({
-        outputShape: z.string(),
-        callback: async () => {
+        async () => {
           return "overloads ftw"
+        }
+      ),
+      testNoOutput: createCustomServiceCall(
+        {
+          inputShape: z.number(),
         },
-      }),
-      testNoOutput: createCustomServiceCall({
-        inputShape: z.number(),
-        callback: async () => {
+        async () => {
           return
-        },
-      }),
-      testNoInputNorOutput: createCustomServiceCall({
-        callback: async () => {
-          return
-        },
+        }
+      ),
+      testNoInputNorOutput: createCustomServiceCall(async () => {
+        return
       }),
     }
   )
@@ -237,7 +245,7 @@ describe("v2 api tests", async () => {
         await testApi.list({
           filters: {
             //@ts-expect-error Do not allow passing any key as filter
-            nonExistant: "error",
+            nonExistent: "error",
           },
         })
       } catch {
@@ -292,9 +300,9 @@ describe("v2 api tests", async () => {
       //customEndpoints ts tests
       try {
         //@ts-expect-error when passing string rather than number
-        const stringparam = await testApi.customServiceCalls.test(5)
+        await testApi.customServiceCalls.test(5)
         //@ts-expect-error error on nonexisting custom service call method
-        const listTest = await testApi.customServiceCalls.nonExisting()
+        await testApi.customServiceCalls.nonExisting()
       } catch {
         //ignore
       }
