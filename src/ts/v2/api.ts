@@ -40,95 +40,60 @@ type CustomServiceCallInputOutputs<
 }
 
 type CustomServiceCallback<
-  TInput extends z.ZodRawShape | ZodPrimitives = z.ZodUndefined,
-  TOutput extends z.ZodRawShape | ZodPrimitives = z.ZodUndefined
+  TInput extends z.ZodRawShape | ZodPrimitives = z.ZodVoid,
+  TOutput extends z.ZodRawShape | ZodPrimitives = z.ZodVoid
 > = {
-  //TODO: I want this to infer even further, if TInput and+or+nor TOutput is void it should have different params exposed, this was my shot but failed, I don't know exactly why it did not work. My guess is that I have some inference attached to this which is not happy at all with this change in the fields
-  // callback: (
-  //   params: { client: AxiosInstance } & TInput extends z.ZodVoid
-  //     ? TOutput extends z.ZodVoid
-  //       ? //both are void, then unknown would coalesce the type to just { client }
-  //         unknown
-  //       : TInput extends z.ZodVoid
-  //       ? //only TInput is void so we need a fromApi to parse the output
-  //         {
-  //           utils: {
-  //             fromApi: (
-  //               obj: object
-  //             ) => TOutput extends z.ZodRawShape
-  //               ? GetZodInferredTypeFromRaw<TOutput>
-  //               : TOutput extends z.ZodTypeAny
-  //               ? z.infer<TOutput>
-  //               : never
-  //           }
-  //         }
-  //       : TOutput extends z.ZodVoid
-  //       ? //only TOutput is void so we need the input param and the toApi util
-  //         {
-  //           input: TInput extends z.ZodRawShape
-  //             ? GetZodInferredTypeFromRaw<TInput>
-  //             : TInput extends z.ZodTypeAny
-  //             ? z.infer<TInput>
-  //             : never
-  //           utils: {
-  //             toApi: (
-  //               obj: object
-  //             ) => TInput extends z.ZodRawShape
-  //               ? SnakeCasedPropertiesDeep<GetZodInferredTypeFromRaw<TInput>>
-  //               : TInput extends z.ZodTypeAny
-  //               ? z.infer<TInput>
-  //               : never
-  //           }
-  //         }
-  //       : {
-  //           input: TInput extends z.ZodRawShape
-  //             ? GetZodInferredTypeFromRaw<TInput>
-  //             : TInput extends z.ZodTypeAny
-  //             ? z.infer<TInput>
-  //             : never
-  //           utils: {
-  //             fromApi: (
-  //               obj: object
-  //             ) => TOutput extends z.ZodRawShape
-  //               ? GetZodInferredTypeFromRaw<TOutput>
-  //               : TOutput extends z.ZodTypeAny
-  //               ? z.infer<TOutput>
-  //               : never
-  //             toApi: (
-  //               obj: object
-  //             ) => TInput extends z.ZodRawShape
-  //               ? SnakeCasedPropertiesDeep<GetZodInferredTypeFromRaw<TInput>>
-  //               : TInput extends z.ZodTypeAny
-  //               ? z.infer<TInput>
-  //               : never
-  //           }
-  //         }
-  //     : never
-  // )
-  callback: (params: {
-    client: AxiosInstance
-    input: TInput extends z.ZodRawShape
-      ? GetZodInferredTypeFromRaw<TInput>
-      : TInput extends z.ZodTypeAny
-      ? z.infer<TInput>
-      : never
-    utils: {
-      fromApi: (
-        obj: object
-      ) => TOutput extends z.ZodRawShape
-        ? GetZodInferredTypeFromRaw<TOutput>
-        : TOutput extends z.ZodTypeAny
-        ? z.infer<TOutput>
-        : never
-      toApi: (
-        obj: object
-      ) => TInput extends z.ZodRawShape
-        ? SnakeCasedPropertiesDeep<GetZodInferredTypeFromRaw<TInput>>
-        : TInput extends z.ZodTypeAny
-        ? z.infer<TInput>
-        : never
-    }
-  }) => Promise<
+  callback: (
+    params: { client: AxiosInstance } & (TInput extends z.ZodVoid
+      ? TOutput extends z.ZodVoid
+        ? unknown
+        : {
+            utils: {
+              fromApi: (
+                obj: object
+              ) => TOutput extends z.ZodRawShape
+                ? GetZodInferredTypeFromRaw<TOutput>
+                : TOutput extends z.ZodTypeAny
+                ? z.infer<TOutput>
+                : never
+            }
+          }
+      : TOutput extends z.ZodVoid
+      ? {
+          utils: {
+            toApi: (
+              obj: object
+            ) => TInput extends z.ZodRawShape
+              ? SnakeCasedPropertiesDeep<GetZodInferredTypeFromRaw<TInput>>
+              : TInput extends z.ZodTypeAny
+              ? z.infer<TInput>
+              : never
+          }
+        }
+      : {
+          input: TInput extends z.ZodRawShape
+            ? GetZodInferredTypeFromRaw<TInput>
+            : TInput extends z.ZodTypeAny
+            ? z.infer<TInput>
+            : never
+          utils: {
+            fromApi: (
+              obj: object
+            ) => TOutput extends z.ZodRawShape
+              ? GetZodInferredTypeFromRaw<TOutput>
+              : TOutput extends z.ZodTypeAny
+              ? z.infer<TOutput>
+              : never
+            toApi: (
+              obj: object
+            ) => TInput extends z.ZodRawShape
+              ? SnakeCasedPropertiesDeep<GetZodInferredTypeFromRaw<TInput>>
+              : TInput extends z.ZodTypeAny
+              ? z.infer<TInput>
+              : never
+          }
+        })
+  ) => Promise<
     TOutput extends z.ZodRawShape
       ? GetZodInferredTypeFromRaw<TOutput>
       : TOutput extends z.ZodTypeAny
@@ -190,7 +155,7 @@ export function createCustomServiceCall(opts) {
   }
 }
 
-type CustomServiceCall<TOpts extends object> = TOpts extends Record<string, CustomServiceCallOpts<any, any>>
+type CustomServiceCall<TOpts extends object> = TOpts extends Record<string, CustomServiceCallPlaceholder>
   ? {
       [TKey in keyof TOpts]: (
         inputs: TOpts[TKey]["inputShape"] extends z.ZodRawShape
@@ -297,11 +262,21 @@ type ApiBaseParams<
   client: AxiosInstance
 }
 
+type CustomServiceCallPlaceholder = {
+  inputShape
+  outputShape
+  callback: (params: {
+    client: AxiosInstance
+    input
+    utils: { fromApi: (obj: object) => never; toApi: (obj: object) => never }
+  }) => Promise<unknown>
+}
+
 export function createApi<
   TApiEntity extends z.ZodRawShape,
   TApiCreate extends z.ZodRawShape,
   TApiUpdate extends z.ZodRawShape,
-  TCustomServiceCalls extends Record<string, CustomServiceCallOpts<any, any>>,
+  TCustomServiceCalls extends Record<string, CustomServiceCallPlaceholder>,
   TExtraFilters extends z.ZodRawShape = never
 >(
   base: ApiBaseParams<TApiEntity, TApiCreate, TApiUpdate, TExtraFilters>,
@@ -324,7 +299,7 @@ export function createApi<
 export function createApi({ models, client, endpoint }, customServiceCalls = undefined) {
   const axiosClient: AxiosInstance = client
 
-  const createCustomServiceCallHandler = (serviceCallOpts: CustomServiceCallOpts<any, any>) => async (inputs: any) => {
+  const createCustomServiceCallHandler = (serviceCallOpts) => async (inputs: unknown) => {
     const isInputZod = serviceCallOpts.inputShape instanceof z.ZodSchema
     const isOutputZod = serviceCallOpts.outputShape instanceof z.ZodSchema
     const fromApi = (obj: object) =>
@@ -340,12 +315,7 @@ export function createApi({ models, client, endpoint }, customServiceCalls = und
   }
 
   const modifiedCustomServiceCalls = customServiceCalls
-    ? Object.fromEntries(
-        Object.entries(customServiceCalls as Record<string, CustomServiceCallOpts<any, any>>).map(([k, v]) => [
-          k,
-          createCustomServiceCallHandler(v),
-        ])
-      )
+    ? Object.fromEntries(Object.entries(customServiceCalls).map(([k, v]) => [k, createCustomServiceCallHandler(v)]))
     : undefined
 
   const retrieve = async (id: string) => {

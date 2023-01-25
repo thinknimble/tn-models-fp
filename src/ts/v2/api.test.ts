@@ -42,7 +42,7 @@ describe("v2 api tests", async () => {
           givenInput: z.string(),
           inputLength: z.number(),
         },
-        callback: async ({ client, input, utils }) => {
+        callback: async ({ input }) => {
           return {
             givenInput: input.myInput,
             inputLength: input.myInput.length,
@@ -292,7 +292,7 @@ describe("v2 api tests", async () => {
     it("verifies these ts tests", async () => {
       //customEndpoints ts tests
       try {
-        //@ts-expect-error expects string rather than number
+        //@ts-expect-error when passing string rather than number
         const stringparam = await testApi.customServiceCalls.test(5)
         //@ts-expect-error error on nonexisting custom service call method
         const listTest = await testApi.customServiceCalls.nonExisting()
