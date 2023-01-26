@@ -28,22 +28,27 @@ declare type CustomServiceCallInputOutputs<TInput extends z.ZodRawShape | ZodPri
 declare type CustomServiceCallback<TInput extends z.ZodRawShape | ZodPrimitives = z.ZodVoid, TOutput extends z.ZodRawShape | ZodPrimitives = z.ZodVoid> = (params: {
     client: AxiosInstance;
     endpoint: string;
-} & (TInput extends z.ZodVoid ? TOutput extends z.ZodVoid ? unknown : {
+} & (TInput extends z.ZodVoid ? TOutput extends z.ZodVoid ? unknown : TOutput extends ZodPrimitives ? unknown : {
     utils: {
         fromApi: (obj: object) => TOutput extends z.ZodRawShape ? GetZodInferredTypeFromRaw<TOutput> : TOutput extends z.ZodTypeAny ? z.infer<TOutput> : never;
     };
 } : TOutput extends z.ZodVoid ? {
     input: TInput extends z.ZodRawShape ? GetZodInferredTypeFromRaw<TInput> : TInput extends z.ZodTypeAny ? z.infer<TInput> : never;
+} & (TInput extends ZodPrimitives ? unknown : {
     utils: {
         toApi: (obj: object) => TInput extends z.ZodRawShape ? SnakeCasedPropertiesDeep<GetZodInferredTypeFromRaw<TInput>> : TInput extends z.ZodTypeAny ? z.infer<TInput> : never;
     };
-} : {
+}) : {
     input: TInput extends z.ZodRawShape ? GetZodInferredTypeFromRaw<TInput> : TInput extends z.ZodTypeAny ? z.infer<TInput> : never;
+} & ((TOutput extends ZodPrimitives ? unknown : {
     utils: {
         fromApi: (obj: object) => TOutput extends z.ZodRawShape ? GetZodInferredTypeFromRaw<TOutput> : TOutput extends z.ZodTypeAny ? z.infer<TOutput> : never;
+    };
+}) & (TInput extends ZodPrimitives ? unknown : {
+    utils: {
         toApi: (obj: object) => TInput extends z.ZodRawShape ? SnakeCasedPropertiesDeep<GetZodInferredTypeFromRaw<TInput>> : TInput extends z.ZodTypeAny ? z.infer<TInput> : never;
     };
-})) => Promise<TOutput extends z.ZodRawShape ? GetZodInferredTypeFromRaw<TOutput> : TOutput extends z.ZodTypeAny ? z.infer<TOutput> : never>;
+})))) => Promise<TOutput extends z.ZodRawShape ? GetZodInferredTypeFromRaw<TOutput> : TOutput extends z.ZodTypeAny ? z.infer<TOutput> : never>;
 declare type CustomServiceCallOpts<TInput extends z.ZodRawShape | ZodPrimitives = z.ZodUndefined, TOutput extends z.ZodRawShape | ZodPrimitives = z.ZodUndefined> = CustomServiceCallInputOutputs<TInput, TOutput> & {
     callback: CustomServiceCallback<TInput, TOutput>;
 };

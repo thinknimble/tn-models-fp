@@ -60,12 +60,12 @@ const testInputOutputPlainZods = (() => {
       inputShape,
       outputShape,
     },
-    async ({ input, utils }) => {
-      type tests = [
-        Expect<Equals<typeof input, z.infer<typeof inputShape>>>,
-        Expect<Equals<(typeof utils)["fromApi"], (obj: object) => z.infer<typeof outputShape>>>,
-        Expect<Equals<(typeof utils)["toApi"], (obj: object) => z.infer<typeof inputShape>>>
-      ]
+    async ({
+      input,
+      //@ts-expect-error no utils fns since both input and output are primitives
+      utils,
+    }) => {
+      type tests = [Expect<Equals<typeof input, z.infer<typeof inputShape>>>]
       return 10
     }
   )
@@ -78,15 +78,11 @@ const testNoInputPlainZodOutput = (() => {
       outputShape,
     },
     async ({
-      utils: {
-        fromApi,
-        //@ts-expect-error no toApi if there is no inputShape
-        toApi,
-      },
+      //@ts-expect-error no utils fns since outputShape is primitive
+      utils,
       //@ts-expect-error no input if there is no inputShape
       input,
     }) => {
-      type test = Expect<Equals<typeof fromApi, (obj: object) => z.infer<typeof outputShape>>>
       return "overloads ftw"
     }
   )
@@ -100,16 +96,10 @@ const testNoOutputPlainZodInput = (() => {
     },
     async ({
       input,
-      utils: {
-        toApi,
-        //@ts-expect-error no fromApi if there is no outputShape
-        fromApi,
-      },
+      //@ts-expect-error no utils fn since inputShape is primitive
+      utils,
     }) => {
-      type tests = [
-        Expect<Equals<typeof input, z.infer<typeof inputShape>>>,
-        Expect<Equals<typeof toApi, (obj: object) => z.infer<typeof inputShape>>>
-      ]
+      type tests = [Expect<Equals<typeof input, z.infer<typeof inputShape>>>]
       return
     }
   )
@@ -158,6 +148,58 @@ const testNoInputOutputObject = (() => {
     }) => {
       type test = Expect<Equals<typeof fromApi, (obj: object) => GetZodInferredTypeFromRaw<typeof outputShape>>>
       return { myOutput: 10 }
+    }
+  )
+})()
+
+const testInputPlainZodOutputObject = (() => {
+  const inputShape = z.string()
+  const outputShape = {
+    myOutput: z.number(),
+  }
+
+  return createCustomServiceCall(
+    {
+      inputShape,
+      outputShape,
+    },
+    async ({
+      input,
+      utils: {
+        fromApi,
+        //@ts-expect-error no toApi util since input is primitive
+        toApi,
+      },
+    }) => {
+      type tests = [
+        Expect<Equals<typeof input, z.infer<typeof inputShape>>>,
+        Expect<Equals<typeof fromApi, (obj: object) => GetZodInferredTypeFromRaw<typeof outputShape>>>
+      ]
+      return { myOutput: 10 }
+    }
+  )
+})()
+
+const testInputObjectOutputPlainZod = (() => {
+  const inputShape = {
+    myInput: z.string(),
+  }
+  const outputShape = z.number()
+
+  return createCustomServiceCall(
+    {
+      inputShape,
+      outputShape,
+    },
+    async ({ input, utils: { toApi } }) => {
+      type tests = [
+        Expect<Equals<typeof input, GetZodInferredTypeFromRaw<typeof inputShape>>>,
+        Expect<
+          Equals<typeof toApi, (obj: object) => SnakeCasedPropertiesDeep<GetZodInferredTypeFromRaw<typeof inputShape>>>
+        >
+      ]
+
+      return 10
     }
   )
 })()
@@ -213,6 +255,8 @@ describe("v2 api tests", async () => {
       testNoOutputPlainZodInput,
       testNoOutputInputObject,
       testNoInputOutputObject,
+      testInputPlainZodOutputObject,
+      testInputObjectOutputPlainZod,
     }
   )
 
