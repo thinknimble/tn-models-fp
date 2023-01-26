@@ -59,6 +59,11 @@ type CustomServiceCallback<
         }
     : TOutput extends z.ZodVoid
     ? {
+        input: TInput extends z.ZodRawShape
+          ? GetZodInferredTypeFromRaw<TInput>
+          : TInput extends z.ZodTypeAny
+          ? z.infer<TInput>
+          : never
         utils: {
           toApi: (
             obj: object

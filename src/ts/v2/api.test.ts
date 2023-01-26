@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { faker } from "@faker-js/faker"
 import { SnakeCasedPropertiesDeep } from "@thinknimble/tn-utils"
 import axios from "axios"
@@ -20,6 +21,147 @@ const entityZodShape = {
   id: z.string().uuid(),
 }
 
+// testApi custom calls + createCustomServiceCall TS tests!
+const testInputOutputObjects = (() => {
+  const inputShape = { myInput: z.string() }
+  const outputShape = {
+    givenInput: z.string(),
+    inputLength: z.number(),
+  }
+  return createCustomServiceCall(
+    {
+      inputShape,
+      outputShape,
+    },
+    async ({ input, utils }) => {
+      type tests = [
+        Expect<Equals<typeof input, GetZodInferredTypeFromRaw<typeof inputShape>>>,
+        Expect<Equals<(typeof utils)["fromApi"], (obj: object) => GetZodInferredTypeFromRaw<typeof outputShape>>>,
+        Expect<
+          Equals<
+            (typeof utils)["toApi"],
+            (obj: object) => SnakeCasedPropertiesDeep<GetZodInferredTypeFromRaw<typeof inputShape>>
+          >
+        >
+      ]
+      return {
+        givenInput: input.myInput,
+        inputLength: input.myInput.length,
+      }
+    }
+  )
+})()
+
+const testInputOutputPlainZods = (() => {
+  const inputShape = z.string()
+  const outputShape = z.number()
+  return createCustomServiceCall(
+    {
+      inputShape,
+      outputShape,
+    },
+    async ({ input, utils }) => {
+      type tests = [
+        Expect<Equals<typeof input, z.infer<typeof inputShape>>>,
+        Expect<Equals<(typeof utils)["fromApi"], (obj: object) => z.infer<typeof outputShape>>>,
+        Expect<Equals<(typeof utils)["toApi"], (obj: object) => z.infer<typeof inputShape>>>
+      ]
+      return 10
+    }
+  )
+})()
+
+const testNoInputPlainZodOutput = (() => {
+  const outputShape = z.string()
+  return createCustomServiceCall(
+    {
+      outputShape,
+    },
+    async ({
+      utils: {
+        fromApi,
+        //@ts-expect-error no toApi if there is no inputShape
+        toApi,
+      },
+      //@ts-expect-error no input if there is no inputShape
+      input,
+    }) => {
+      type test = Expect<Equals<typeof fromApi, (obj: object) => z.infer<typeof outputShape>>>
+      return "overloads ftw"
+    }
+  )
+})()
+
+const testNoOutputPlainZodInput = (() => {
+  const inputShape = z.number()
+  return createCustomServiceCall(
+    {
+      inputShape,
+    },
+    async ({
+      input,
+      utils: {
+        toApi,
+        //@ts-expect-error no fromApi if there is no outputShape
+        fromApi,
+      },
+    }) => {
+      type tests = [
+        Expect<Equals<typeof input, z.infer<typeof inputShape>>>,
+        Expect<Equals<typeof toApi, (obj: object) => z.infer<typeof inputShape>>>
+      ]
+      return
+    }
+  )
+})()
+
+const testNoOutputInputObject = (() => {
+  const inputShape = { myInput: z.string() }
+  return createCustomServiceCall(
+    {
+      inputShape,
+    },
+    async ({
+      input,
+      utils: {
+        toApi,
+        //@ts-expect-error no fromApi if there is no outputShape
+        fromApi,
+      },
+    }) => {
+      type tests = [
+        Expect<Equals<typeof input, GetZodInferredTypeFromRaw<typeof inputShape>>>,
+        Expect<
+          Equals<typeof toApi, (obj: object) => SnakeCasedPropertiesDeep<GetZodInferredTypeFromRaw<typeof inputShape>>>
+        >
+      ]
+    }
+  )
+})()
+
+const testNoInputOutputObject = (() => {
+  const outputShape = {
+    myOutput: z.number(),
+  }
+  return createCustomServiceCall(
+    {
+      outputShape,
+    },
+    async ({
+      utils: {
+        fromApi,
+        //@ts-expect-error no toApi if there is no input
+        toApi,
+      },
+      //@ts-expect-error no input available
+      input,
+    }) => {
+      type test = Expect<Equals<typeof fromApi, (obj: object) => GetZodInferredTypeFromRaw<typeof outputShape>>>
+      return { myOutput: 10 }
+    }
+  )
+})()
+
 describe("v2 api tests", async () => {
   const testEndpoint = "users"
   const testApi = createApi(
@@ -35,21 +177,6 @@ describe("v2 api tests", async () => {
       },
     },
     {
-      customCall: createCustomServiceCall(
-        {
-          inputShape: { myInput: z.string() },
-          outputShape: {
-            givenInput: z.string(),
-            inputLength: z.number(),
-          },
-        },
-        async ({ input }) => {
-          return {
-            givenInput: input.myInput,
-            inputLength: input.myInput.length,
-          }
-        }
-      ),
       testPost: createCustomServiceCall(
         {
           inputShape: {
@@ -66,37 +193,26 @@ describe("v2 api tests", async () => {
           return parsed
         }
       ),
-      test: createCustomServiceCall(
-        {
-          inputShape: z.string(),
-          outputShape: z.number(),
-        },
-        async () => {
-          return 10
-        }
-      ),
-      testNoInput: createCustomServiceCall(
-        {
-          outputShape: z.string(),
-        },
-        async () => {
-          return "overloads ftw"
-        }
-      ),
-      testNoOutput: createCustomServiceCall(
-        {
-          inputShape: z.number(),
-        },
-        async () => {
+      testNoInputNorOutput: createCustomServiceCall(
+        async ({
+          //@ts-expect-error no input available
+          input,
+          //@ts-expect-error no utils available
+          utils,
+        }) => {
           return
         }
       ),
-      testNoInputNorOutput: createCustomServiceCall(async () => {
-        return
-      }),
       testEndpointParam: createCustomServiceCall({ outputShape: z.string() }, async ({ endpoint }) => {
         return endpoint
       }),
+      // custom calls that include type tests
+      testInputOutputObjects,
+      testInputOutputPlainZods,
+      testNoInputPlainZodOutput,
+      testNoOutputPlainZodInput,
+      testNoOutputInputObject,
+      testNoInputOutputObject,
     }
   )
 
@@ -275,12 +391,12 @@ describe("v2 api tests", async () => {
     it("returns camel cased response", async () => {
       //arrange
       const myInput = "Hello there"
-      const expected: Awaited<ReturnType<typeof testApi.customServiceCalls.customCall>> = {
+      const expected: Awaited<ReturnType<typeof testApi.customServiceCalls.testInputOutputObjects>> = {
         givenInput: myInput,
         inputLength: myInput.length,
       }
       //act
-      const res = await testApi.customServiceCalls.customCall({
+      const res = await testApi.customServiceCalls.testInputOutputObjects({
         myInput,
       })
       //assert
@@ -291,11 +407,11 @@ describe("v2 api tests", async () => {
       expect(res).toEqual(testEndpoint)
     })
     it("checks output only overload", async () => {
-      const res = await testApi.customServiceCalls.testNoInput()
+      const res = await testApi.customServiceCalls.testNoInputPlainZodOutput()
       expect(res).toEqual("overloads ftw")
     })
     it("checks input only overload", async () => {
-      const res = await testApi.customServiceCalls.testNoOutput(10)
+      const res = await testApi.customServiceCalls.testNoOutputPlainZodInput(10)
       expect(res).toBeUndefined()
     })
     it("checks no input no output overload", async () => {
@@ -306,7 +422,7 @@ describe("v2 api tests", async () => {
       //customEndpoints ts tests
       try {
         //@ts-expect-error when passing string rather than number
-        await testApi.customServiceCalls.test(5)
+        await testApi.customServiceCalls.testInputOutputPlainZods(5)
         //@ts-expect-error error on nonexisting custom service call method
         await testApi.customServiceCalls.nonExisting()
       } catch {
