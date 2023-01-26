@@ -110,7 +110,14 @@ declare type BareApiService<TEntity extends z.ZodRawShape, TCreate extends z.Zod
     }): Promise<z.infer<ReturnType<typeof getPaginatedZod<TEntity>>>>;
 };
 declare type ApiService<TEntity extends z.ZodRawShape, TCreate extends z.ZodRawShape, TCustomServiceCalls extends object, TExtraFilters extends z.ZodRawShape = never> = BareApiService<TEntity, TCreate, TExtraFilters> & {
+    /**
+     * The custom calls you declared as input but as plain functions and wrapped for type safety
+     */
     customServiceCalls: CustomServiceCall<TCustomServiceCalls>;
+    /**
+     * Alias for customServiceCalls
+     */
+    csc: CustomServiceCall<TCustomServiceCalls>;
 };
 declare type ApiBaseParams<TApiEntity extends z.ZodRawShape, TApiCreate extends z.ZodRawShape, TExtraFilters extends z.ZodRawShape = never> = {
     /**

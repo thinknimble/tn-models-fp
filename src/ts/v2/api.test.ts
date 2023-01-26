@@ -432,6 +432,20 @@ describe("v2 api tests", async () => {
         another_input: input.anotherInput,
       })
     })
+    it("calls api with snake case using csc alias", async () => {
+      //arrange
+      const postSpy = vi.spyOn(mockedAxios, "post")
+      mockedAxios.post.mockResolvedValueOnce({
+        data: { justAny: "any" },
+      })
+      const input = { anotherInput: "testing" }
+      //act
+      await testApi.csc.testPost(input)
+      //assert
+      expect(postSpy).toHaveBeenCalledWith(testEndpoint, {
+        another_input: input.anotherInput,
+      })
+    })
     it("returns camel cased response", async () => {
       //arrange
       const myInput = "Hello there"

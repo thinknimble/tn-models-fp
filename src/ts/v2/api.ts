@@ -243,7 +243,14 @@ type ApiService<
   TCustomServiceCalls extends object,
   TExtraFilters extends z.ZodRawShape = never
 > = BareApiService<TEntity, TCreate, TExtraFilters> & {
+  /**
+   * The custom calls you declared as input but as plain functions and wrapped for type safety
+   */
   customServiceCalls: CustomServiceCall<TCustomServiceCalls>
+  /**
+   * Alias for customServiceCalls
+   */
+  csc: CustomServiceCall<TCustomServiceCalls>
 }
 
 type ApiBaseParams<
@@ -394,5 +401,6 @@ export function createApi({ models, client, endpoint }, customServiceCalls = und
   return {
     ...baseReturn,
     customServiceCalls: modifiedCustomServiceCalls,
+    csc: modifiedCustomServiceCalls,
   }
 }
