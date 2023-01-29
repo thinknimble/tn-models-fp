@@ -176,6 +176,9 @@ export function createCustomServiceCall(...args) {
   }
 }
 
+/**
+ * Base type for custom service calls which serves as a placeholder to later take advantage of inference
+ */
 type CustomServiceCallPlaceholder = {
   inputShape
   outputShape
@@ -187,7 +190,10 @@ type CustomServiceCallPlaceholder = {
   }) => Promise<unknown>
 }
 
-type CustomServiceCall<TOpts extends object> = TOpts extends Record<string, CustomServiceCallPlaceholder>
+/**
+ * Get resulting custom service call from `createApi`
+ */
+type CustomServiceCallsRecord<TOpts extends object> = TOpts extends Record<string, CustomServiceCallPlaceholder>
   ? {
       [TKey in keyof TOpts]: (
         inputs: TOpts[TKey]["inputShape"] extends z.ZodRawShape
@@ -210,6 +216,7 @@ type ZodRawShapeSnakeCased<T extends z.ZodRawShape> = {
 }
 
 const getSnakeCasedZodRawShape = <T extends z.ZodRawShape>(zodShape: T) => {
+  // objectToSnakeCase would mess up zod internal fields, so we must do the case conversion only on the keys of the shape
   const unknownSnakeCasedZod: unknown = Object.fromEntries(
     Object.entries(zodShape).map(([k, v]) => {
       return [toSnakeCase(k), v]
@@ -221,6 +228,9 @@ export const getPaginatedSnakeCasedZod = <T extends z.ZodRawShape>(zodShape: T) 
   return getPaginatedZod(getSnakeCasedZodRawShape(zodShape))
 }
 
+/**
+ * Get the resulting inferred type from a zod shape
+ */
 export type GetZodInferredTypeFromRaw<T extends z.ZodRawShape> = z.infer<ReturnType<typeof z.object<T>>>
 
 type BareApiService<
@@ -246,11 +256,11 @@ type ApiService<
   /**
    * The custom calls you declared as input but as plain functions and wrapped for type safety
    */
-  customServiceCalls: CustomServiceCall<TCustomServiceCalls>
+  customServiceCalls: CustomServiceCallsRecord<TCustomServiceCalls>
   /**
    * Alias for customServiceCalls
    */
-  csc: CustomServiceCall<TCustomServiceCalls>
+  csc: CustomServiceCallsRecord<TCustomServiceCalls>
 }
 
 type ApiBaseParams<
@@ -298,8 +308,8 @@ type ApiBaseParams<
 export function createApi<
   TApiEntity extends z.ZodRawShape,
   TApiCreate extends z.ZodRawShape,
-  TCustomServiceCalls extends Record<string, CustomServiceCallPlaceholder>,
-  TExtraFilters extends z.ZodRawShape = never
+  TExtraFilters extends z.ZodRawShape = never,
+  TCustomServiceCalls extends Record<string, CustomServiceCallPlaceholder> = never
 >(
   base: ApiBaseParams<TApiEntity, TApiCreate, TExtraFilters>,
   /**
@@ -314,8 +324,23 @@ export function createApi<
   TExtraFilters extends z.ZodRawShape = never
 >(base: ApiBaseParams<TApiEntity, TApiCreate, TExtraFilters>): BareApiService<TApiEntity, TApiCreate, TExtraFilters>
 
-//! doing overloads to improve UX is a bit of a double-edged sword here. We are risking the type safety within this method! We'd still get errors if we don't match the declared input-outputs from overloads so that's something.
-export function createApi({ models, client, endpoint }, customServiceCalls = undefined) {
+export function createApi<
+  TApiEntity extends z.ZodRawShape,
+  TApiCreate extends z.ZodRawShape,
+  TExtraFilters extends z.ZodRawShape = never,
+  TCustomServiceCalls extends Record<string, CustomServiceCallPlaceholder> = never
+>(
+  {
+    models,
+    client,
+    endpoint,
+  }: ApiBaseParams<
+    TApiEntity,
+    TApiCreate,
+    TCustomServiceCalls extends z.ZodRawShape ? TCustomServiceCalls : TExtraFilters
+  >,
+  customServiceCalls: TCustomServiceCalls | undefined = undefined
+) {
   const axiosClient: AxiosInstance = client
 
   const createCustomServiceCallHandler = (serviceCallOpts) => async (input: unknown) => {
@@ -330,11 +355,18 @@ export function createApi({ models, client, endpoint }, customServiceCalls = und
         ? serviceCallOpts.inputShape.parse(obj)
         : z.object(getSnakeCasedZodRawShape(serviceCallOpts.inputShape)).parse(objectToSnakeCase(obj))
 
-    return serviceCallOpts.callback({ client, endpoint, input, utils: { fromApi, toApi } })
+    return serviceCallOpts.callback({
+      client,
+      endpoint,
+      input,
+      utils: { fromApi, toApi },
+    })
   }
 
   const modifiedCustomServiceCalls = customServiceCalls
-    ? Object.fromEntries(Object.entries(customServiceCalls).map(([k, v]) => [k, createCustomServiceCallHandler(v)]))
+    ? (Object.fromEntries(
+        Object.entries(customServiceCalls).map(([k, v]) => [k, createCustomServiceCallHandler(v)])
+      ) as CustomServiceCallsRecord<TCustomServiceCalls>)
     : undefined
 
   const retrieve = async (id: string) => {

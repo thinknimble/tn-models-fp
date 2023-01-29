@@ -64,6 +64,9 @@ export declare function createCustomServiceCall<TOutput extends z.ZodRawShape | 
     outputShape: TOutput;
 }, cb: CustomServiceCallback<z.ZodVoid, TOutput>): CustomServiceCallOpts<z.ZodVoid, TOutput>;
 export declare function createCustomServiceCall(cb: CustomServiceCallback<z.ZodVoid, z.ZodVoid>): CustomServiceCallOpts<z.ZodVoid, z.ZodVoid>;
+/**
+ * Base type for custom service calls which serves as a placeholder to later take advantage of inference
+ */
 declare type CustomServiceCallPlaceholder = {
     inputShape: any;
     outputShape: any;
@@ -77,7 +80,10 @@ declare type CustomServiceCallPlaceholder = {
         };
     }) => Promise<unknown>;
 };
-declare type CustomServiceCall<TOpts extends object> = TOpts extends Record<string, CustomServiceCallPlaceholder> ? {
+/**
+ * Get resulting custom service call from `createApi`
+ */
+declare type CustomServiceCallsRecord<TOpts extends object> = TOpts extends Record<string, CustomServiceCallPlaceholder> ? {
     [TKey in keyof TOpts]: (inputs: TOpts[TKey]["inputShape"] extends z.ZodRawShape ? GetZodInferredTypeFromRaw<TOpts[TKey]["inputShape"]> : TOpts[TKey]["inputShape"] extends z.ZodTypeAny ? z.infer<TOpts[TKey]["inputShape"]> : never) => Promise<TOpts[TKey]["outputShape"] extends z.ZodRawShape ? GetZodInferredTypeFromRaw<TOpts[TKey]["outputShape"]> : TOpts[TKey]["outputShape"] extends z.ZodTypeAny ? z.infer<TOpts[TKey]["outputShape"]> : never>;
 } : never;
 declare type ZodRawShapeSnakeCased<T extends z.ZodRawShape> = {
@@ -99,6 +105,9 @@ export declare const getPaginatedSnakeCasedZod: <T extends z.ZodRawShape>(zodSha
     count: number;
     results: (z.objectUtil.addQuestionMarks<ZodRawShapeSnakeCased<T> extends infer T_6 extends z.ZodRawShape ? { [k_2_1 in keyof T_6]: ZodRawShapeSnakeCased<T>[k_2_1]["_input"]; } : never> extends infer T_4 ? { [k_3 in keyof T_4]: z.objectUtil.addQuestionMarks<ZodRawShapeSnakeCased<T> extends infer T_5 extends z.ZodRawShape ? { [k_2 in keyof T_5]: ZodRawShapeSnakeCased<T>[k_2]["_input"]; } : never>[k_3]; } : never)[];
 }>;
+/**
+ * Get the resulting inferred type from a zod shape
+ */
 export declare type GetZodInferredTypeFromRaw<T extends z.ZodRawShape> = z.infer<ReturnType<typeof z.object<T>>>;
 declare type BareApiService<TEntity extends z.ZodRawShape, TCreate extends z.ZodRawShape, TExtraFilters extends z.ZodRawShape = never> = {
     client: AxiosInstance;
@@ -113,11 +122,11 @@ declare type ApiService<TEntity extends z.ZodRawShape, TCreate extends z.ZodRawS
     /**
      * The custom calls you declared as input but as plain functions and wrapped for type safety
      */
-    customServiceCalls: CustomServiceCall<TCustomServiceCalls>;
+    customServiceCalls: CustomServiceCallsRecord<TCustomServiceCalls>;
     /**
      * Alias for customServiceCalls
      */
-    csc: CustomServiceCall<TCustomServiceCalls>;
+    csc: CustomServiceCallsRecord<TCustomServiceCalls>;
 };
 declare type ApiBaseParams<TApiEntity extends z.ZodRawShape, TApiCreate extends z.ZodRawShape, TExtraFilters extends z.ZodRawShape = never> = {
     /**
@@ -156,7 +165,7 @@ declare type ApiBaseParams<TApiEntity extends z.ZodRawShape, TApiCreate extends 
      */
     client: AxiosInstance;
 };
-export declare function createApi<TApiEntity extends z.ZodRawShape, TApiCreate extends z.ZodRawShape, TCustomServiceCalls extends Record<string, CustomServiceCallPlaceholder>, TExtraFilters extends z.ZodRawShape = never>(base: ApiBaseParams<TApiEntity, TApiCreate, TExtraFilters>, 
+export declare function createApi<TApiEntity extends z.ZodRawShape, TApiCreate extends z.ZodRawShape, TExtraFilters extends z.ZodRawShape = never, TCustomServiceCalls extends Record<string, CustomServiceCallPlaceholder> = never>(base: ApiBaseParams<TApiEntity, TApiCreate, TExtraFilters>, 
 /**
  * Create your own custom service calls to use with this API. Tools for case conversion are provided.
  */
