@@ -150,7 +150,7 @@ export function createCustomServiceCall(
   cb: CustomServiceCallback<z.ZodVoid, z.ZodVoid>
 ): CustomServiceCallOpts<z.ZodVoid, z.ZodVoid>
 
-export function createCustomServiceCall(...args) {
+export function createCustomServiceCall(...args): CustomServiceCallOpts<any, any> {
   const [first, second] = args
   if (typeof first === "function") {
     return { callback: first, inputShape: z.void(), outputShape: z.void() }
@@ -169,6 +169,7 @@ export function createCustomServiceCall(...args) {
       callback: second,
     }
   }
+
   // only output
   return {
     inputShape: z.void(),
