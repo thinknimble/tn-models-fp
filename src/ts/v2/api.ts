@@ -100,21 +100,18 @@ type CustomServiceCallback<
     : never
 >
 
-/**
- * Base input output object type for custom service calls
- */
-type CustomServiceCallInputOutputs<
-  TInput extends z.ZodRawShape | ZodPrimitives = z.ZodUndefined,
-  TOutput extends z.ZodRawShape | ZodPrimitives = z.ZodUndefined
-> = {
+type CustomServiceCallInputObj<TInput extends z.ZodRawShape | ZodPrimitives = z.ZodUndefined> = {
   inputShape: TInput
+}
+type CustomServiceCallOutputObj<TOutput extends z.ZodRawShape | ZodPrimitives = z.ZodUndefined> = {
   outputShape: TOutput
 }
 
 type CustomServiceCallOpts<
   TInput extends z.ZodRawShape | ZodPrimitives = z.ZodUndefined,
   TOutput extends z.ZodRawShape | ZodPrimitives = z.ZodUndefined
-> = CustomServiceCallInputOutputs<TInput, TOutput> & { callback: CustomServiceCallback<TInput, TOutput> }
+> = CustomServiceCallInputObj<TInput> &
+  CustomServiceCallOutputObj<TOutput> & { callback: CustomServiceCallback<TInput, TOutput> }
 
 type ZodPrimitives = z.ZodString | z.ZodNumber | z.ZodDate | z.ZodBigInt | z.ZodBoolean | z.ZodUndefined | z.ZodVoid
 
@@ -126,21 +123,21 @@ export function createCustomServiceCall<
   TInput extends z.ZodRawShape | ZodPrimitives,
   TOutput extends z.ZodRawShape | ZodPrimitives
 >(
-  models: CustomServiceCallInputOutputs<TInput, TOutput>,
+  models: CustomServiceCallInputObj<TInput> & CustomServiceCallOutputObj<TOutput>,
   cb: CustomServiceCallback<TInput, TOutput>
 ): CustomServiceCallOpts<TInput, TOutput>
 /**
  * Create a custom type-inferred service call with input only
  */
 export function createCustomServiceCall<TInput extends z.ZodRawShape | ZodPrimitives>(
-  models: { inputShape: TInput },
+  models: CustomServiceCallInputObj<TInput>,
   cb: CustomServiceCallback<TInput, z.ZodVoid>
 ): CustomServiceCallOpts<TInput, z.ZodVoid>
 /**
  * Create a custom type-inferred service call with output only
  */
 export function createCustomServiceCall<TOutput extends z.ZodRawShape | ZodPrimitives>(
-  models: { outputShape: TOutput },
+  models: CustomServiceCallOutputObj<TOutput>,
   cb: CustomServiceCallback<z.ZodVoid, TOutput>
 ): CustomServiceCallOpts<z.ZodVoid, TOutput>
 /**

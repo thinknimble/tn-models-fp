@@ -48,33 +48,28 @@ declare type CustomServiceCallback<TInput extends z.ZodRawShape | ZodPrimitives 
     client: AxiosInstance;
     endpoint: string;
 } & CallbackUtils<TInput, TOutput> & CallbackInput<TInput>) => Promise<TOutput extends z.ZodRawShape ? GetZodInferredTypeFromRaw<TOutput> : TOutput extends z.ZodTypeAny ? z.infer<TOutput> : never>;
-/**
- * Base input output object type for custom service calls
- */
-declare type CustomServiceCallInputOutputs<TInput extends z.ZodRawShape | ZodPrimitives = z.ZodUndefined, TOutput extends z.ZodRawShape | ZodPrimitives = z.ZodUndefined> = {
+declare type CustomServiceCallInputObj<TInput extends z.ZodRawShape | ZodPrimitives = z.ZodUndefined> = {
     inputShape: TInput;
+};
+declare type CustomServiceCallOutputObj<TOutput extends z.ZodRawShape | ZodPrimitives = z.ZodUndefined> = {
     outputShape: TOutput;
 };
-declare type CustomServiceCallOpts<TInput extends z.ZodRawShape | ZodPrimitives = z.ZodUndefined, TOutput extends z.ZodRawShape | ZodPrimitives = z.ZodUndefined> = CustomServiceCallInputOutputs<TInput, TOutput> & {
+declare type CustomServiceCallOpts<TInput extends z.ZodRawShape | ZodPrimitives = z.ZodUndefined, TOutput extends z.ZodRawShape | ZodPrimitives = z.ZodUndefined> = CustomServiceCallInputObj<TInput> & CustomServiceCallOutputObj<TOutput> & {
     callback: CustomServiceCallback<TInput, TOutput>;
 };
 declare type ZodPrimitives = z.ZodString | z.ZodNumber | z.ZodDate | z.ZodBigInt | z.ZodBoolean | z.ZodUndefined | z.ZodVoid;
 /**
  * Create a custom type-inferred service call with both input and output
  */
-export declare function createCustomServiceCall<TInput extends z.ZodRawShape | ZodPrimitives, TOutput extends z.ZodRawShape | ZodPrimitives>(models: CustomServiceCallInputOutputs<TInput, TOutput>, cb: CustomServiceCallback<TInput, TOutput>): CustomServiceCallOpts<TInput, TOutput>;
+export declare function createCustomServiceCall<TInput extends z.ZodRawShape | ZodPrimitives, TOutput extends z.ZodRawShape | ZodPrimitives>(models: CustomServiceCallInputObj<TInput> & CustomServiceCallOutputObj<TOutput>, cb: CustomServiceCallback<TInput, TOutput>): CustomServiceCallOpts<TInput, TOutput>;
 /**
  * Create a custom type-inferred service call with input only
  */
-export declare function createCustomServiceCall<TInput extends z.ZodRawShape | ZodPrimitives>(models: {
-    inputShape: TInput;
-}, cb: CustomServiceCallback<TInput, z.ZodVoid>): CustomServiceCallOpts<TInput, z.ZodVoid>;
+export declare function createCustomServiceCall<TInput extends z.ZodRawShape | ZodPrimitives>(models: CustomServiceCallInputObj<TInput>, cb: CustomServiceCallback<TInput, z.ZodVoid>): CustomServiceCallOpts<TInput, z.ZodVoid>;
 /**
  * Create a custom type-inferred service call with output only
  */
-export declare function createCustomServiceCall<TOutput extends z.ZodRawShape | ZodPrimitives>(models: {
-    outputShape: TOutput;
-}, cb: CustomServiceCallback<z.ZodVoid, TOutput>): CustomServiceCallOpts<z.ZodVoid, TOutput>;
+export declare function createCustomServiceCall<TOutput extends z.ZodRawShape | ZodPrimitives>(models: CustomServiceCallOutputObj<TOutput>, cb: CustomServiceCallback<z.ZodVoid, TOutput>): CustomServiceCallOpts<z.ZodVoid, TOutput>;
 /**
  * Create a custom type-inferred service call with neither input nor output
  */
