@@ -6,7 +6,7 @@ import {
   toSnakeCase,
 } from "@thinknimble/tn-utils"
 import { AxiosInstance } from "axios"
-import { z } from "zod"
+import { z, ZodRawShape } from "zod"
 import { IPagination } from "../pagination"
 import { getPaginatedZod } from "./pagination"
 import { parseResponse } from "./utils"
@@ -31,86 +31,67 @@ const filtersZod = z
 
 const uuidZod = z.string().uuid()
 
-type CustomServiceCallInputOutputs<
-  TInput extends z.ZodRawShape | ZodPrimitives = z.ZodUndefined,
-  TOutput extends z.ZodRawShape | ZodPrimitives = z.ZodUndefined
-> = {
-  inputShape: TInput
-  outputShape: TOutput
-}
+type ToApiCall<TInput extends ZodRawShape | z.ZodTypeAny> = (
+  obj: object
+) => TInput extends z.ZodRawShape
+  ? SnakeCasedPropertiesDeep<GetZodInferredTypeFromRaw<TInput>>
+  : TInput extends z.ZodTypeAny
+  ? z.infer<TInput>
+  : never
+
+type FromApiCall<TOutput extends ZodRawShape | z.ZodTypeAny> = (
+  obj: object
+) => TOutput extends z.ZodRawShape
+  ? GetZodInferredTypeFromRaw<TOutput>
+  : TOutput extends z.ZodTypeAny
+  ? z.infer<TOutput>
+  : never
+
+type InferCallbackInput<TInput extends ZodRawShape | z.ZodTypeAny> = TInput extends z.ZodRawShape
+  ? GetZodInferredTypeFromRaw<TInput>
+  : TInput extends z.ZodTypeAny
+  ? z.infer<TInput>
+  : never
+
+type CallbackInput<TInput extends ZodRawShape | ZodPrimitives> = TInput extends z.ZodVoid
+  ? unknown
+  : {
+      input: InferCallbackInput<TInput>
+    }
+
+type CallbackUtils<
+  TInput extends ZodRawShape | ZodPrimitives,
+  TOutput extends ZodRawShape | ZodPrimitives,
+  TInputIsPrimitive extends boolean = TInput extends ZodPrimitives ? true : false,
+  TOutputIsPrimitive extends boolean = TOutput extends ZodPrimitives ? true : false
+> = TInput extends z.ZodVoid
+  ? TOutput extends z.ZodVoid
+    ? unknown
+    : TOutputIsPrimitive extends true
+    ? unknown
+    : { utils: { fromApi: FromApiCall<TOutput> } }
+  : TOutput extends z.ZodVoid
+  ? TInputIsPrimitive extends true
+    ? unknown
+    : {
+        utils: {
+          toApi: ToApiCall<TInput>
+        }
+      }
+  : (TInputIsPrimitive extends true ? unknown : { utils: { toApi: ToApiCall<TInput> } }) &
+      (TOutputIsPrimitive extends true
+        ? unknown
+        : {
+            utils: {
+              fromApi: FromApiCall<TOutput>
+            }
+          })
 
 type CustomServiceCallback<
   TInput extends z.ZodRawShape | ZodPrimitives = z.ZodVoid,
   TOutput extends z.ZodRawShape | ZodPrimitives = z.ZodVoid
 > = (
-  params: { client: AxiosInstance; endpoint: string } & (TInput extends z.ZodVoid
-    ? TOutput extends z.ZodVoid
-      ? unknown
-      : TOutput extends ZodPrimitives
-      ? unknown
-      : {
-          utils: {
-            fromApi: (
-              obj: object
-            ) => TOutput extends z.ZodRawShape
-              ? GetZodInferredTypeFromRaw<TOutput>
-              : TOutput extends z.ZodTypeAny
-              ? z.infer<TOutput>
-              : never
-          }
-        }
-    : TOutput extends z.ZodVoid
-    ? {
-        input: TInput extends z.ZodRawShape
-          ? GetZodInferredTypeFromRaw<TInput>
-          : TInput extends z.ZodTypeAny
-          ? z.infer<TInput>
-          : never
-      } & (TInput extends ZodPrimitives
-        ? unknown
-        : {
-            utils: {
-              toApi: (
-                obj: object
-              ) => TInput extends z.ZodRawShape
-                ? SnakeCasedPropertiesDeep<GetZodInferredTypeFromRaw<TInput>>
-                : TInput extends z.ZodTypeAny
-                ? z.infer<TInput>
-                : never
-            }
-          })
-    : {
-        input: TInput extends z.ZodRawShape
-          ? GetZodInferredTypeFromRaw<TInput>
-          : TInput extends z.ZodTypeAny
-          ? z.infer<TInput>
-          : never
-      } & ((TOutput extends ZodPrimitives
-        ? unknown
-        : {
-            utils: {
-              fromApi: (
-                obj: object
-              ) => TOutput extends z.ZodRawShape
-                ? GetZodInferredTypeFromRaw<TOutput>
-                : TOutput extends z.ZodTypeAny
-                ? z.infer<TOutput>
-                : never
-            }
-          }) &
-        (TInput extends ZodPrimitives
-          ? unknown
-          : {
-              utils: {
-                toApi: (
-                  obj: object
-                ) => TInput extends z.ZodRawShape
-                  ? SnakeCasedPropertiesDeep<GetZodInferredTypeFromRaw<TInput>>
-                  : TInput extends z.ZodTypeAny
-                  ? z.infer<TInput>
-                  : never
-              }
-            })))
+  params: { client: AxiosInstance; endpoint: string } & CallbackUtils<TInput, TOutput> & CallbackInput<TInput>
 ) => Promise<
   TOutput extends z.ZodRawShape
     ? GetZodInferredTypeFromRaw<TOutput>
@@ -119,6 +100,17 @@ type CustomServiceCallback<
     : never
 >
 
+/**
+ * Base input output object type for custom service calls
+ */
+type CustomServiceCallInputOutputs<
+  TInput extends z.ZodRawShape | ZodPrimitives = z.ZodUndefined,
+  TOutput extends z.ZodRawShape | ZodPrimitives = z.ZodUndefined
+> = {
+  inputShape: TInput
+  outputShape: TOutput
+}
+
 type CustomServiceCallOpts<
   TInput extends z.ZodRawShape | ZodPrimitives = z.ZodUndefined,
   TOutput extends z.ZodRawShape | ZodPrimitives = z.ZodUndefined
@@ -126,9 +118,9 @@ type CustomServiceCallOpts<
 
 type ZodPrimitives = z.ZodString | z.ZodNumber | z.ZodDate | z.ZodBigInt | z.ZodBoolean | z.ZodUndefined | z.ZodVoid
 
-//! The order of overloads MATTER. This was quite a foot-gun-ish thing to discover. Lesson is: declare overloads from more most generic > most narrowed. It kind of makes sense to go narrowing down the parameter possibilities. Seems like the first overload that matches is the one that is used.
+//! The order of overloads MATTER. This was quite a foot-gun-ish thing to discover. Lesson is: declare overloads from most generic > most narrowed. It kind of makes sense to go narrowing down the parameter possibilities. Seems like the first overload that matches is the one that is used.
 /**
- * Use this method to get the right type inference when creating a custom service call
+ * Create a custom type-inferred service call with both input and output
  */
 export function createCustomServiceCall<
   TInput extends z.ZodRawShape | ZodPrimitives,
@@ -137,14 +129,23 @@ export function createCustomServiceCall<
   models: CustomServiceCallInputOutputs<TInput, TOutput>,
   cb: CustomServiceCallback<TInput, TOutput>
 ): CustomServiceCallOpts<TInput, TOutput>
+/**
+ * Create a custom type-inferred service call with input only
+ */
 export function createCustomServiceCall<TInput extends z.ZodRawShape | ZodPrimitives>(
   models: { inputShape: TInput },
   cb: CustomServiceCallback<TInput, z.ZodVoid>
 ): CustomServiceCallOpts<TInput, z.ZodVoid>
+/**
+ * Create a custom type-inferred service call with output only
+ */
 export function createCustomServiceCall<TOutput extends z.ZodRawShape | ZodPrimitives>(
   models: { outputShape: TOutput },
   cb: CustomServiceCallback<z.ZodVoid, TOutput>
 ): CustomServiceCallOpts<z.ZodVoid, TOutput>
+/**
+ * Create a custom type-inferred service call with neither input nor output
+ */
 export function createCustomServiceCall(
   cb: CustomServiceCallback<z.ZodVoid, z.ZodVoid>
 ): CustomServiceCallOpts<z.ZodVoid, z.ZodVoid>
