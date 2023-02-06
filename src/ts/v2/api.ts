@@ -340,40 +340,53 @@ export function createApi<
   >,
   customServiceCalls: TCustomServiceCalls | undefined = undefined
 ) {
-  const axiosClient: AxiosInstance = client
-
-  const createCustomServiceCallHandler = (serviceCallOpts) => async (input: unknown) => {
-    // we have to identify if we have a shape or a plain zod (only primitives are allowed.
-    const isInputZodPrimitive = serviceCallOpts.inputShape instanceof z.ZodSchema
-    const isOutputZodPrimitive = serviceCallOpts.outputShape instanceof z.ZodSchema
-    const fromApi = isOutputZodPrimitive
-      ? undefined
-      : (obj) => z.object(serviceCallOpts.outputShape).parse(objectToCamelCase(obj))
-    const toApi = isInputZodPrimitive
-      ? undefined
-      : (obj: object) => z.object(getSnakeCasedZodRawShape(serviceCallOpts.inputShape)).parse(objectToSnakeCase(obj))
-    // avoid leaking the wrong fields to our callback (we already protect this through ts but it does not hurt to prevent it at runtime as well)
-    const utilsResult =
-      fromApi || toApi
-        ? {
-            utils: {
-              ...(fromApi ? { fromApi } : {}),
-              ...(toApi ? { toApi } : {}),
-            },
-          }
-        : {}
-    const inputResult = input ? { input } : {}
-    return serviceCallOpts.callback({
-      client,
-      endpoint,
-      ...inputResult,
-      ...utilsResult,
-    })
-  }
+  const createCustomServiceCallHandler =
+    (
+      serviceCallOpts,
+      /**
+       * This name allow us to keep record of which method it is, so that we can identify in case of output mismatch
+       */
+      name: string
+    ) =>
+    async (input: unknown) => {
+      // we have to identify if we have a shape or a plain zod (only primitives are allowed). Primitive zods do not get util functions since they don't require response case transformation
+      const isInputZodPrimitive = serviceCallOpts.inputShape instanceof z.ZodSchema
+      const isOutputZodPrimitive = serviceCallOpts.outputShape instanceof z.ZodSchema
+      // since this checks for the api response, which we don't control, we can't strict parse, else we would break the flow. We'd rather safe parse and show a warning if there's a mismatch
+      const fromApi = isOutputZodPrimitive
+        ? undefined
+        : (obj: object) =>
+            parseResponse({
+              identifier: name,
+              data: objectToCamelCase(obj) ?? {},
+              zod: z.object(serviceCallOpts.outputShape),
+            })
+      // Given that this is under our control, we should not do safe parse, if the parsing fails means something is wrong (you're not complying with the schema you defined)
+      const toApi = isInputZodPrimitive
+        ? undefined
+        : (obj: object) => z.object(getSnakeCasedZodRawShape(serviceCallOpts.inputShape)).parse(objectToSnakeCase(obj))
+      // avoid leaking the wrong fields to our callback (we already protect this through ts but it does not hurt to prevent it at runtime as well)
+      const utilsResult =
+        fromApi || toApi
+          ? {
+              utils: {
+                ...(fromApi ? { fromApi } : {}),
+                ...(toApi ? { toApi } : {}),
+              },
+            }
+          : {}
+      const inputResult = input ? { input } : {}
+      return serviceCallOpts.callback({
+        client,
+        endpoint,
+        ...inputResult,
+        ...utilsResult,
+      })
+    }
 
   const modifiedCustomServiceCalls = customServiceCalls
     ? (Object.fromEntries(
-        Object.entries(customServiceCalls).map(([k, v]) => [k, createCustomServiceCallHandler(v)])
+        Object.entries(customServiceCalls).map(([k, v]) => [k, createCustomServiceCallHandler(v, k)])
       ) as CustomServiceCallsRecord<TCustomServiceCalls>)
     : undefined
 
@@ -383,28 +396,28 @@ export function createApi<
       console.warn("The passed id is not a valid UUID, check your input")
     }
     const uri = `${endpoint}/${id}`
-    const res = await axiosClient.get(uri)
+    const res = await client.get(uri)
     const parsed = parseResponse({
-      uri,
+      identifier: `${retrieve.name} ${uri}`,
       data: res.data,
       zod: z.object(getSnakeCasedZodRawShape(models.entity)),
     })
     return objectToCamelCase(parsed)
   }
 
-  const create = async (inputs) => {
+  const create = async (inputs: TApiCreate) => {
     const snaked = objectToSnakeCase(inputs)
-    const res = await axiosClient.post(endpoint, snaked)
+    const res = await client.post(endpoint, snaked)
     const snakedEntityShape = getSnakeCasedZodRawShape(models.entity)
     const parsed = parseResponse({
-      uri: endpoint,
+      identifier: `${create.name} ${endpoint}`,
       data: res.data,
       zod: z.object(snakedEntityShape),
     })
     return objectToCamelCase(parsed)
   }
 
-  const list = async (params) => {
+  const list = async (params: Parameters<BareApiService<TApiEntity, TApiCreate, TExtraFilters>["list"]>[0]) => {
     const filters = params ? params.filters : undefined
     const pagination = params ? params.pagination : undefined
     // Filters parsing, throws if the fields do not comply with the zod schema
@@ -428,7 +441,7 @@ export function createApi<
 
     const paginatedZod = getPaginatedSnakeCasedZod(models.entity)
 
-    const res = await axiosClient.get(endpoint, {
+    const res = await client.get(endpoint, {
       params: snakedCleanParsedFilters,
     })
     const rawResponse = paginatedZod.parse(res.data)
