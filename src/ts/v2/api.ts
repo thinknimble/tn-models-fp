@@ -343,22 +343,31 @@ export function createApi<
   const axiosClient: AxiosInstance = client
 
   const createCustomServiceCallHandler = (serviceCallOpts) => async (input: unknown) => {
-    const isInputZod = serviceCallOpts.inputShape instanceof z.ZodSchema
-    const isOutputZod = serviceCallOpts.outputShape instanceof z.ZodSchema
-    const fromApi = (obj: object) =>
-      isOutputZod
-        ? serviceCallOpts.outputShape.parse(obj)
-        : z.object(serviceCallOpts.outputShape).parse(objectToCamelCase(obj))
-    const toApi = (obj: object) =>
-      isInputZod
-        ? serviceCallOpts.inputShape.parse(obj)
-        : z.object(getSnakeCasedZodRawShape(serviceCallOpts.inputShape)).parse(objectToSnakeCase(obj))
-
+    // we have to identify if we have a shape or a plain zod (only primitives are allowed.
+    const isInputZodPrimitive = serviceCallOpts.inputShape instanceof z.ZodSchema
+    const isOutputZodPrimitive = serviceCallOpts.outputShape instanceof z.ZodSchema
+    const fromApi = isOutputZodPrimitive
+      ? undefined
+      : (obj) => z.object(serviceCallOpts.outputShape).parse(objectToCamelCase(obj))
+    const toApi = isInputZodPrimitive
+      ? undefined
+      : (obj: object) => z.object(getSnakeCasedZodRawShape(serviceCallOpts.inputShape)).parse(objectToSnakeCase(obj))
+    // avoid leaking the wrong fields to our callback (we already protect this through ts but it does not hurt to prevent it at runtime as well)
+    const utilsResult =
+      fromApi || toApi
+        ? {
+            utils: {
+              ...(fromApi ? { fromApi } : {}),
+              ...(toApi ? { toApi } : {}),
+            },
+          }
+        : {}
+    const inputResult = input ? { input } : {}
     return serviceCallOpts.callback({
       client,
       endpoint,
-      input,
-      utils: { fromApi, toApi },
+      ...inputResult,
+      ...utilsResult,
     })
   }
 
@@ -369,7 +378,8 @@ export function createApi<
     : undefined
 
   const retrieve = async (id: string) => {
-    if (uuidZod.safeParse(id).success) {
+    //TODO: should we allow the user to set their own id zod schema?
+    if (!uuidZod.safeParse(id).success) {
       console.warn("The passed id is not a valid UUID, check your input")
     }
     const uri = `${endpoint}/${id}`
