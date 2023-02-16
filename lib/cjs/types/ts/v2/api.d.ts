@@ -2,7 +2,7 @@ import { AxiosInstance } from "axios";
 import { z } from "zod";
 import { IPagination } from "../pagination";
 import { getPaginatedZod } from "./pagination";
-import { FromApiCall, GetZodInferredTypeFromRaw, ToApiCall } from "./utils";
+import { CallbackUtils, GetZodInferredTypeFromRaw, ZodPrimitives } from "./utils";
 declare const paginationFiltersZod: z.ZodOptional<z.ZodObject<{
     page: z.ZodOptional<z.ZodNumber>;
     pageSize: z.ZodOptional<z.ZodNumber>;
@@ -25,23 +25,6 @@ declare type InferCallbackInput<TInput extends z.ZodRawShape | z.ZodTypeAny> = T
 declare type CallbackInput<TInput extends z.ZodRawShape | ZodPrimitives> = TInput extends z.ZodVoid ? unknown : {
     input: InferCallbackInput<TInput>;
 };
-declare type CallbackUtils<TInput extends z.ZodRawShape | ZodPrimitives, TOutput extends z.ZodRawShape | ZodPrimitives, TInputIsPrimitive extends boolean = TInput extends ZodPrimitives ? true : false, TOutputIsPrimitive extends boolean = TOutput extends ZodPrimitives ? true : false> = TInput extends z.ZodVoid ? TOutput extends z.ZodVoid ? unknown : TOutputIsPrimitive extends true ? unknown : {
-    utils: {
-        fromApi: FromApiCall<TOutput>;
-    };
-} : TOutput extends z.ZodVoid ? TInputIsPrimitive extends true ? unknown : {
-    utils: {
-        toApi: ToApiCall<TInput>;
-    };
-} : (TInputIsPrimitive extends true ? unknown : {
-    utils: {
-        toApi: ToApiCall<TInput>;
-    };
-}) & (TOutputIsPrimitive extends true ? unknown : {
-    utils: {
-        fromApi: FromApiCall<TOutput>;
-    };
-});
 declare type CustomServiceCallback<TInput extends z.ZodRawShape | ZodPrimitives = z.ZodVoid, TOutput extends z.ZodRawShape | ZodPrimitives = z.ZodVoid> = (params: {
     client: AxiosInstance;
     endpoint: string;
@@ -55,7 +38,6 @@ declare type CustomServiceCallOutputObj<TOutput extends z.ZodRawShape | ZodPrimi
 declare type CustomServiceCallOpts<TInput extends z.ZodRawShape | ZodPrimitives = z.ZodUndefined, TOutput extends z.ZodRawShape | ZodPrimitives = z.ZodUndefined> = CustomServiceCallInputObj<TInput> & CustomServiceCallOutputObj<TOutput> & {
     callback: CustomServiceCallback<TInput, TOutput>;
 };
-declare type ZodPrimitives = z.ZodString | z.ZodNumber | z.ZodDate | z.ZodBigInt | z.ZodBoolean | z.ZodUndefined | z.ZodVoid;
 /**
  * Create a custom type-inferred service call with both input and output
  */

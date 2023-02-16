@@ -1,11 +1,17 @@
-import { objectToCamelCase, objectToSnakeCase, SnakeCasedPropertiesDeep } from "@thinknimble/tn-utils"
+import { objectToCamelCase, objectToSnakeCase } from "@thinknimble/tn-utils"
 import { AxiosInstance } from "axios"
 import { z } from "zod"
 import { IPagination } from "../pagination"
 import { getPaginatedZod } from "./pagination"
 import { parseResponse } from "./response"
-import { createApiUtils, FromApiCall, GetZodInferredTypeFromRaw, ToApiCall } from "./utils"
-import { getPaginatedSnakeCasedZod, getSnakeCasedZodRawShape } from "./utils"
+import {
+  CallbackUtils,
+  createApiUtils,
+  getPaginatedSnakeCasedZod,
+  getSnakeCasedZodRawShape,
+  GetZodInferredTypeFromRaw,
+  ZodPrimitives,
+} from "./utils"
 
 const paginationFiltersZod = z
   .object({
@@ -39,34 +45,6 @@ type CallbackInput<TInput extends z.ZodRawShape | ZodPrimitives> = TInput extend
       input: InferCallbackInput<TInput>
     }
 
-type CallbackUtils<
-  TInput extends z.ZodRawShape | ZodPrimitives,
-  TOutput extends z.ZodRawShape | ZodPrimitives,
-  TInputIsPrimitive extends boolean = TInput extends ZodPrimitives ? true : false,
-  TOutputIsPrimitive extends boolean = TOutput extends ZodPrimitives ? true : false
-> = TInput extends z.ZodVoid
-  ? TOutput extends z.ZodVoid
-    ? unknown
-    : TOutputIsPrimitive extends true
-    ? unknown
-    : { utils: { fromApi: FromApiCall<TOutput> } }
-  : TOutput extends z.ZodVoid
-  ? TInputIsPrimitive extends true
-    ? unknown
-    : {
-        utils: {
-          toApi: ToApiCall<TInput>
-        }
-      }
-  : (TInputIsPrimitive extends true ? unknown : { utils: { toApi: ToApiCall<TInput> } }) &
-      (TOutputIsPrimitive extends true
-        ? unknown
-        : {
-            utils: {
-              fromApi: FromApiCall<TOutput>
-            }
-          })
-
 type CustomServiceCallback<
   TInput extends z.ZodRawShape | ZodPrimitives = z.ZodVoid,
   TOutput extends z.ZodRawShape | ZodPrimitives = z.ZodVoid
@@ -92,8 +70,6 @@ type CustomServiceCallOpts<
   TOutput extends z.ZodRawShape | ZodPrimitives = z.ZodUndefined
 > = CustomServiceCallInputObj<TInput> &
   CustomServiceCallOutputObj<TOutput> & { callback: CustomServiceCallback<TInput, TOutput> }
-
-type ZodPrimitives = z.ZodString | z.ZodNumber | z.ZodDate | z.ZodBigInt | z.ZodBoolean | z.ZodUndefined | z.ZodVoid
 
 //! The order of overloads MATTER. This was quite a foot-gun-ish thing to discover. Lesson is: declare overloads from most generic > most narrowed. It kind of makes sense to go narrowing down the parameter possibilities. Seems like the first overload that matches is the one that is used.
 /**
@@ -317,7 +293,7 @@ export function createApi<
         client,
         endpoint,
         ...inputResult,
-        ...utilsResult,
+        ...(utilsResult ? utilsResult : {}),
       })
     }
 

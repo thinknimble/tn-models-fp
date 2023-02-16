@@ -1,5 +1,6 @@
 import { SnakeCase, SnakeCasedPropertiesDeep } from "@thinknimble/tn-utils";
 import { z } from "zod";
+export declare type ZodPrimitives = z.ZodString | z.ZodNumber | z.ZodDate | z.ZodBigInt | z.ZodBoolean | z.ZodUndefined | z.ZodVoid;
 /**
  * Get the resulting inferred type from a zod shape
  */
@@ -26,19 +27,32 @@ export declare const getPaginatedSnakeCasedZod: <T extends z.ZodRawShape>(zodSha
     count: number;
     results: (z.objectUtil.addQuestionMarks<ZodRawShapeSnakeCased<T> extends infer T_6 extends z.ZodRawShape ? { [k_2_1 in keyof T_6]: ZodRawShapeSnakeCased<T>[k_2_1]["_input"]; } : never> extends infer T_4 ? { [k_3 in keyof T_4]: z.objectUtil.addQuestionMarks<ZodRawShapeSnakeCased<T> extends infer T_5 extends z.ZodRawShape ? { [k_2 in keyof T_5]: ZodRawShapeSnakeCased<T>[k_2]["_input"]; } : never>[k_3]; } : never)[];
 }>;
-export declare const createApiUtils: <TInput extends z.ZodRawShape | z.ZodTypeAny, TOutput extends z.ZodRawShape | z.ZodTypeAny>({ inputShape, outputShape, name, }: {
+export declare type CallbackUtils<TInput extends z.ZodRawShape | ZodPrimitives, TOutput extends z.ZodRawShape | ZodPrimitives, TInputIsPrimitive extends boolean = TInput extends ZodPrimitives ? true : false, TOutputIsPrimitive extends boolean = TOutput extends ZodPrimitives ? true : false> = TInput extends z.ZodVoid ? TOutput extends z.ZodVoid ? unknown : TOutputIsPrimitive extends true ? unknown : {
+    utils: {
+        fromApi: FromApiCall<TOutput>;
+    };
+} : TOutput extends z.ZodVoid ? TInputIsPrimitive extends true ? unknown : {
+    utils: {
+        toApi: ToApiCall<TInput>;
+    };
+} : (TInputIsPrimitive extends true ? unknown : {
+    utils: {
+        toApi: ToApiCall<TInput>;
+    };
+}) & (TOutputIsPrimitive extends true ? unknown : {
+    utils: {
+        fromApi: FromApiCall<TOutput>;
+    };
+});
+export declare function createApiUtils<TInput extends z.ZodRawShape | ZodPrimitives, TOutput extends z.ZodRawShape | ZodPrimitives>(args: {
+    name: string;
+} & ({
     inputShape: TInput;
     outputShape: TOutput;
-    name: string;
-}) => {
-    utils: {
-        toApi?: ((obj: object) => {
-            [x: string]: any;
-        }) | undefined;
-        fromApi?: FromApiCall<TOutput> | undefined;
-    };
 } | {
-    utils?: undefined;
-};
+    inputShape: TInput;
+} | {
+    outputShape: TOutput;
+})): CallbackUtils<TInput, TOutput, TInput extends ZodPrimitives ? true : false, TOutput extends ZodPrimitives ? true : false>;
 export {};
 //# sourceMappingURL=utils.d.ts.map
