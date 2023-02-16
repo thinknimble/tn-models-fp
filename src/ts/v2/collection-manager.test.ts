@@ -4,8 +4,9 @@ import axios from "axios"
 import { beforeEach, describe, expect, it, Mocked, vi } from "vitest"
 import { z } from "zod"
 import Pagination from "../pagination"
-import { createApi, getPaginatedSnakeCasedZod } from "./api"
+import { createApi } from "./api"
 import { createCollectionManager } from "./collection-manager"
+import { getPaginatedSnakeCasedZod } from "./utils"
 
 vi.mock("axios")
 

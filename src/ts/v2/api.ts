@@ -1,15 +1,11 @@
-import {
-  objectToCamelCase,
-  objectToSnakeCase,
-  SnakeCase,
-  SnakeCasedPropertiesDeep,
-  toSnakeCase,
-} from "@thinknimble/tn-utils"
+import { objectToCamelCase, objectToSnakeCase, SnakeCasedPropertiesDeep } from "@thinknimble/tn-utils"
 import { AxiosInstance } from "axios"
-import { z, ZodRawShape } from "zod"
+import { z } from "zod"
 import { IPagination } from "../pagination"
 import { getPaginatedZod } from "./pagination"
-import { parseResponse } from "./utils"
+import { parseResponse } from "./response"
+import { createApiUtils, FromApiCall, GetZodInferredTypeFromRaw, ToApiCall } from "./utils"
+import { getPaginatedSnakeCasedZod, getSnakeCasedZodRawShape } from "./utils"
 
 const paginationFiltersZod = z
   .object({
@@ -31,37 +27,21 @@ const filtersZod = z
 
 const uuidZod = z.string().uuid()
 
-type ToApiCall<TInput extends ZodRawShape | z.ZodTypeAny> = (
-  obj: object
-) => TInput extends z.ZodRawShape
-  ? SnakeCasedPropertiesDeep<GetZodInferredTypeFromRaw<TInput>>
-  : TInput extends z.ZodTypeAny
-  ? z.infer<TInput>
-  : never
-
-type FromApiCall<TOutput extends ZodRawShape | z.ZodTypeAny> = (
-  obj: object
-) => TOutput extends z.ZodRawShape
-  ? GetZodInferredTypeFromRaw<TOutput>
-  : TOutput extends z.ZodTypeAny
-  ? z.infer<TOutput>
-  : never
-
-type InferCallbackInput<TInput extends ZodRawShape | z.ZodTypeAny> = TInput extends z.ZodRawShape
+type InferCallbackInput<TInput extends z.ZodRawShape | z.ZodTypeAny> = TInput extends z.ZodRawShape
   ? GetZodInferredTypeFromRaw<TInput>
   : TInput extends z.ZodTypeAny
   ? z.infer<TInput>
   : never
 
-type CallbackInput<TInput extends ZodRawShape | ZodPrimitives> = TInput extends z.ZodVoid
+type CallbackInput<TInput extends z.ZodRawShape | ZodPrimitives> = TInput extends z.ZodVoid
   ? unknown
   : {
       input: InferCallbackInput<TInput>
     }
 
 type CallbackUtils<
-  TInput extends ZodRawShape | ZodPrimitives,
-  TOutput extends ZodRawShape | ZodPrimitives,
+  TInput extends z.ZodRawShape | ZodPrimitives,
+  TOutput extends z.ZodRawShape | ZodPrimitives,
   TInputIsPrimitive extends boolean = TInput extends ZodPrimitives ? true : false,
   TOutputIsPrimitive extends boolean = TOutput extends ZodPrimitives ? true : false
 > = TInput extends z.ZodVoid
@@ -210,28 +190,6 @@ type CustomServiceCallsRecord<TOpts extends object> = TOpts extends Record<strin
     }
   : never
 
-type ZodRawShapeSnakeCased<T extends z.ZodRawShape> = {
-  [TKey in keyof T as SnakeCase<TKey>]: T[TKey]
-}
-
-const getSnakeCasedZodRawShape = <T extends z.ZodRawShape>(zodShape: T) => {
-  // objectToSnakeCase would mess up zod internal fields, so we must do the case conversion only on the keys of the shape
-  const unknownSnakeCasedZod: unknown = Object.fromEntries(
-    Object.entries(zodShape).map(([k, v]) => {
-      return [toSnakeCase(k), v]
-    })
-  )
-  return unknownSnakeCasedZod as ZodRawShapeSnakeCased<T>
-}
-export const getPaginatedSnakeCasedZod = <T extends z.ZodRawShape>(zodShape: T) => {
-  return getPaginatedZod(getSnakeCasedZodRawShape(zodShape))
-}
-
-/**
- * Get the resulting inferred type from a zod shape
- */
-export type GetZodInferredTypeFromRaw<T extends z.ZodRawShape> = z.infer<ReturnType<typeof z.object<T>>>
-
 type BareApiService<
   TEntity extends z.ZodRawShape,
   TCreate extends z.ZodRawShape,
@@ -349,32 +307,11 @@ export function createApi<
       name: string
     ) =>
     async (input: unknown) => {
-      // we have to identify if we have a shape or a plain zod (only primitives are allowed). Primitive zods do not get util functions since they don't require response case transformation
-      const isInputZodPrimitive = serviceCallOpts.inputShape instanceof z.ZodSchema
-      const isOutputZodPrimitive = serviceCallOpts.outputShape instanceof z.ZodSchema
-      // since this checks for the api response, which we don't control, we can't strict parse, else we would break the flow. We'd rather safe parse and show a warning if there's a mismatch
-      const fromApi = isOutputZodPrimitive
-        ? undefined
-        : (obj: object) =>
-            parseResponse({
-              identifier: name,
-              data: objectToCamelCase(obj) ?? {},
-              zod: z.object(serviceCallOpts.outputShape),
-            })
-      // Given that this is under our control, we should not do safe parse, if the parsing fails means something is wrong (you're not complying with the schema you defined)
-      const toApi = isInputZodPrimitive
-        ? undefined
-        : (obj: object) => z.object(getSnakeCasedZodRawShape(serviceCallOpts.inputShape)).parse(objectToSnakeCase(obj))
-      // avoid leaking the wrong fields to our callback (we already protect this through ts but it does not hurt to prevent it at runtime as well)
-      const utilsResult =
-        fromApi || toApi
-          ? {
-              utils: {
-                ...(fromApi ? { fromApi } : {}),
-                ...(toApi ? { toApi } : {}),
-              },
-            }
-          : {}
+      const utilsResult = createApiUtils({
+        name,
+        inputShape: serviceCallOpts.inputShape,
+        outputShape: serviceCallOpts.outputShape,
+      })
       const inputResult = input ? { input } : {}
       return serviceCallOpts.callback({
         client,
