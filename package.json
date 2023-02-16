@@ -31,7 +31,7 @@
   "homepage": "https://github.com/thinknimble/tn-models",
   "dependencies": {
     "@babel/runtime": "^7.16.7",
-    "@thinknimble/tn-utils": "github:thinknimble/tn-utils#test-dep"
+    "@thinknimble/tn-utils": "https://github.com/thinknimble/tn-utils#test-dep"
   },
   "devDependencies": {
     "@babel/cli": "^7.8.4",
