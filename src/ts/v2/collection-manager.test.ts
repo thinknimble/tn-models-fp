@@ -130,7 +130,7 @@ describe("collection manager v2 tests", () => {
       //act
       await collectionManager.refresh()
       //assert
-      expect(getSpy).toHaveBeenCalledWith(testEndpoint, {
+      expect(getSpy).toHaveBeenCalledWith(testEndpoint + "/", {
         params: {
           ...feedFiltersSnakeCased,
           page: feedPagination.page.toString(),

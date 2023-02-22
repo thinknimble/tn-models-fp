@@ -321,7 +321,7 @@ describe("v2 api tests", async () => {
       //act
       const response = await testApi.retrieve(randomUuid)
       //assert
-      expect(getSpy).toHaveBeenCalledWith(`${testEndpoint}/${randomUuid}`)
+      expect(getSpy).toHaveBeenCalledWith(`${testEndpoint}/${randomUuid}/`)
       expect(response).toEqual({
         age: entityResponse.age,
         firstName: entityResponse.first_name,
@@ -392,7 +392,7 @@ describe("v2 api tests", async () => {
         pagination,
       })
       //assert
-      expect(getSpy).toHaveBeenCalledWith(testEndpoint, {
+      expect(getSpy).toHaveBeenCalledWith(testEndpoint + "/", {
         params: {
           an_extra_filter: filters.anExtraFilter,
           page: pagination.page.toString(),

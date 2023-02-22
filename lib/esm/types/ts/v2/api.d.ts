@@ -27,6 +27,9 @@ declare type CallbackInput<TInput extends z.ZodRawShape | ZodPrimitives> = TInpu
 };
 declare type CustomServiceCallback<TInput extends z.ZodRawShape | ZodPrimitives = z.ZodVoid, TOutput extends z.ZodRawShape | ZodPrimitives = z.ZodVoid> = (params: {
     client: AxiosInstance;
+    /**
+     * Note this endpoint is the same as defined on api creation. So you must address its trailing slash on client call if required
+     */
     endpoint: string;
 } & CallbackUtils<TInput, TOutput> & CallbackInput<TInput>) => Promise<TOutput extends z.ZodRawShape ? GetZodInferredTypeFromRaw<TOutput> : TOutput extends z.ZodTypeAny ? z.infer<TOutput> : never>;
 declare type CustomServiceCallInputObj<TInput extends z.ZodRawShape | ZodPrimitives = z.ZodUndefined> = {

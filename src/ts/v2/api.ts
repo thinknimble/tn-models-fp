@@ -49,7 +49,14 @@ type CustomServiceCallback<
   TInput extends z.ZodRawShape | ZodPrimitives = z.ZodVoid,
   TOutput extends z.ZodRawShape | ZodPrimitives = z.ZodVoid
 > = (
-  params: { client: AxiosInstance; endpoint: string } & CallbackUtils<TInput, TOutput> & CallbackInput<TInput>
+  params: {
+    client: AxiosInstance
+    /**
+     * Note this endpoint is the same as defined on api creation. So you must address its trailing slash on client call if required
+     */
+    endpoint: string
+  } & CallbackUtils<TInput, TOutput> &
+    CallbackInput<TInput>
 ) => Promise<
   TOutput extends z.ZodRawShape
     ? GetZodInferredTypeFromRaw<TOutput>
@@ -274,6 +281,7 @@ export function createApi<
   >,
   customServiceCalls: TCustomServiceCalls | undefined = undefined
 ) {
+  const slashEndingEndpoint = endpoint.at(-1) === "/" ? endpoint : endpoint + "/"
   const createCustomServiceCallHandler =
     (
       serviceCallOpts,
@@ -308,7 +316,7 @@ export function createApi<
     if (!uuidZod.safeParse(id).success) {
       console.warn("The passed id is not a valid UUID, check your input")
     }
-    const uri = `${endpoint}/${id}`
+    const uri = `${slashEndingEndpoint}${id}/`
     const res = await client.get(uri)
     const parsed = parseResponse({
       identifier: `${retrieve.name} ${uri}`,
@@ -354,7 +362,7 @@ export function createApi<
 
     const paginatedZod = getPaginatedSnakeCasedZod(models.entity)
 
-    const res = await client.get(endpoint, {
+    const res = await client.get(slashEndingEndpoint, {
       params: snakedCleanParsedFilters,
     })
     const rawResponse = paginatedZod.parse(res.data)
