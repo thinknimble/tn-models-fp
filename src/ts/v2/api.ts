@@ -281,7 +281,7 @@ export function createApi<
   >,
   customServiceCalls: TCustomServiceCalls | undefined = undefined
 ) {
-  const slashEndingEndpoint = endpoint.at(-1) === "/" ? endpoint : endpoint + "/"
+  const slashEndingEndpoint = endpoint[endpoint.length - 1] === "/" ? endpoint : endpoint + "/"
   const createCustomServiceCallHandler =
     (
       serviceCallOpts,
