@@ -56,6 +56,19 @@ export const getPaginatedSnakeCasedZod = <T extends z.ZodRawShape>(zodShape: T) 
   return getPaginatedZod(getSnakeCasedZodRawShape(zodShape))
 }
 
+type FromApiUtil<T extends z.ZodRawShape | ZodPrimitives> = {
+  /**
+   * Given an object, parses the response based on outputShape, it turns the result keys into camelCase. It also shows a warning if the outputShape does not match the passed object
+   */
+  fromApi: FromApiCall<T>
+}
+type ToApiUtil<T extends z.ZodRawShape | ZodPrimitives> = {
+  /**
+   * Given an object, parses the input and turns its keys into snake_case
+   */
+  toApi: ToApiCall<T>
+}
+
 export type CallbackUtils<
   TInput extends z.ZodRawShape | ZodPrimitives,
   TOutput extends z.ZodRawShape | ZodPrimitives,
@@ -66,22 +79,18 @@ export type CallbackUtils<
     ? unknown
     : TOutputIsPrimitive extends true
     ? unknown
-    : { utils: { fromApi: FromApiCall<TOutput> } }
+    : { utils: FromApiUtil<TOutput> }
   : TOutput extends z.ZodVoid
   ? TInputIsPrimitive extends true
     ? unknown
     : {
-        utils: {
-          toApi: ToApiCall<TInput>
-        }
+        utils: ToApiUtil<TInput>
       }
-  : (TInputIsPrimitive extends true ? unknown : { utils: { toApi: ToApiCall<TInput> } }) &
+  : (TInputIsPrimitive extends true ? unknown : { utils: ToApiUtil<TInput> }) &
       (TOutputIsPrimitive extends true
         ? unknown
         : {
-            utils: {
-              fromApi: FromApiCall<TOutput>
-            }
+            utils: FromApiUtil<TOutput>
           })
 
 const getToApiHandler = <T extends z.ZodRawShape | ZodPrimitives>(inputShape: T) => {

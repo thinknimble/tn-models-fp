@@ -27,22 +27,26 @@ export declare const getPaginatedSnakeCasedZod: <T extends z.ZodRawShape>(zodSha
     count: number;
     results: (z.objectUtil.addQuestionMarks<ZodRawShapeSnakeCased<T> extends infer T_6 extends z.ZodRawShape ? { [k_2_1 in keyof T_6]: ZodRawShapeSnakeCased<T>[k_2_1]["_input"]; } : never> extends infer T_4 ? { [k_3 in keyof T_4]: z.objectUtil.addQuestionMarks<ZodRawShapeSnakeCased<T> extends infer T_5 extends z.ZodRawShape ? { [k_2 in keyof T_5]: ZodRawShapeSnakeCased<T>[k_2]["_input"]; } : never>[k_3]; } : never)[];
 }>;
+declare type FromApiUtil<T extends z.ZodRawShape | ZodPrimitives> = {
+    /**
+     * Given an object, parses the response based on outputShape, it turns the result keys into camelCase. It also shows a warning if the outputShape does not match the passed object
+     */
+    fromApi: FromApiCall<T>;
+};
+declare type ToApiUtil<T extends z.ZodRawShape | ZodPrimitives> = {
+    /**
+     * Given an object, parses the input and turns its keys into snake_case
+     */
+    toApi: ToApiCall<T>;
+};
 export declare type CallbackUtils<TInput extends z.ZodRawShape | ZodPrimitives, TOutput extends z.ZodRawShape | ZodPrimitives, TInputIsPrimitive extends boolean = TInput extends ZodPrimitives ? true : false, TOutputIsPrimitive extends boolean = TOutput extends ZodPrimitives ? true : false> = TInput extends z.ZodVoid ? TOutput extends z.ZodVoid ? unknown : TOutputIsPrimitive extends true ? unknown : {
-    utils: {
-        fromApi: FromApiCall<TOutput>;
-    };
+    utils: FromApiUtil<TOutput>;
 } : TOutput extends z.ZodVoid ? TInputIsPrimitive extends true ? unknown : {
-    utils: {
-        toApi: ToApiCall<TInput>;
-    };
+    utils: ToApiUtil<TInput>;
 } : (TInputIsPrimitive extends true ? unknown : {
-    utils: {
-        toApi: ToApiCall<TInput>;
-    };
+    utils: ToApiUtil<TInput>;
 }) & (TOutputIsPrimitive extends true ? unknown : {
-    utils: {
-        fromApi: FromApiCall<TOutput>;
-    };
+    utils: FromApiUtil<TOutput>;
 });
 export declare function createApiUtils<TInput extends z.ZodRawShape | ZodPrimitives, TOutput extends z.ZodRawShape | ZodPrimitives>(args: {
     name: string;
