@@ -4,7 +4,11 @@
   "description": "Utilities for building front-end models.",
   "author": "Thinknimble",
   "license": "MIT",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
   "scripts": {
+    "build": "tsup index.ts --format cjs,esm --dts",
     "test": "vitest",
     "test:run": "vitest run"
   },
@@ -27,7 +31,8 @@
     "eslint-config-prettier": "^8.6.0",
     "eslint-plugin-prettier": "^4.2.1",
     "prettier": "^2.8.3",
-    "typescript": "^4.7.4",
+    "tsup": "^6.6.3",
+    "typescript": "^4.9.5",
     "vite": "^4.0.4",
     "vitest": "^0.27.3"
   },

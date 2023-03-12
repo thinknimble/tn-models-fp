@@ -110,7 +110,7 @@ export function createCustomServiceCall(
   cb: CustomServiceCallback<z.ZodVoid, z.ZodVoid>
 ): CustomServiceCallOpts<z.ZodVoid, z.ZodVoid>
 
-export function createCustomServiceCall(...args): CustomServiceCallOpts<any, any> {
+export function createCustomServiceCall(...args: any[]): CustomServiceCallOpts<any, any> {
   const [first, second] = args
   if (typeof first === "function") {
     return { callback: first, inputShape: z.void(), outputShape: z.void() }
@@ -142,12 +142,12 @@ export function createCustomServiceCall(...args): CustomServiceCallOpts<any, any
  * Base type for custom service calls which serves as a placeholder to later take advantage of inference
  */
 type CustomServiceCallPlaceholder = {
-  inputShape
-  outputShape
+  inputShape: any
+  outputShape: any
   callback: (params: {
     endpoint: string
     client: AxiosInstance
-    input
+    input: any
     utils: { fromApi: (obj: object) => never; toApi: (obj: object) => never }
   }) => Promise<unknown>
 }
@@ -284,7 +284,7 @@ export function createApi<
   const slashEndingEndpoint = endpoint[endpoint.length - 1] === "/" ? endpoint : endpoint + "/"
   const createCustomServiceCallHandler =
     (
-      serviceCallOpts,
+      serviceCallOpts: any,
       /**
        * This name allow us to keep record of which method it is, so that we can identify in case of output mismatch
        */
