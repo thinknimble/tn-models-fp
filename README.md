@@ -185,3 +185,26 @@ const collectionManager = createCollectionManager({
 
 for `toApi` to work properly we need to define the shape of the api call input, which in this case differs from the one that we are declaring in the inputShape.
 Internally `toApi` parses into snake case with `inputShape` in mind. So we would probably want to separate these two shapes in case we don't want them to be the same
+
+# Contribution guide
+
+## Publishing new version of the package.
+
+To make our life easier with versioning and releasing new versions of the packages we're using [changeset](https://github.com/changesets/changesets/tree/main).
+
+If a PR for a feature conveys a release with it OR you want to release a version after some PRs have been merged.
+
+From the root of the project you have to
+
+```
+pnpm changeset
+```
+
+Follow the prompts:
+
+- Give it a patch/minor/major depending on the release you mean to publish.
+- Add a description of what the release contains.
+
+Commit those changes into the PR or create a PR for it and merge it.
+
+What this will do is create a Version release PR that will allow you to confirm the release. Once that PR is merged, the github action will reach out to npm and publish the package for you.
