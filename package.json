@@ -9,12 +9,12 @@
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "tsup index.ts --format cjs,esm --dts",
+    "build": "tsup src/index.ts --format cjs,esm --dts",
     "lint": "tsc",
     "test": "vitest run",
     "test:dev": "vitest",
     "ci": "pnpm run lint && pnpm run test && pnpm run build",
-    "release": "pnpm run ci && changeset publish"
+    "release": "pnpm run lint && pnpm run test && pnpm run build && changeset publish"
   },
   "repository": {
     "type": "git",
