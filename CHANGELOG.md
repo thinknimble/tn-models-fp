@@ -1,5 +1,11 @@
 # @thinknimble/tn-models-fp
 
+## 0.0.4
+
+### Patch Changes
+
+- 773bb15: Update readme for contribution guide
+
 ## 0.0.3
 
 ### Patch Changes
