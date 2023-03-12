@@ -6,7 +6,7 @@ import {
   toSnakeCase,
 } from "@thinknimble/tn-utils"
 import { z } from "zod"
-import { getPaginatedZod } from "./pagination"
+import { getPaginatedZod } from "./utils/pagination"
 import { parseResponse } from "./response"
 
 export type ZodPrimitives =

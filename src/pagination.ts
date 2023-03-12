@@ -31,7 +31,7 @@ export interface IPagination {
   get currentPageEnd(): number
 }
 
-export default class Pagination implements IPagination {
+export class Pagination implements IPagination {
   page: number
   totalCount: number
   next: null | string

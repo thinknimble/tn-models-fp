@@ -1,8 +1,8 @@
 import { objectToCamelCase, objectToSnakeCase } from "@thinknimble/tn-utils"
 import { AxiosInstance } from "axios"
 import { z } from "zod"
-import { IPagination } from "../pagination"
-import { getPaginatedZod } from "./pagination"
+import { IPagination } from "./pagination"
+import { getPaginatedZod } from "./utils/pagination"
 import { parseResponse } from "./response"
 import {
   CallbackUtils,

@@ -4,7 +4,7 @@ import { SnakeCasedPropertiesDeep } from "@thinknimble/tn-utils"
 import axios from "axios"
 import { beforeEach, describe, expect, it, Mocked, vi } from "vitest"
 import { z } from "zod"
-import Pagination from "../pagination"
+import Pagination from "./pagination"
 import { createApi, createCustomServiceCall } from "./api"
 import { getPaginatedSnakeCasedZod, GetZodInferredTypeFromRaw } from "./utils"
 
