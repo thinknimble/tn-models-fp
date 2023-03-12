@@ -1,10 +1,11 @@
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { faker } from "@faker-js/faker"
 import { SnakeCasedPropertiesDeep } from "@thinknimble/tn-utils"
 import axios from "axios"
 import { beforeEach, describe, expect, it, Mocked, vi } from "vitest"
 import { z } from "zod"
-import Pagination from "./pagination"
+import { Pagination } from "./pagination"
 import { createApi, createCustomServiceCall } from "./api"
 import { getPaginatedSnakeCasedZod, GetZodInferredTypeFromRaw } from "./utils"
 
@@ -364,16 +365,16 @@ describe("v2 api tests", async () => {
         ...listResponse,
         results: [
           {
-            age: joseph.age,
-            firstName: joseph.first_name,
-            lastName: joseph.last_name,
-            id: joseph.id,
+            age: joseph!.age,
+            firstName: joseph!.first_name,
+            lastName: joseph!.last_name,
+            id: joseph!.id,
           },
           {
-            age: jotaro.age,
-            firstName: jotaro.first_name,
-            lastName: jotaro.last_name,
-            id: jotaro.id,
+            age: jotaro!.age,
+            firstName: jotaro!.first_name,
+            lastName: jotaro!.last_name,
+            id: jotaro!.id,
           },
         ],
       })
