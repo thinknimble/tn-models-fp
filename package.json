@@ -3,6 +3,7 @@
   "version": "0.0.1",
   "description": "Utilities for building front-end models.",
   "author": "Thinknimble",
+  "private": "false",
   "license": "MIT",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
@@ -12,7 +13,8 @@
     "lint": "tsc",
     "test": "vitest run",
     "test:dev": "vitest",
-    "ci": "pnpm run lint && pnpm run test && pnpm run build"
+    "ci": "pnpm run lint && pnpm run test && pnpm run build",
+    "release": "pnpm run ci && changeset publish"
   },
   "repository": {
     "type": "git",
@@ -30,6 +32,7 @@
     "@faker-js/faker": "^7.6.0",
     "@typescript-eslint/eslint-plugin": "^5.48.2",
     "@typescript-eslint/parser": "^5.48.2",
+    "axios": "^1.3.4",
     "eslint": "^8.32.0",
     "eslint-config-prettier": "^8.6.0",
     "eslint-plugin-prettier": "^4.2.1",
@@ -37,7 +40,8 @@
     "tsup": "^6.6.3",
     "typescript": "^4.9.5",
     "vite": "^4.0.4",
-    "vitest": "^0.27.3"
+    "vitest": "^0.27.3",
+    "zod": "^3.21.4"
   },
   "peerDependencies": {
     "axios": ">1.0.0",
