@@ -10,8 +10,9 @@
   "scripts": {
     "build": "tsup index.ts --format cjs,esm --dts",
     "lint": "tsc",
-    "test": "vitest",
-    "test:run": "vitest run"
+    "test": "vitest run",
+    "test:dev": "vitest",
+    "ci": "pnpm run lint && pnpm run test && pnpm run build"
   },
   "repository": {
     "type": "git",
