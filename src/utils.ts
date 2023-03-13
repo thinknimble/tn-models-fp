@@ -144,12 +144,63 @@ export type ZodRawShapeRecurse = {
   [key: string]: z.ZodTypeAny | z.ZodRawShape | ZodRawShapeRecurse
 }
 
-export type GetInferredRecurseRaw<T extends ZodRawShapeRecurse> = {
-  [TKey in keyof T]: T[TKey] extends z.ZodTypeAny
-    ? z.infer<T[TKey]>
-    : T[TKey] extends z.ZodRawShape
-    ? GetInferredFromRaw<T[TKey]>
-    : T[TKey] extends ZodRawShapeRecurse
-    ? GetInferredRecurseRaw<T[TKey]>
+export type GetInferredRecurseRaw<T extends ZodRawShapeRecurse> = Prettify<{
+  [K in keyof T]: T[K] extends z.ZodTypeAny
+    ? z.infer<T[K]>
+    : T[K] extends z.ZodRawShape
+    ? GetInferredFromRaw<T[K]>
+    : T[K] extends ZodRawShapeRecurse
+    ? GetInferredRecurseRaw<T[K]>
     : never
+}>
+export type GetRecurseZodRawShape<T extends ZodRawShapeRecurse> = Prettify<{
+  [K in keyof T]: T[K] extends z.ZodTypeAny
+    ? T[K]
+    : T[K] extends z.ZodRawShape
+    ? z.ZodObject<T[K]>
+    : T[K] extends ZodRawShapeRecurse
+    ? GetRecurseZodRawShape<T[K]>
+    : never
+}>
+type Prettify<T> = {
+  [K in keyof T]: T[K]
+  // eslint-disable-next-line @typescript-eslint/ban-types
+} & {}
+
+//TODO: remove
+type test = GetRecurseZodRawShape<{
+  a: {
+    a1: z.ZodString
+    a2: z.ZodString
+  }
+  b: z.ZodString
+}>
+
+const isShape = (input: object): input is z.ZodRawShape => {
+  return Object.values(input).every((item) => item instanceof z.ZodType)
+}
+
+//TODO: types for this method are quite weak right now. Any nested object in the shape loses their types after doing the zodification of it
+/**
+ * Given an object, turn it into a zod object
+ */
+//@ts-expect-error check whether this is fixable
+export const objectToZod = <T extends ZodRawShapeRecurse>(input: T): z.ZodObject<GetRecurseZodRawShape<T>> => {
+  const entries = Object.entries(input)
+  return z.object(
+    Object.fromEntries(
+      entries.map(([k, v]) => {
+        if (typeof v !== "object")
+          throw new Error("Failed to parse shape. Any zod shape apex should be an instance of ZodType or a ZodRawShape")
+        if (isShape(v)) {
+          return [k, z.object(v)] as const
+        }
+        if (v instanceof z.ZodType) {
+          return [k, v] as const
+        }
+        return [k, objectToZod(v)] as const
+      })
+    )
+    //@ts-expect-error check whether this is fixable
+  ) as z.ZodObject<GetRecurseZodRawShape<T>>
 }
