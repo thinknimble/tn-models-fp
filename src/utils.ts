@@ -21,7 +21,7 @@ export type ZodPrimitives =
 /**
  * Get the resulting inferred type from a zod shape
  */
-export type GetZodInferredTypeFromRaw<T extends z.ZodRawShape> = z.infer<ReturnType<typeof z.object<T>>>
+export type GetInferredFromRaw<T extends z.ZodRawShape> = z.infer<ReturnType<typeof z.object<T>>>
 
 type ZodRawShapeSnakeCased<T extends z.ZodRawShape> = {
   [TKey in keyof T as SnakeCase<TKey>]: T[TKey]
@@ -30,7 +30,7 @@ type ZodRawShapeSnakeCased<T extends z.ZodRawShape> = {
 export type ToApiCall<TInput extends z.ZodRawShape | z.ZodTypeAny> = (
   obj: object
 ) => TInput extends z.ZodRawShape
-  ? SnakeCasedPropertiesDeep<GetZodInferredTypeFromRaw<TInput>>
+  ? SnakeCasedPropertiesDeep<GetInferredFromRaw<TInput>>
   : TInput extends z.ZodTypeAny
   ? z.infer<TInput>
   : never
@@ -38,7 +38,7 @@ export type ToApiCall<TInput extends z.ZodRawShape | z.ZodTypeAny> = (
 export type FromApiCall<TOutput extends z.ZodRawShape | z.ZodTypeAny> = (
   obj: object
 ) => TOutput extends z.ZodRawShape
-  ? GetZodInferredTypeFromRaw<TOutput>
+  ? GetInferredFromRaw<TOutput>
   : TOutput extends z.ZodTypeAny
   ? z.infer<TOutput>
   : never
@@ -138,4 +138,18 @@ export function createApiUtils<
         }
       : null
   ) as CallbackUtils<TInput, TOutput>
+}
+
+export type ZodRawShapeRecurse = {
+  [key: string]: z.ZodTypeAny | z.ZodRawShape | ZodRawShapeRecurse
+}
+
+export type GetInferredRecurseRaw<T extends ZodRawShapeRecurse> = {
+  [TKey in keyof T]: T[TKey] extends z.ZodTypeAny
+    ? z.infer<T[TKey]>
+    : T[TKey] extends z.ZodRawShape
+    ? GetInferredFromRaw<T[TKey]>
+    : T[TKey] extends ZodRawShapeRecurse
+    ? GetInferredRecurseRaw<T[TKey]>
+    : never
 }

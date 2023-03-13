@@ -7,7 +7,7 @@ import { beforeEach, describe, expect, it, Mocked, vi } from "vitest"
 import { z } from "zod"
 import { Pagination } from "./pagination"
 import { createApi, createCustomServiceCall } from "./api"
-import { getPaginatedSnakeCasedZod, GetZodInferredTypeFromRaw } from "./utils"
+import { getPaginatedSnakeCasedZod, GetInferredFromRaw } from "./utils"
 
 vi.mock("axios")
 
@@ -37,12 +37,12 @@ const testInputOutputObjects = (() => {
     },
     async ({ input, utils }) => {
       type tests = [
-        Expect<Equals<typeof input, GetZodInferredTypeFromRaw<typeof inputShape>>>,
-        Expect<Equals<(typeof utils)["fromApi"], (obj: object) => GetZodInferredTypeFromRaw<typeof outputShape>>>,
+        Expect<Equals<typeof input, GetInferredFromRaw<typeof inputShape>>>,
+        Expect<Equals<(typeof utils)["fromApi"], (obj: object) => GetInferredFromRaw<typeof outputShape>>>,
         Expect<
           Equals<
             (typeof utils)["toApi"],
-            (obj: object) => SnakeCasedPropertiesDeep<GetZodInferredTypeFromRaw<typeof inputShape>>
+            (obj: object) => SnakeCasedPropertiesDeep<GetInferredFromRaw<typeof inputShape>>
           >
         >
       ]
@@ -122,10 +122,8 @@ const testNoOutputInputObject = (() => {
       },
     }) => {
       type tests = [
-        Expect<Equals<typeof input, GetZodInferredTypeFromRaw<typeof inputShape>>>,
-        Expect<
-          Equals<typeof toApi, (obj: object) => SnakeCasedPropertiesDeep<GetZodInferredTypeFromRaw<typeof inputShape>>>
-        >
+        Expect<Equals<typeof input, GetInferredFromRaw<typeof inputShape>>>,
+        Expect<Equals<typeof toApi, (obj: object) => SnakeCasedPropertiesDeep<GetInferredFromRaw<typeof inputShape>>>>
       ]
     }
   )
@@ -148,7 +146,7 @@ const testNoInputOutputObject = (() => {
       //@ts-expect-error no input available
       input,
     }) => {
-      type test = Expect<Equals<typeof fromApi, (obj: object) => GetZodInferredTypeFromRaw<typeof outputShape>>>
+      type test = Expect<Equals<typeof fromApi, (obj: object) => GetInferredFromRaw<typeof outputShape>>>
       return { myOutput: 10 }
     }
   )
@@ -175,7 +173,7 @@ const testInputPlainZodOutputObject = (() => {
     }) => {
       type tests = [
         Expect<Equals<typeof input, z.infer<typeof inputShape>>>,
-        Expect<Equals<typeof fromApi, (obj: object) => GetZodInferredTypeFromRaw<typeof outputShape>>>
+        Expect<Equals<typeof fromApi, (obj: object) => GetInferredFromRaw<typeof outputShape>>>
       ]
       return { myOutput: 10 }
     }
@@ -195,10 +193,8 @@ const testInputObjectOutputPlainZod = (() => {
     },
     async ({ input, utils: { toApi } }) => {
       type tests = [
-        Expect<Equals<typeof input, GetZodInferredTypeFromRaw<typeof inputShape>>>,
-        Expect<
-          Equals<typeof toApi, (obj: object) => SnakeCasedPropertiesDeep<GetZodInferredTypeFromRaw<typeof inputShape>>>
-        >
+        Expect<Equals<typeof input, GetInferredFromRaw<typeof inputShape>>>,
+        Expect<Equals<typeof toApi, (obj: object) => SnakeCasedPropertiesDeep<GetInferredFromRaw<typeof inputShape>>>>
       ]
 
       return 10
@@ -267,13 +263,13 @@ describe("v2 api tests", async () => {
       mockedAxios.post.mockReset()
     })
 
-    const createInput: GetZodInferredTypeFromRaw<typeof createZodShape> = {
+    const createInput: GetInferredFromRaw<typeof createZodShape> = {
       age: 19,
       lastName: "Doe",
       firstName: "Jane",
     }
     const randomId: string = faker.datatype.uuid()
-    const createResponse: SnakeCasedPropertiesDeep<GetZodInferredTypeFromRaw<typeof entityZodShape>> = {
+    const createResponse: SnakeCasedPropertiesDeep<GetInferredFromRaw<typeof entityZodShape>> = {
       age: createInput.age,
       last_name: createInput.lastName,
       first_name: createInput.firstName,
@@ -311,7 +307,7 @@ describe("v2 api tests", async () => {
     it("returns camelCased entity", async () => {
       //arrange
       const randomUuid = faker.datatype.uuid()
-      const entityResponse: SnakeCasedPropertiesDeep<GetZodInferredTypeFromRaw<typeof entityZodShape>> = {
+      const entityResponse: SnakeCasedPropertiesDeep<GetInferredFromRaw<typeof entityZodShape>> = {
         age: 18,
         first_name: "John",
         last_name: "Doe",
