@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import { describe, it, expect } from "vitest"
+import { describe, expect, it } from "vitest"
 import { z } from "zod"
-import { createApiUtils } from "./utils"
+import { createApiUtils, GetInferredRecurseRaw, GetRecursiveZodShape, objectToValidZodShape } from "./utils"
 
 describe("createApiUtils", () => {
   it("returns undefined when both input output are primitives", () => {
@@ -83,5 +83,51 @@ describe("createApiUtils", () => {
     ]
     expect("toApi" in utils).toEqual(true)
     expect("fromApi" in utils).toEqual(true)
+  })
+})
+
+describe("objectToValidZodShape", () => {
+  it("Takes a nested shape and turns it into the corresponding zod", () => {
+    //arrange
+    const shape = {
+      a: {
+        a1: z.string(),
+      },
+      b: {
+        b1: {
+          b11: z.string(),
+          b12: {
+            b121: z.string(),
+          },
+        },
+      },
+      c: z.string(),
+    }
+    const expectedParsePass: GetInferredRecurseRaw<typeof shape> = {
+      a: {
+        a1: "a1",
+      },
+      b: {
+        b1: {
+          b11: "b11",
+          b12: {
+            b121: "hello",
+          },
+        },
+      },
+      c: "c",
+    }
+    type ExpectedParsePassType = typeof expectedParsePass
+    //act
+    const validZodShape = objectToValidZodShape(shape)
+    const result = z.object(validZodShape)
+    type test = z.infer<typeof result>
+    type typeTests = [
+      Expect<Equals<test["c"], ExpectedParsePassType["c"]>>,
+      Expect<Equals<test["a"], ExpectedParsePassType["a"]>>,
+      Expect<Equals<test["b"], ExpectedParsePassType["b"]>>
+    ]
+    //assert
+    expect(() => result.parse(expectedParsePass)).not.toThrow()
   })
 })
