@@ -1,5 +1,11 @@
 # @thinknimble/tn-models-fp
 
+## 1.0.1
+
+### Patch Changes
+
+- f0de186: Add missing type exports for recursive shapes
+
 ## 1.0.0
 
 ### Major Changes
