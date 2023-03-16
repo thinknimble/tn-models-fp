@@ -1,5 +1,11 @@
 # @thinknimble/tn-models-fp
 
+## 1.0.2
+
+### Patch Changes
+
+- 43c3973: Move `Prettify` util to an actual ts file instead of `global.d.ts`
+
 ## 1.0.1
 
 ### Patch Changes
