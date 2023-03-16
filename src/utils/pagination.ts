@@ -1,7 +1,7 @@
 import { z } from "zod"
-import { objectToValidZodShape, ZodRawShapeRecurse } from "../utils"
+import { objectToValidZodShape, ZodRecursiveShape } from "../utils"
 
-export const getPaginatedZod = <T extends ZodRawShapeRecurse>(zodRawShape: T) =>
+export const getPaginatedZod = <T extends ZodRecursiveShape>(zodRawShape: T) =>
   z.object({
     count: z.number(),
     next: z.string().nullable(),
