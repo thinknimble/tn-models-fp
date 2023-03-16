@@ -19,6 +19,11 @@ jobs:
         with:
           node-version: 16.x
           cache: "pnpm"
-
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm run ci
+      - name: 📦 Install packages
+        run: pnpm install --frozen-lockfile
+      - name: 🆎 TypeCheck
+        run: pnpm lint
+      - name: 🧪 Run tests
+        run: pnpm test
+      - name: 🏗️ Build
+        run: pnpm build
