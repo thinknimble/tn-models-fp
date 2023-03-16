@@ -169,11 +169,6 @@ export type GetInferredRecurseRaw<T extends ZodRawShapeRecurse> = Prettify<{
     : never
 }>
 
-type Prettify<T> = {
-  [K in keyof T]: T[K]
-  // eslint-disable-next-line @typescript-eslint/ban-types
-} & {}
-
 export type GetRecursiveZodShape<T extends ZodRawShapeRecurse> = {
   [K in keyof T]: T[K] extends z.ZodTypeAny
     ? T[K]
