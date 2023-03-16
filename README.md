@@ -12,6 +12,7 @@ The package is based in zod to replace models and fields approach from previous 
   - [Install this package with your favorite package manager!](#install-this-package-with-your-favorite-package-manager)
   - [Create your api!](#create-your-api)
   - [Use its built-in methods in your app](#use-its-built-in-methods-in-your-app)
+  - [Create your own calls](#create-your-own-calls)
 - [API reference](#api-reference)
   - [`createApi`](#createapi)
     - [Example use](#example-use)
@@ -104,6 +105,29 @@ const TodoManager = () => {
   )
 }
 
+```
+
+## Create your own calls
+
+A second parameter to `createApi` can be passed so you can create your own calls.
+To do this you pass an object with the service callbacks. These should be created with `createCustomServiceCall` method:
+
+First parameter are the models for your input and output shapes of the call.
+
+Second parameter is the actual service call, this callback is powered up with multiple arguments that provide you with all the tools we think you need to make a type-safe call.
+
+```typescript
+const updatePartial = createCustomServiceCall(
+  {
+    inputShape: partialUpdateShape,
+    outputShape: entityShape,
+  },
+  async ({ client, endpoint, input, utils: { toApi, fromApi } }) => {
+    const { id, ...rest } = toApi(input)
+    const res = await client.patch(`${endpoint}/${id}`, rest)
+    return fromApi(res.data)
+  }
+)
 ```
 
 # API reference
