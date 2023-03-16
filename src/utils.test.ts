@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { describe, expect, it } from "vitest"
 import { z } from "zod"
-import { createApiUtils, GetInferredRecurseRaw, GetRecursiveZodShape, objectToValidZodShape } from "./utils"
+import { createApiUtils, GetInferredRecursiveShape, objectToValidZodShape } from "./utils"
 
 describe("createApiUtils", () => {
   it("returns undefined when both input output are primitives", () => {
@@ -103,7 +103,7 @@ describe("objectToValidZodShape", () => {
       },
       c: z.string(),
     }
-    const expectedParsePass: GetInferredRecurseRaw<typeof shape> = {
+    const expectedParsePass: GetInferredRecursiveShape<typeof shape> = {
       a: {
         a1: "a1",
       },

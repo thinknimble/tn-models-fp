@@ -6,8 +6,8 @@ import {
   toSnakeCase,
 } from "@thinknimble/tn-utils"
 import { z } from "zod"
-import { getPaginatedZod } from "./utils/pagination"
 import { parseResponse } from "./response"
+import { getPaginatedZod } from "./utils/pagination"
 
 export type ZodPrimitives =
   | z.ZodString
@@ -25,50 +25,50 @@ type GetZodObjectType<T extends z.ZodRawShape> = ReturnType<typeof z.object<T>>
  */
 export type GetInferredFromRaw<T extends z.ZodRawShape> = z.infer<GetZodObjectType<T>>
 
-type ZodRecurseShapeSnakeCased<T extends ZodRawShapeRecurse> = {
-  [K in keyof T as SnakeCase<K>]: T[K] extends ZodRawShapeRecurse<infer Res> ? ZodRecurseShapeSnakeCased<Res> : T[K]
+type ZodRecursiveShapeSnakeCased<T extends ZodRecursiveShape> = {
+  [K in keyof T as SnakeCase<K>]: T[K] extends ZodRecursiveShape<infer Res> ? ZodRecursiveShapeSnakeCased<Res> : T[K]
 }
 
-export type ToApiCall<TInput extends ZodRawShapeRecurse | z.ZodTypeAny> = (
+export type ToApiCall<TInput extends ZodRecursiveShape | z.ZodTypeAny> = (
   obj: object
-) => TInput extends ZodRawShapeRecurse
-  ? SnakeCasedPropertiesDeep<GetInferredRecurseRaw<TInput>>
+) => TInput extends ZodRecursiveShape
+  ? SnakeCasedPropertiesDeep<GetInferredRecursiveShape<TInput>>
   : TInput extends z.ZodTypeAny
   ? z.infer<TInput>
   : never
 
-export type FromApiCall<TOutput extends ZodRawShapeRecurse | z.ZodTypeAny> = (
+export type FromApiCall<TOutput extends ZodRecursiveShape | z.ZodTypeAny> = (
   obj: object
-) => TOutput extends ZodRawShapeRecurse
-  ? GetInferredRecurseRaw<TOutput>
+) => TOutput extends ZodRecursiveShape
+  ? GetInferredRecursiveShape<TOutput>
   : TOutput extends z.ZodTypeAny
   ? z.infer<TOutput>
   : never
 
-export const zodRecurseShapeToSnakeCase = <T extends ZodRawShapeRecurse>(
-  zodRecurseShape: T
-): ZodRecurseShapeSnakeCased<T> => {
+export const zodRecursiveShapeToSnakeCase = <T extends ZodRecursiveShape>(
+  zodRecursiveShape: T
+): ZodRecursiveShapeSnakeCased<T> => {
   return Object.fromEntries(
-    Object.entries(zodRecurseShape).map(([k, v]) => {
+    Object.entries(zodRecursiveShape).map(([k, v]) => {
       if (v instanceof z.ZodType) {
         return [toSnakeCase(k), v]
       }
-      return [toSnakeCase(k), zodRecurseShapeToSnakeCase(v)]
+      return [toSnakeCase(k), zodRecursiveShapeToSnakeCase(v)]
     })
-  ) as ZodRecurseShapeSnakeCased<T>
+  ) as ZodRecursiveShapeSnakeCased<T>
 }
 
-export const getPaginatedSnakeCasedZod = <T extends ZodRawShapeRecurse>(zodShape: T) => {
-  return getPaginatedZod(objectToValidZodShape(zodRecurseShapeToSnakeCase(zodShape)))
+export const getPaginatedSnakeCasedZod = <T extends ZodRecursiveShape>(zodShape: T) => {
+  return getPaginatedZod(objectToValidZodShape(zodRecursiveShapeToSnakeCase(zodShape)))
 }
 
-type FromApiUtil<T extends ZodRawShapeRecurse | ZodPrimitives> = {
+type FromApiUtil<T extends ZodRecursiveShape | ZodPrimitives> = {
   /**
    * Given an object, parses the response based on outputShape, it turns the result keys into camelCase. It also shows a warning if the outputShape does not match the passed object
    */
   fromApi: FromApiCall<T>
 }
-type ToApiUtil<T extends ZodRawShapeRecurse | ZodPrimitives> = {
+type ToApiUtil<T extends ZodRecursiveShape | ZodPrimitives> = {
   /**
    * Given an object, parses the input and turns its keys into snake_case
    */
@@ -76,8 +76,8 @@ type ToApiUtil<T extends ZodRawShapeRecurse | ZodPrimitives> = {
 }
 
 export type CallbackUtils<
-  TInput extends ZodRawShapeRecurse | ZodPrimitives,
-  TOutput extends ZodRawShapeRecurse | ZodPrimitives,
+  TInput extends ZodRecursiveShape | ZodPrimitives,
+  TOutput extends ZodRecursiveShape | ZodPrimitives,
   TInputIsPrimitive extends boolean = TInput extends ZodPrimitives ? true : false,
   TOutputIsPrimitive extends boolean = TOutput extends ZodPrimitives ? true : false
 > = TInput extends z.ZodVoid
@@ -99,18 +99,18 @@ export type CallbackUtils<
             utils: FromApiUtil<TOutput>
           })
 
-const createToApiHandler = <T extends ZodRawShapeRecurse | ZodPrimitives>(inputShape: T) => {
+const createToApiHandler = <T extends ZodRecursiveShape | ZodPrimitives>(inputShape: T) => {
   const isInputZodPrimitive = inputShape instanceof z.ZodSchema
   // Given that this is under our control, we should not do safe parse, if the parsing fails means something is wrong (you're not complying with the schema you defined)
   return isInputZodPrimitive
     ? undefined
     : (((obj: object) =>
         z
-          .object(objectToValidZodShape(zodRecurseShapeToSnakeCase(inputShape)))
+          .object(objectToValidZodShape(zodRecursiveShapeToSnakeCase(inputShape)))
           .parse(objectToSnakeCase(obj))) as ToApiCall<T>)
 }
 
-const createFromApiHandler = <T extends ZodRawShapeRecurse | ZodPrimitives>(outputShape: T, callerName: string) => {
+const createFromApiHandler = <T extends ZodRecursiveShape | ZodPrimitives>(outputShape: T, callerName: string) => {
   const isOutputZodPrimitive = outputShape instanceof z.ZodSchema
   // since this checks for the api response, which we don't control, we can't strict parse, else we would break the flow. We'd rather safe parse and show a warning if there's a mismatch
   return isOutputZodPrimitive
@@ -124,8 +124,8 @@ const createFromApiHandler = <T extends ZodRawShapeRecurse | ZodPrimitives>(outp
 }
 
 export function createApiUtils<
-  TInput extends ZodRawShapeRecurse | ZodPrimitives,
-  TOutput extends ZodRawShapeRecurse | ZodPrimitives
+  TInput extends ZodRecursiveShape | ZodPrimitives,
+  TOutput extends ZodRecursiveShape | ZodPrimitives
 >(
   args: { name: string } & (
     | { inputShape: TInput; outputShape: TOutput }
@@ -149,33 +149,33 @@ export function createApiUtils<
   ) as CallbackUtils<TInput, TOutput>
 }
 
-export type ZodRawShapeRecurse<T extends object = object> = {
+export type ZodRecursiveShape<T extends object = object> = {
   [K in keyof T]: T[K] extends z.ZodTypeAny
     ? T[K]
     : T[K] extends z.ZodRawShape
     ? T[K]
-    : T[K] extends ZodRawShapeRecurse<infer Res>
-    ? ZodRawShapeRecurse<Res>
+    : T[K] extends ZodRecursiveShape<infer Res>
+    ? ZodRecursiveShape<Res>
     : never
 }
 
-export type GetInferredRecurseRaw<T extends ZodRawShapeRecurse> = Prettify<{
+export type GetInferredRecursiveShape<T extends ZodRecursiveShape> = Prettify<{
   [K in keyof T]: T[K] extends z.ZodTypeAny
     ? z.infer<T[K]>
     : T[K] extends z.ZodRawShape
     ? GetInferredFromRaw<T[K]>
-    : T[K] extends ZodRawShapeRecurse
-    ? GetInferredRecurseRaw<T[K]>
+    : T[K] extends ZodRecursiveShape
+    ? GetInferredRecursiveShape<T[K]>
     : never
 }>
 
-export type GetRecursiveZodShape<T extends ZodRawShapeRecurse> = {
+export type GetRecursiveZodShape<T extends ZodRecursiveShape> = {
   [K in keyof T]: T[K] extends z.ZodTypeAny
     ? T[K]
     : T[K] extends z.ZodRawShape
     ? GetZodObjectType<T[K]>
-    : T[K] extends Prettify<ZodRawShapeRecurse<infer Res>>
-    ? GetZodObjectType<GetRecursiveZodShape<ZodRawShapeRecurse<Res>>>
+    : T[K] extends Prettify<ZodRecursiveShape<infer Res>>
+    ? GetZodObjectType<GetRecursiveZodShape<ZodRecursiveShape<Res>>>
     : never
 }
 
@@ -186,7 +186,7 @@ const isShape = (input: object): input is z.ZodRawShape => {
 /**
  * Given an object, turn it into a zod object
  */
-export const objectToValidZodShape = <T extends ZodRawShapeRecurse>(input: T): Prettify<GetRecursiveZodShape<T>> => {
+export const objectToValidZodShape = <T extends ZodRecursiveShape>(input: T): Prettify<GetRecursiveZodShape<T>> => {
   const entries = Object.entries(input)
   return Object.fromEntries(
     entries.map(([k, v]) => {
