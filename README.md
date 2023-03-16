@@ -1,4 +1,4 @@
-# TN Models - FP approach + TS
+# TN Models - FP approach + TS <!-- omit in toc -->
 
 This package attempts to approach [ tn-models ](https://github.com/thinknimble/tn-models) from a functional paradigm to avoid having issues with types in classes. Thus, preventing doing weird stuff with class static fields which are undiscoverable from TS perspective.
 
@@ -6,7 +6,107 @@ We also prevent runtime obfuscation of fields ( this happened with classes where
 
 The package is based in zod to replace models and fields approach from previous version
 
-# Docs
+# Table of contents <!-- omit in toc -->
+
+- [Getting started](#getting-started)
+  - [Install this package with your favorite package manager!](#install-this-package-with-your-favorite-package-manager)
+  - [Create your api!](#create-your-api)
+  - [Use its built-in methods in your app](#use-its-built-in-methods-in-your-app)
+- [API reference](#api-reference)
+  - [`createApi`](#createapi)
+    - [Example use](#example-use)
+  - [Models (zod-based)](#models-zod-based)
+    - [Why shapes and not zods?](#why-shapes-and-not-zods)
+  - [`createCustomServiceCall` or `csc`](#createcustomservicecall-or-csc)
+  - [`createApiUtils`](#createapiutils)
+  - [`createCollectionManager`](#createcollectionmanager)
+    - [Example use](#example-use-1)
+- [Roadmap](#roadmap)
+  - [Custom api calls](#custom-api-calls)
+- [Contribution guide](#contribution-guide)
+  - [Publishing new version of the package.](#publishing-new-version-of-the-package)
+
+# Getting started
+
+## Install this package with your favorite package manager!
+
+```bash
+npm i @thinknimble/tn-models-fp
+```
+
+```bash
+yarn add @thinknimble/tn-models-fp
+```
+
+```bash
+pnpm i @thinknimble/tn-models-fp
+```
+
+## Create your api!
+
+You need a couple of things:
+
+- An `AxiosInstance`. Either create it on the fly or provide an existing one
+- A base uri for your api
+- Model for resource creation
+- Model for resource entity (what you know the api will return)
+
+IG:
+
+```typescript
+import axios from "axios"
+import { z } from "zod"
+
+const createShape = {
+  completed: z.boolean().default(false),
+  content: z.string().min(1),
+  completedDate: z.string().datetime().nullable(),
+}
+
+export const todoApi = createApi({
+  client: axios.create(),
+  endpoint: "api/todo",
+  models: {
+    create: createShape,
+    entity: { id: z.string().uuid(), ...createShape },
+  },
+})
+```
+
+## Use its built-in methods in your app
+
+```typescript
+import {todoApi} from './services'
+import {useMutation} from '@tanstack/react-query'
+import {useState} from 'react'
+import { Pagination } from '@thinknimble/tn-models-fp'
+
+const TodoManager = () => {
+  const [selectedTodoId,setSelectedTodoId] = useState()
+
+  const {data: selectedTodo} = useQuery({
+    queryKey: ['todo',selectedTodoId],
+    queryFn: () => todoApi.retrieve( selectedTodoId )
+  })
+
+  const {mutateAsync:create} = useMutation({
+    mutationFn: todoApi.create
+  })
+
+  const [pagination, setPagination] = useState( new Pagination({ page:1 }) )
+  const { data:currentList } = useQuery({
+    queryKey: ['todo-list',page],
+    queryFn: () => todoApi.list( { pagination } )
+  })
+
+  return (
+    //...
+  )
+}
+
+```
+
+# API reference
 
 ## `createApi`
 
@@ -27,8 +127,8 @@ export const todoApi = createApi({
   client, // AxiosInstance
   endpoint, //string base endpoint
   models: {
-    create: createZodRaw, // ZodRawShape
-    entity: entityZodRaw, // ZodRawShape
+    create: createZodRaw, // ZodRecursiveShape
+    entity: entityZodRaw, // ZodRecursiveShape
   },
 })
 ```
@@ -41,20 +141,34 @@ I see zod as a library that bridges the gap between typescript world and javascr
 
 Zod is going to be used both as the core tool for our type inference and as a validator parser (for snake_casing requests and camelCasing responses as well as checking whether the type received from api is the same as expected).
 
-What we're using in this approach (and what we would require users to use) are[ `ZodRawShape`](https://github.com/colinhacks/zod/blob/42984bf92b93b468666f64d536016b1439f8bf9e/src/types.ts#L48)s which in plain words are records which values are `ZodType` (pretty much anything that you can create with zod's `z`).
+What we're using in this approach (and what we would require users to use) are recursive zod shapes. Which in plain words are objects which values are either
+
+- `ZodType` : pretty much anything that you can create with zod's `z`
+- `ZodRawShape` : object which values are `ZodType`s
+- `ZodRecursiveShape` : here's the recursion
 
 Sample models:
 
 ```ts
 import { z } from "zod"
 
-const createZodRaw = {
-  completed: z.boolean().default(false),
-  content: z.string().min(1),
-  completedDate: z.string().datetime().nullable(),
+const createShape = {
+  completed: z.boolean().default(false), //ZodType
+  content: z.string().min(1), // ZodType
+  completedDate: z.string().datetime().nullable(), // ZodType
+  extraInformation: {
+    // ZodRecursiveShape
+    developerUserId: z.string().uuid(),
+    reviewerUserId: z.string().uuid(),
+    qaUserId: z.string().uuid(),
+    prDetails: {
+      // ZodRawShape
+      url: z.string().url(),
+    },
+  },
 }
 
-const entityZodRaw = { ...createZodRaw, id: z.number() }
+const entityShape = { ...createZodRaw, id: z.number() }
 ```
 
 ### Why shapes and not zods?
@@ -164,12 +278,17 @@ const collectionManager = createCollectionManager({
 })
 ```
 
-# TODO - Roadmap
+# Roadmap
 
 ## Custom api calls
 
-- [ ] Detach api inputs from call input. (?)
-      (?) We could be interested in passing certain input to our call and constructing the input to the api within our method rather than passing it whole in as the custom service call parameter. Probably we could split custom service call inputs vs api call inputs. IG of custom service call input diff with api call input
+- [ ] Detach api inputs from call input.
+
+<details>
+<summary>
+More info
+</summary>
+We could be interested in passing certain input to our call and constructing the input to the api within our method rather than passing it whole in as the custom service call parameter. Probably we could split custom service call inputs vs api call inputs. IG of custom service call input diff with api call input
 
 ```typescript
 //...
@@ -185,6 +304,8 @@ const collectionManager = createCollectionManager({
 
 for `toApi` to work properly we need to define the shape of the api call input, which in this case differs from the one that we are declaring in the inputShape.
 Internally `toApi` parses into snake case with `inputShape` in mind. So we would probably want to separate these two shapes in case we don't want them to be the same
+
+</details>
 
 # Contribution guide
 
