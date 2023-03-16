@@ -1,5 +1,11 @@
 # @thinknimble/tn-models-fp
 
+## 1.0.3
+
+### Patch Changes
+
+- cc42056: Add export for recursiveShapeToValidZodRawShape and add extra documentation around this method as well (will probably remove this export in the future)
+
 ## 1.0.2
 
 ### Patch Changes
