@@ -9,7 +9,7 @@ import {
   GetInferredFromRaw,
   GetInferredRecursiveShape,
   getPaginatedSnakeCasedZod,
-  objectToValidZodShape,
+  recursiveShapeToValidZodRawShape,
   ZodPrimitives,
   ZodRecursiveShape,
   zodRecursiveShapeToSnakeCase,
@@ -325,7 +325,7 @@ export function createApi<
     const parsed = parseResponse({
       identifier: `${retrieve.name} ${uri}`,
       data: res.data,
-      zod: z.object(objectToValidZodShape(zodRecursiveShapeToSnakeCase(models.entity))),
+      zod: z.object(recursiveShapeToValidZodRawShape(zodRecursiveShapeToSnakeCase(models.entity))),
     })
     return objectToCamelCase(parsed)
   }
@@ -333,7 +333,7 @@ export function createApi<
   const create = async (inputs: TApiCreate) => {
     const snaked = objectToSnakeCase(inputs)
     const res = await client.post(endpoint, snaked)
-    const snakedEntityShape = objectToValidZodShape(zodRecursiveShapeToSnakeCase(models.entity))
+    const snakedEntityShape = recursiveShapeToValidZodRawShape(zodRecursiveShapeToSnakeCase(models.entity))
     const parsed = parseResponse({
       identifier: `${create.name} ${endpoint}`,
       data: res.data,

@@ -64,7 +64,7 @@ export const zodRecursiveShapeToSnakeCase = <T extends ZodRecursiveShape>(
 }
 
 export const getPaginatedSnakeCasedZod = <T extends ZodRecursiveShape>(zodShape: T) => {
-  return getPaginatedZod(objectToValidZodShape(zodRecursiveShapeToSnakeCase(zodShape)))
+  return getPaginatedZod(recursiveShapeToValidZodRawShape(zodRecursiveShapeToSnakeCase(zodShape)))
 }
 
 type FromApiUtil<T extends ZodRecursiveShape | ZodPrimitives> = {
@@ -111,7 +111,7 @@ const createToApiHandler = <T extends ZodRecursiveShape | ZodPrimitives>(inputSh
     ? undefined
     : (((obj: object) =>
         z
-          .object(objectToValidZodShape(zodRecursiveShapeToSnakeCase(inputShape)))
+          .object(recursiveShapeToValidZodRawShape(zodRecursiveShapeToSnakeCase(inputShape)))
           .parse(objectToSnakeCase(obj))) as ToApiCall<T>)
 }
 
@@ -124,7 +124,7 @@ const createFromApiHandler = <T extends ZodRecursiveShape | ZodPrimitives>(outpu
         parseResponse({
           identifier: callerName,
           data: objectToCamelCase(obj) ?? {},
-          zod: z.object(objectToValidZodShape(outputShape)),
+          zod: z.object(recursiveShapeToValidZodRawShape(outputShape)),
         })) as FromApiCall<T>)
 }
 
@@ -189,9 +189,11 @@ const isShape = (input: object): input is z.ZodRawShape => {
 }
 
 /**
- * Given an object, turn it into a zod object
+ * Given a recursive shape, convert it to a valid ZodRawShape by recursively calling z.object on each ZodRawShape found.
  */
-export const objectToValidZodShape = <T extends ZodRecursiveShape>(input: T): Prettify<GetRecursiveZodShape<T>> => {
+export const recursiveShapeToValidZodRawShape = <T extends ZodRecursiveShape>(
+  input: T
+): Prettify<GetRecursiveZodShape<T>> => {
   const entries = Object.entries(input)
   return Object.fromEntries(
     entries.map(([k, v]) => {
@@ -203,7 +205,7 @@ export const objectToValidZodShape = <T extends ZodRecursiveShape>(input: T): Pr
       if (v instanceof z.ZodType) {
         return [k, v] as const
       }
-      return [k, z.object(objectToValidZodShape(v))] as const
+      return [k, z.object(recursiveShapeToValidZodRawShape(v))] as const
     })
   ) as GetRecursiveZodShape<T>
 }

@@ -10,5 +10,5 @@ export type {
   GetInferredRecursiveShape,
   GetRecursiveZodShape,
 } from "./utils"
-export { createApiUtils } from "./utils"
+export { createApiUtils, recursiveShapeToValidZodRawShape } from "./utils"
 export { parseResponse } from "./response"
