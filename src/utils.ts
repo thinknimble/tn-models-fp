@@ -38,7 +38,7 @@ export type ToApiCall<TInput extends ZodRecursiveShape | z.ZodTypeAny> = (
   obj: object
 ) => TInput extends ZodRecursiveShape
   ? SnakeCasedPropertiesDeep<GetInferredRecursiveShape<TInput>>
-  : TInput extends z.ZodTypeAny
+  : TInput extends z.ZodType
   ? z.infer<TInput>
   : never
 
@@ -46,7 +46,7 @@ export type FromApiCall<TOutput extends ZodRecursiveShape | z.ZodTypeAny> = (
   obj: object
 ) => TOutput extends ZodRecursiveShape
   ? GetInferredRecursiveShape<TOutput>
-  : TOutput extends z.ZodTypeAny
+  : TOutput extends z.ZodType
   ? z.infer<TOutput>
   : never
 
@@ -155,7 +155,7 @@ export function createApiUtils<
 }
 
 export type ZodRecursiveShape<T extends object = object> = {
-  [K in keyof T]: T[K] extends z.ZodTypeAny
+  [K in keyof T]: T[K] extends z.ZodType
     ? T[K]
     : T[K] extends z.ZodRawShape
     ? T[K]
@@ -165,7 +165,7 @@ export type ZodRecursiveShape<T extends object = object> = {
 }
 
 export type GetInferredRecursiveShape<T extends ZodRecursiveShape> = Prettify<{
-  [K in keyof T]: T[K] extends z.ZodTypeAny
+  [K in keyof T]: T[K] extends z.ZodType
     ? z.infer<T[K]>
     : T[K] extends z.ZodRawShape
     ? GetInferredFromRaw<T[K]>
