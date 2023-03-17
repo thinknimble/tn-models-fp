@@ -1,5 +1,5 @@
 import { objectToCamelCase, objectToSnakeCase } from "@thinknimble/tn-utils"
-import { AxiosInstance } from "axios"
+import { AxiosInstance, Axios } from "axios"
 import { z } from "zod"
 import { IPagination } from "./pagination"
 import { parseResponse } from "./response"
@@ -9,12 +9,14 @@ import {
   GetInferredFromRaw,
   GetInferredRecursiveShape,
   getPaginatedSnakeCasedZod,
+  Prettify,
   recursiveShapeToValidZodRawShape,
   ZodPrimitives,
   ZodRecursiveShape,
   zodRecursiveShapeToSnakeCase,
 } from "./utils"
-import { getPaginatedZod } from "./utils/pagination"
+import { getPaginatedShape, getPaginatedZod } from "./utils/pagination"
+import { Pagination } from "./pagination"
 
 const paginationFiltersZod = z
   .object({
@@ -36,9 +38,11 @@ const filtersZod = z
 
 const uuidZod = z.string().uuid()
 
-type InferCallbackInput<TInput extends ZodRecursiveShape | z.ZodTypeAny> = TInput extends z.ZodRawShape
+type InferCallbackInput<TInput extends ZodRecursiveShape | z.ZodType> = TInput extends z.ZodRawShape
+  ? GetInferredFromRaw<TInput>
+  : TInput extends ZodRecursiveShape<infer Res>
   ? GetInferredRecursiveShape<TInput>
-  : TInput extends z.ZodTypeAny
+  : TInput extends z.ZodType
   ? z.infer<TInput>
   : never
 
@@ -55,7 +59,7 @@ type CustomServiceCallback<
   params: {
     client: AxiosInstance
     /**
-     * Note this endpoint is the same as defined on api creation. So you must address its trailing slash on client call if required
+     * This uri has a trailing slash. Regardless of whether you added it on createApi call or not.
      */
     endpoint: string
   } & CallbackUtils<TInput, TOutput> &
@@ -144,6 +148,8 @@ export function createCustomServiceCall(...args: any[]): CustomServiceCallOpts<a
 /**
  * Base type for custom service calls which serves as a placeholder to later take advantage of inference
  */
+type FromApiPlaceholder = { fromApi: (obj: object) => any }
+type ToApiPlaceholder = { toApi: (obj: object) => any }
 type CustomServiceCallPlaceholder = {
   inputShape: object
   outputShape: object
@@ -151,7 +157,7 @@ type CustomServiceCallPlaceholder = {
     endpoint: string
     client: AxiosInstance
     input: any
-    utils: { fromApi: (obj: object) => never; toApi: (obj: object) => never }
+    utils: FromApiPlaceholder & ToApiPlaceholder
   }) => Promise<unknown>
 }
 
@@ -303,7 +309,7 @@ export function createApi<
       const inputResult = input ? { input } : {}
       return serviceCallOpts.callback({
         client,
-        endpoint,
+        endpoint: slashEndingEndpoint,
         ...inputResult,
         ...(utilsResult ? utilsResult : {}),
       })
@@ -332,7 +338,7 @@ export function createApi<
 
   const create = async (inputs: TApiCreate) => {
     const snaked = objectToSnakeCase(inputs)
-    const res = await client.post(endpoint, snaked)
+    const res = await client.post(slashEndingEndpoint, snaked)
     const snakedEntityShape = recursiveShapeToValidZodRawShape(zodRecursiveShapeToSnakeCase(models.entity))
     const parsed = parseResponse({
       identifier: `${create.name} ${endpoint}`,
@@ -381,5 +387,90 @@ export function createApi<
     ...baseReturn,
     customServiceCalls: modifiedCustomServiceCalls,
     csc: modifiedCustomServiceCalls,
+  }
+}
+
+type PaginatedServiceCallOptions = {
+  pagination: Pagination
+  uri: string
+  httpMethod?: keyof Pick<Axios, "get" | "post">
+}
+
+export function createPaginatedServiceCall<
+  TOutput extends ZodRecursiveShape
+  // TFilters extends z.ZodRawShape= never
+>(
+  models: CustomServiceCallOutputObj<TOutput>,
+  opts: PaginatedServiceCallOptions
+): CustomServiceCallOpts<z.ZodVoid, ReturnType<typeof getPaginatedShape<TOutput>>>
+export function createPaginatedServiceCall<
+  TOutput extends ZodRecursiveShape,
+  TInput extends ZodRecursiveShape
+  // TFilters extends z.ZodRawShape= never
+>(
+  models: CustomServiceCallInputObj<TInput> & CustomServiceCallOutputObj<TOutput>,
+  opts: PaginatedServiceCallOptions
+): CustomServiceCallOpts<TInput, ReturnType<typeof getPaginatedShape<TOutput>>>
+
+export function createPaginatedServiceCall<TOutput extends ZodRecursiveShape, TInput extends ZodRecursiveShape>(
+  models: object,
+  { pagination, uri, httpMethod = "get" }: PaginatedServiceCallOptions
+): CustomServiceCallOpts<any, any> {
+  // The output shape should still be the camelCased one so as long as we make sure that we return the same we should be able to cast the result right?. OutputShape will always be camelCased from the user input...
+  if (!("outputShape" in models)) {
+    throw new Error("You should provide an output shape ")
+  }
+  const outputShape = models.outputShape as TOutput
+  const newOutputShape = getPaginatedShape(outputShape)
+  const inputShape = "inputShape" in models ? models.inputShape : undefined
+  const callback: CustomServiceCallback<TInput, ReturnType<typeof getPaginatedShape<TOutput>>> = async ({
+    client,
+    endpoint,
+    utils,
+    input,
+  }) => {
+    const allFilters = {
+      ...(pagination ? { page: pagination.page, pageSize: pagination.size } : {}),
+    }
+    const filtersParsed = paginationFiltersZod.parse(allFilters)
+    const snakedFilters = filtersParsed ? objectToSnakeCase(filtersParsed) : undefined
+    const snakedCleanParsedFilters = snakedFilters
+      ? Object.fromEntries(
+          Object.entries(snakedFilters).flatMap(([k, v]) => {
+            if (typeof v === "number") return [[k, v.toString()]]
+            if (!v) return []
+            return [[k, v]]
+          })
+        )
+      : undefined
+
+    let res
+    const fullUri = `${endpoint}${uri}`
+    if (httpMethod === "get") {
+      res = await client.get(fullUri, {
+        params: snakedCleanParsedFilters,
+      })
+    } else {
+      res = await client.post(fullUri, inputShape ? utils.toApi(input) : undefined, {
+        params: snakedCleanParsedFilters,
+      })
+    }
+    const paginatedZod = getPaginatedSnakeCasedZod(outputShape)
+    const rawResponse = paginatedZod.parse(res.data)
+    //! although this claims not to be of the same type than our converted TOutput, it actually is, but all the added type complexity with camel casing util makes TS to think it is something different. It should be safe to cast this, we should definitely check this at runtime with tests
+    const result: unknown = { ...rawResponse, results: rawResponse.results.map((r) => objectToCamelCase(r)) }
+    return result as GetInferredRecursiveShape<ReturnType<typeof getPaginatedShape<TOutput>>>
+  }
+  if ("inputShape" in models) {
+    return {
+      callback: callback as CustomServiceCallback<z.ZodVoid, any>,
+      inputShape: models.inputShape,
+      outputShape: newOutputShape,
+    }
+  }
+  return {
+    callback: callback as CustomServiceCallback<any, any>,
+    inputShape: z.void(),
+    outputShape: newOutputShape,
   }
 }

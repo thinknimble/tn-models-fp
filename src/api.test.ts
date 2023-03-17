@@ -6,8 +6,8 @@ import axios from "axios"
 import { beforeEach, describe, expect, it, Mocked, vi } from "vitest"
 import { z } from "zod"
 import { Pagination } from "./pagination"
-import { createApi, createCustomServiceCall } from "./api"
-import { getPaginatedSnakeCasedZod, GetInferredFromRaw } from "./utils"
+import { createApi, createCustomServiceCall, createPaginatedServiceCall } from "./api"
+import { getPaginatedSnakeCasedZod, GetInferredFromRaw, Prettify } from "./utils"
 
 vi.mock("axios")
 
@@ -53,7 +53,7 @@ const testInputOutputObjects = (() => {
     }
   )
 })()
-
+type test = Prettify<ReturnType<(typeof testInputOutputObjects)["callback"]>>
 const testInputOutputPlainZods = (() => {
   const inputShape = z.string()
   const outputShape = z.number()
@@ -202,6 +202,41 @@ const testInputObjectOutputPlainZod = (() => {
   )
 })()
 
+const testSimplePaginatedCall = (() => {
+  return createPaginatedServiceCall(
+    {
+      outputShape: entityZodShape,
+    },
+    {
+      pagination: new Pagination({ page: 1 }),
+      uri: "testSimplePaginatedCall",
+    }
+  )
+})()
+type result = (typeof testSimplePaginatedCall)["callback"]
+const testPagePaginatedServiceCall = (() => {
+  return createPaginatedServiceCall(
+    {
+      outputShape: entityZodShape,
+    },
+    { pagination: new Pagination({ page: 10, size: 100 }), uri: "testPagePaginatedServiceCall" }
+  )
+})()
+const testPostPaginatedServiceCall = (() => {
+  return createPaginatedServiceCall(
+    {
+      inputShape: {
+        d: {
+          d1: z.number(),
+        },
+        e: z.string(),
+      },
+      outputShape: entityZodShape,
+    },
+    { pagination: new Pagination({ page: 1 }), uri: "testPostPaginatedServiceCall", httpMethod: "post" }
+  )
+})()
+
 describe("v2 api tests", async () => {
   const testEndpoint = "users"
   const testApi = createApi(
@@ -255,6 +290,9 @@ describe("v2 api tests", async () => {
       testNoInputOutputObject,
       testInputPlainZodOutputObject,
       testInputObjectOutputPlainZod,
+      testSimplePaginatedCall,
+      testPagePaginatedServiceCall,
+      testPostPaginatedServiceCall,
     }
   )
 
@@ -283,7 +321,7 @@ describe("v2 api tests", async () => {
       //act
       await testApi.create(createInput)
       //assert
-      expect(postSpy).toHaveBeenCalledWith(testEndpoint, {
+      expect(postSpy).toHaveBeenCalledWith(`${testEndpoint}/`, {
         age: createInput.age,
         last_name: createInput.lastName,
         first_name: createInput.firstName,
@@ -415,7 +453,7 @@ describe("v2 api tests", async () => {
     })
   })
 
-  describe("custom service calls", () => {
+  describe("createCustomServiceCall", () => {
     it("calls api with snake case", async () => {
       //arrange
       const postSpy = vi.spyOn(mockedAxios, "post")
@@ -458,9 +496,9 @@ describe("v2 api tests", async () => {
       //assert
       expect(res).toEqual(expected)
     })
-    it("receives endpoint as parameter within the callback", async () => {
+    it("receives endpoint as parameter within the callback and has a trailing slash", async () => {
       const res = await testApi.customServiceCalls.testEndpointParam()
-      expect(res).toEqual(testEndpoint)
+      expect(res).toEqual(`${testEndpoint}/`)
     })
     it("checks output only overload", async () => {
       const res = await testApi.customServiceCalls.testNoInputPlainZodOutput()
@@ -484,6 +522,118 @@ describe("v2 api tests", async () => {
       } catch {
         //ignore
       }
+    })
+  })
+
+  describe("createPaginatedServiceCall", () => {
+    const josephId = faker.datatype.uuid()
+    const jotaroId = faker.datatype.uuid()
+    const listResponse: z.infer<ReturnType<typeof getPaginatedSnakeCasedZod<typeof entityZodShape>>> = {
+      count: 10,
+      next: null,
+      previous: null,
+      results: [
+        { age: 68, first_name: "Joseph", last_name: "Joestar", id: josephId },
+        {
+          age: 17,
+          first_name: "Jotaro",
+          last_name: "Kujo",
+          id: jotaroId,
+        },
+      ],
+    }
+    const [joseph, jotaro] = listResponse.results
+    it("calls api with the right uri", async () => {
+      //arrange
+      const getSpy = vi.spyOn(mockedAxios, "get")
+      mockedAxios.get.mockResolvedValueOnce({
+        data: listResponse,
+      })
+      //act
+      await testApi.csc.testSimplePaginatedCall()
+      expect(getSpy).toHaveBeenCalledWith(`${testEndpoint}/testSimplePaginatedCall`, {
+        params: {
+          page: "1",
+          page_size: "25",
+        },
+      })
+    })
+    it("calls api with the selected method: post", async () => {
+      //arrange
+      const getSpy = vi.spyOn(mockedAxios, "get")
+      const postSpy = vi.spyOn(mockedAxios, "post")
+      mockedAxios.get.mockResolvedValueOnce({
+        data: listResponse,
+      })
+      mockedAxios.post.mockResolvedValueOnce({
+        data: listResponse,
+      })
+      const body = {
+        d: {
+          d1: 1,
+        },
+        e: "e",
+      }
+      //act
+      await testApi.csc.testPostPaginatedServiceCall(body)
+      //assert
+      expect(getSpy).not.toHaveBeenCalled()
+      expect(postSpy).toHaveBeenCalledWith(`${testEndpoint}/testPostPaginatedServiceCall`, body, {
+        params: {
+          page: "1",
+          page_size: "25",
+        },
+      })
+    })
+    it("calls api with right pagination params", async () => {
+      //arrange
+      const getSpy = vi.spyOn(mockedAxios, "get")
+      mockedAxios.get.mockResolvedValueOnce({
+        data: listResponse,
+      })
+      const body = {
+        d: {
+          d1: 1,
+        },
+        e: "e",
+      }
+      //act
+      await testApi.csc.testPagePaginatedServiceCall()
+      //assert
+      expect(getSpy).toHaveBeenCalledWith(`${testEndpoint}/testPagePaginatedServiceCall`, {
+        params: {
+          page: "10",
+          page_size: "100",
+        },
+      })
+    })
+    it("Returns with the expected shape", async () => {
+      //arrange
+      mockedAxios.get.mockResolvedValueOnce({
+        data: listResponse,
+      })
+      //act
+      const response = await testApi.csc.testSimplePaginatedCall()
+      //assert
+      expect(response).toBeTruthy()
+      expect(response.results).toHaveLength(2)
+      expect(response).toEqual({
+        ...listResponse,
+        results: [
+          {
+            age: joseph!.age,
+            firstName: joseph!.first_name,
+            lastName: joseph!.last_name,
+            id: joseph!.id,
+          },
+          {
+            age: jotaro!.age,
+            firstName: jotaro!.first_name,
+            lastName: jotaro!.last_name,
+            id: jotaro!.id,
+          },
+        ],
+      })
     })
   })
 })
