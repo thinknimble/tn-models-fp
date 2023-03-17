@@ -391,9 +391,12 @@ export function createApi<
 }
 
 type PaginatedServiceCallOptions = {
-  pagination: Pagination
   uri: string
   httpMethod?: keyof Pick<Axios, "get" | "post">
+}
+
+const paginationObjShape = {
+  pagination: z.instanceof(Pagination),
 }
 
 export function createPaginatedServiceCall<
@@ -402,7 +405,7 @@ export function createPaginatedServiceCall<
 >(
   models: CustomServiceCallOutputObj<TOutput>,
   opts: PaginatedServiceCallOptions
-): CustomServiceCallOpts<z.ZodVoid, ReturnType<typeof getPaginatedShape<TOutput>>>
+): CustomServiceCallOpts<typeof paginationObjShape, ReturnType<typeof getPaginatedShape<TOutput>>>
 export function createPaginatedServiceCall<
   TOutput extends ZodRecursiveShape,
   TInput extends ZodRecursiveShape
@@ -410,11 +413,11 @@ export function createPaginatedServiceCall<
 >(
   models: CustomServiceCallInputObj<TInput> & CustomServiceCallOutputObj<TOutput>,
   opts: PaginatedServiceCallOptions
-): CustomServiceCallOpts<TInput, ReturnType<typeof getPaginatedShape<TOutput>>>
+): CustomServiceCallOpts<TInput & typeof paginationObjShape, ReturnType<typeof getPaginatedShape<TOutput>>>
 
 export function createPaginatedServiceCall<TOutput extends ZodRecursiveShape, TInput extends ZodRecursiveShape>(
   models: object,
-  { pagination, uri, httpMethod = "get" }: PaginatedServiceCallOptions
+  { uri, httpMethod = "get" }: PaginatedServiceCallOptions
 ): CustomServiceCallOpts<any, any> {
   // The output shape should still be the camelCased one so as long as we make sure that we return the same we should be able to cast the result right?. OutputShape will always be camelCased from the user input...
   if (!("outputShape" in models)) {
@@ -422,15 +425,16 @@ export function createPaginatedServiceCall<TOutput extends ZodRecursiveShape, TI
   }
   const outputShape = models.outputShape as TOutput
   const newOutputShape = getPaginatedShape(outputShape)
-  const inputShape = "inputShape" in models ? models.inputShape : undefined
-  const callback: CustomServiceCallback<TInput, ReturnType<typeof getPaginatedShape<TOutput>>> = async ({
-    client,
-    endpoint,
-    utils,
-    input,
-  }) => {
+  const inputShape =
+    "inputShape" in models && models.inputShape
+      ? { ...models.inputShape, pagination: z.instanceof(Pagination) }
+      : undefined
+  const callback: CustomServiceCallback<
+    TInput & typeof paginationObjShape,
+    ReturnType<typeof getPaginatedShape<TOutput>>
+  > = async ({ client, endpoint, utils, input }) => {
     const allFilters = {
-      ...(pagination ? { page: pagination.page, pageSize: pagination.size } : {}),
+      ...(input.pagination ? { page: input.pagination.page, pageSize: input.pagination.size } : {}),
     }
     const filtersParsed = paginationFiltersZod.parse(allFilters)
     const snakedFilters = filtersParsed ? objectToSnakeCase(filtersParsed) : undefined
@@ -451,7 +455,9 @@ export function createPaginatedServiceCall<TOutput extends ZodRecursiveShape, TI
         params: snakedCleanParsedFilters,
       })
     } else {
-      res = await client.post(fullUri, inputShape ? utils.toApi(input) : undefined, {
+      const { pagination, ...body } = input ?? {}
+      const validBody = Object.keys(body).length !== 0 ? body : undefined
+      res = await client.post(fullUri, validBody, {
         params: snakedCleanParsedFilters,
       })
     }
