@@ -1,5 +1,11 @@
 # @thinknimble/tn-models-fp
 
+## 1.1.0
+
+### Minor Changes
+
+- 553cf31: Add createPaginatedServiceCall util to add better paginated requests
+
 ## 1.0.3
 
 ### Patch Changes
