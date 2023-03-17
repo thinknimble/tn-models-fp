@@ -208,7 +208,6 @@ const testSimplePaginatedCall = (() => {
       outputShape: entityZodShape,
     },
     {
-      pagination: new Pagination({ page: 1 }),
       uri: "testSimplePaginatedCall",
     }
   )
@@ -219,7 +218,7 @@ const testPagePaginatedServiceCall = (() => {
     {
       outputShape: entityZodShape,
     },
-    { pagination: new Pagination({ page: 10, size: 100 }), uri: "testPagePaginatedServiceCall" }
+    { uri: "testPagePaginatedServiceCall" }
   )
 })()
 const testPostPaginatedServiceCall = (() => {
@@ -233,7 +232,7 @@ const testPostPaginatedServiceCall = (() => {
       },
       outputShape: entityZodShape,
     },
-    { pagination: new Pagination({ page: 1 }), uri: "testPostPaginatedServiceCall", httpMethod: "post" }
+    { uri: "testPostPaginatedServiceCall", httpMethod: "post" }
   )
 })()
 
@@ -550,7 +549,7 @@ describe("v2 api tests", async () => {
         data: listResponse,
       })
       //act
-      await testApi.csc.testSimplePaginatedCall()
+      await testApi.csc.testSimplePaginatedCall({ pagination: new Pagination({ page: 1 }) })
       expect(getSpy).toHaveBeenCalledWith(`${testEndpoint}/testSimplePaginatedCall`, {
         params: {
           page: "1",
@@ -575,7 +574,7 @@ describe("v2 api tests", async () => {
         e: "e",
       }
       //act
-      await testApi.csc.testPostPaginatedServiceCall(body)
+      await testApi.csc.testPostPaginatedServiceCall({ ...body, pagination: new Pagination({ page: 1 }) })
       //assert
       expect(getSpy).not.toHaveBeenCalled()
       expect(postSpy).toHaveBeenCalledWith(`${testEndpoint}/testPostPaginatedServiceCall`, body, {
@@ -598,7 +597,7 @@ describe("v2 api tests", async () => {
         e: "e",
       }
       //act
-      await testApi.csc.testPagePaginatedServiceCall()
+      await testApi.csc.testPagePaginatedServiceCall({ pagination: new Pagination({ page: 10, size: 100 }) })
       //assert
       expect(getSpy).toHaveBeenCalledWith(`${testEndpoint}/testPagePaginatedServiceCall`, {
         params: {
@@ -613,7 +612,7 @@ describe("v2 api tests", async () => {
         data: listResponse,
       })
       //act
-      const response = await testApi.csc.testSimplePaginatedCall()
+      const response = await testApi.csc.testSimplePaginatedCall({ pagination: new Pagination({ page: 1 }) })
       //assert
       expect(response).toBeTruthy()
       expect(response.results).toHaveLength(2)
