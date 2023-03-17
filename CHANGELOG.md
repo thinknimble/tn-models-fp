@@ -1,5 +1,11 @@
 # @thinknimble/tn-models-fp
 
+## 1.2.0
+
+### Minor Changes
+
+- 3cd5224: Change createPaginatedServiceCall to ask for pagination parameter on return callback
+
 ## 1.1.0
 
 ### Minor Changes
