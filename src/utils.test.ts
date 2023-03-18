@@ -1,7 +1,9 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
+import { CamelCasedPropertiesDeep } from "@thinknimble/tn-utils"
 import { describe, expect, it } from "vitest"
 import { z } from "zod"
 import { createApiUtils, GetInferredRecursiveShape, recursiveShapeToValidZodRawShape } from "./utils"
+import { ZodRawShapeToSnakedRecursive, zodToSnakeCaseRecursive } from "./utils/zod"
 
 describe("createApiUtils", () => {
   it("returns undefined when both input output are primitives", () => {
@@ -129,5 +131,54 @@ describe("objectToValidZodShape", () => {
     ]
     //assert
     expect(() => result.parse(expectedParsePass)).not.toThrow()
+  })
+})
+
+describe.only("zodToSnakeCaseShapeRecursive", () => {
+  const myZod = z.object({
+    stringZod: z.string(),
+    objectZod: z.object({
+      numberZod: z.number(),
+    }),
+    arrayObjZod: z.array(
+      z.object({
+        elementOne: z.string(),
+        elementTwo: z.number(),
+      })
+    ),
+    arrayStringZod: z.array(z.string()),
+  })
+  const result = zodToSnakeCaseRecursive(myZod)
+  const { array_obj_zod, array_string_zod, object_zod, string_zod } = result.shape
+  it("Passes these ts tests", () => {
+    const result = myZod.shape
+    type ResultType = z.ZodObject<ZodRawShapeToSnakedRecursive<typeof result>>
+    type tests = [Expect<Equals<z.infer<typeof myZod>, CamelCasedPropertiesDeep<z.infer<ResultType>>>>]
+  })
+  it("Works on primitives", () => {
+    expect(string_zod).toBeInstanceOf(z.ZodString)
+  })
+  it("Works on simple objects", () => {
+    expect(object_zod).toBeInstanceOf(z.ZodObject)
+    expect(object_zod.shape).toHaveProperty("number_zod")
+    expect(object_zod.shape.number_zod).toBeInstanceOf(z.ZodNumber)
+  })
+  it("Works on object arrays", () => {
+    // const {arrayObjZod,arrayStringZod,objectZod,stringZod}  = myZod.shape
+    expect(array_obj_zod).toBeInstanceOf(z.ZodArray)
+    expect(array_obj_zod.element).toBeInstanceOf(z.ZodObject)
+    expect(array_obj_zod.element.shape).toHaveProperty("element_one")
+    expect(array_obj_zod.element.shape.element_one).toBeInstanceOf(z.ZodString)
+    expect(array_obj_zod.element.shape).toHaveProperty("element_two")
+    expect(array_obj_zod.element.shape.element_two).toBeInstanceOf(z.ZodNumber)
+  })
+  it("Works on primitive arrays", () => {
+    expect(array_string_zod).toBeInstanceOf(z.ZodArray)
+    expect(array_string_zod.element).toBeInstanceOf(z.ZodString)
+  })
+  it("Works on nested objects", () => {
+    expect(array_string_zod).toBeInstanceOf(z.ZodArray)
+    expect(array_string_zod).toBeInstanceOf(z.ZodArray)
+    expect(array_string_zod).toBeInstanceOf(z.ZodArray)
   })
 })
