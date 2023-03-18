@@ -134,7 +134,7 @@ describe("objectToValidZodShape", () => {
   })
 })
 
-describe.only("zodToSnakeCaseShapeRecursive", () => {
+describe("zodToSnakeCaseShapeRecursive", () => {
   const myZod = z.object({
     stringZod: z.string(),
     objectZod: z.object({
