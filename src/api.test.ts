@@ -1,14 +1,13 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { faker } from "@faker-js/faker"
-import { CamelCasedPropertiesDeep, SnakeCasedPropertiesDeep } from "@thinknimble/tn-utils"
+import { SnakeCasedPropertiesDeep } from "@thinknimble/tn-utils"
 import axios from "axios"
 import { beforeEach, describe, expect, it, Mocked, vi } from "vitest"
 import { z } from "zod"
 import { createApi, createCustomServiceCall, createPaginatedServiceCall } from "./api"
 import { Pagination } from "./pagination"
 import { GetInferredFromRaw, getPaginatedSnakeCasedZod, Prettify } from "./utils"
-import { ZodRawShapeToSnakedRecursive, zodToSnakeCaseRecursive } from "./utils/zod"
 
 vi.mock("axios")
 
