@@ -6,7 +6,7 @@ import { z } from "zod"
 import { Pagination } from "./pagination"
 import { createApi } from "./api"
 import { createCollectionManager } from "./collection-manager"
-import { getPaginatedSnakeCasedZod } from "./utils"
+import { getPaginatedSnakeCasedZod } from "./utils/pagination"
 
 vi.mock("axios")
 

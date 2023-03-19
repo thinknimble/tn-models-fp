@@ -8,10 +8,10 @@ export const isZodObject = (input: z.ZodTypeAny): input is z.ZodObject<z.ZodRawS
   return input instanceof z.ZodObject
 }
 export const isZodOptional = (input: z.ZodTypeAny): input is z.ZodOptional<z.ZodTypeAny> => {
-  return input.isOptional()
+  return input instanceof z.ZodOptional
 }
 export const isZodNullable = (input: z.ZodTypeAny): input is z.ZodNullable<z.ZodTypeAny> => {
-  return input.isNullable()
+  return input instanceof z.ZodNullable
 }
 
 export const isZodIntersection = (input: z.ZodTypeAny): input is z.ZodIntersection<z.ZodTypeAny, z.ZodTypeAny> => {
