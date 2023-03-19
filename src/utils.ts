@@ -7,7 +7,7 @@ import {
 } from "@thinknimble/tn-utils"
 import { z } from "zod"
 import { parseResponse } from "./response"
-import { getPaginatedZod } from "./utils/pagination"
+import { getPaginatedSnakeCasedZod } from "./utils/pagination"
 import { zodObjectRecursive } from "./utils/zod"
 
 export type Prettify<T> = {
@@ -31,10 +31,6 @@ type GetZodObjectType<T extends z.ZodRawShape> = ReturnType<typeof z.object<T>>
  */
 export type GetInferredFromRaw<T extends z.ZodRawShape> = z.infer<GetZodObjectType<T>>
 
-type ZodRecursiveShapeSnakeCased<T extends z.ZodRawShape> = {
-  [K in keyof T as SnakeCase<K>]: T[K] extends z.ZodRawShape ? ZodRecursiveShapeSnakeCased<T[K]> : T[K]
-}
-
 export type ToApiCall<TInput extends z.ZodRawShape | z.ZodTypeAny> = (
   obj: object
 ) => TInput extends z.ZodRawShape
@@ -46,21 +42,6 @@ export type ToApiCall<TInput extends z.ZodRawShape | z.ZodTypeAny> = (
 export type FromApiCall<TOutput extends z.ZodRawShape | z.ZodTypeAny> = (
   obj: object
 ) => TOutput extends z.ZodRawShape ? GetInferredFromRaw<TOutput> : TOutput extends z.ZodType ? z.infer<TOutput> : never
-
-export const zodRecursiveShapeToSnakeCase = <T extends z.ZodRawShape>(shape: T): ZodRecursiveShapeSnakeCased<T> => {
-  return Object.fromEntries(
-    Object.entries(shape).map(([k, v]) => {
-      if (v instanceof z.ZodType) {
-        return [toSnakeCase(k), v]
-      }
-      return [toSnakeCase(k), zodRecursiveShapeToSnakeCase(v)]
-    })
-  ) as ZodRecursiveShapeSnakeCased<T>
-}
-
-export const getPaginatedSnakeCasedZod = <T extends z.ZodRawShape>(zodShape: T) => {
-  return getPaginatedZod(zodShape)
-}
 
 type FromApiUtil<T extends z.ZodRawShape | ZodPrimitives> = {
   /**

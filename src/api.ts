@@ -3,8 +3,8 @@ import { AxiosInstance, Axios } from "axios"
 import { z } from "zod"
 import { IPagination } from "./pagination"
 import { parseResponse } from "./response"
-import { CallbackUtils, createApiUtils, GetInferredFromRaw, getPaginatedSnakeCasedZod, ZodPrimitives } from "./utils"
-import { getPaginatedShape, getPaginatedZod } from "./utils/pagination"
+import { CallbackUtils, createApiUtils, GetInferredFromRaw, ZodPrimitives } from "./utils"
+import { getPaginatedShape, getPaginatedSnakeCasedZod, getPaginatedZod } from "./utils/pagination"
 import { Pagination } from "./pagination"
 import { zodObjectRecursive } from "./utils/zod"
 
@@ -391,7 +391,7 @@ export function createPaginatedServiceCall<
 >(
   models: CustomServiceCallOutputObj<TOutput>,
   opts: PaginatedServiceCallOptions
-): CustomServiceCallOpts<typeof paginationObjShape, ReturnType<typeof getPaginatedShape<TOutput>>>
+): CustomServiceCallOpts<typeof paginationObjShape, ReturnType<typeof getPaginatedZod<TOutput>>["shape"]>
 export function createPaginatedServiceCall<
   TOutput extends z.ZodRawShape,
   TInput extends z.ZodRawShape
