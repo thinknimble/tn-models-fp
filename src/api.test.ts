@@ -5,9 +5,9 @@ import { SnakeCasedPropertiesDeep } from "@thinknimble/tn-utils"
 import axios from "axios"
 import { beforeEach, describe, expect, it, Mocked, vi } from "vitest"
 import { z } from "zod"
-import { Pagination } from "./pagination"
 import { createApi, createCustomServiceCall, createPaginatedServiceCall } from "./api"
-import { getPaginatedSnakeCasedZod, GetInferredFromRaw, Prettify } from "./utils"
+import { Pagination } from "./pagination"
+import { GetInferredFromRaw, getPaginatedSnakeCasedZod, Prettify } from "./utils"
 
 vi.mock("axios")
 
