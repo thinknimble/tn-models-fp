@@ -18,6 +18,10 @@ export const isZodIntersection = (input: z.ZodTypeAny): input is z.ZodIntersecti
   return input instanceof z.ZodIntersection
 }
 
+export const isZodUnion = (input: z.ZodTypeAny): input is z.ZodUnion<readonly [z.ZodTypeAny]> => {
+  return input instanceof z.ZodUnion
+}
+
 type InferZodArray<T extends z.ZodArray<z.ZodTypeAny>> = T extends z.ZodArray<infer TEl>
   ? z.ZodArray<ZodRecursiveResult<TEl>>
   : never
@@ -34,12 +38,28 @@ type InferZodNullable<T extends z.ZodNullable<z.ZodTypeAny>> = T extends z.ZodNu
   ? z.ZodNullable<ZodRecursiveResult<TNull>>
   : never
 
-// I don't think this is going to work properly to be completely honest. I feel intersection and unions should have their own branch in this inference given that for those we need two types so it is going to be weird.
 type InferZodIntersection<T extends z.ZodIntersection<z.ZodTypeAny, z.ZodTypeAny>> = T extends z.ZodIntersection<
   infer TLeft,
   infer TRight
 >
   ? z.ZodIntersection<ZodRecursiveResult<TLeft>, ZodRecursiveResult<TRight>>
+  : never
+
+type InferZodUnionOptions<T extends readonly z.ZodTypeAny[]> = T["length"] extends 0
+  ? T
+  : T extends readonly [infer TOpt, ...infer Rest]
+  ? TOpt extends z.ZodTypeAny
+    ? Rest extends readonly z.ZodTypeAny[]
+      ? readonly [ZodRecursiveResult<TOpt>, ...InferZodUnionOptions<Rest>]
+      : ZodRecursiveResult<TOpt>
+    : never
+  : T extends readonly [infer TOptAnother]
+  ? TOptAnother extends z.ZodTypeAny
+    ? ZodRecursiveResult<TOptAnother>
+    : never
+  : never
+type InferZodUnion<T extends z.ZodUnion<z.ZodUnionOptions>> = T extends z.ZodUnion<infer TOpts>
+  ? z.ZodUnion<InferZodUnionOptions<TOpts>>
   : never
 
 /**
@@ -59,6 +79,8 @@ export type ZodRawShapeToSnakedRecursive<T extends z.ZodRawShape> = {
     ? InferZodArray<T[K]>
     : T[K] extends z.ZodIntersection<z.ZodTypeAny, z.ZodTypeAny>
     ? InferZodIntersection<T[K]>
+    : T[K] extends z.ZodUnion<z.ZodUnionOptions>
+    ? InferZodUnion<T[K]>
     : T[K]
 }
 type ZodRecursiveResult<T extends z.ZodTypeAny> = T extends z.ZodObject<z.ZodRawShape>
@@ -71,6 +93,8 @@ type ZodRecursiveResult<T extends z.ZodTypeAny> = T extends z.ZodObject<z.ZodRaw
   ? InferZodNullable<T>
   : T extends z.ZodIntersection<z.ZodTypeAny, z.ZodTypeAny>
   ? InferZodIntersection<T>
+  : T extends z.ZodUnion<z.ZodUnionOptions>
+  ? InferZodUnion<T>
   : T
 
 function resolveRecursiveZod<T extends z.ZodTypeAny>(zod: T) {
@@ -89,6 +113,9 @@ function resolveRecursiveZod<T extends z.ZodTypeAny>(zod: T) {
   }
   if (isZodIntersection(zod)) {
     return zodIntersectionRecursive(zod)
+  }
+  if (isZodUnion(zod)) {
+    return zodUnionRecursive(zod)
   }
   return zod
 }
@@ -113,9 +140,15 @@ function zodOptionalRecursive<T extends z.ZodTypeAny>(zodOptional: z.ZodOptional
   return resolveRecursiveZod(unwrapped).optional()
 }
 
-export function zodIntersectionRecursive<T extends z.ZodIntersection<z.ZodTypeAny, z.ZodTypeAny>>(zod: T): any {
+function zodIntersectionRecursive<T extends z.ZodIntersection<z.ZodTypeAny, z.ZodTypeAny>>(zod: T): any {
   const { left, right } = zod._def
   return resolveRecursiveZod(left).and(resolveRecursiveZod(right))
+}
+
+function zodUnionRecursive<T extends z.ZodUnion<readonly [z.ZodTypeAny]>>(zod: T): any {
+  const allUnions = zod._def.options
+  const remapped: unknown = allUnions.map((u) => resolveRecursiveZod(u))
+  return z.union(remapped as readonly [z.ZodTypeAny, z.ZodTypeAny, ...z.ZodTypeAny[]])
 }
 
 /**

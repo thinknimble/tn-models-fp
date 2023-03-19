@@ -197,6 +197,8 @@ describe("zodToSnakeCaseShapeRecursive", () => {
     })
     .nullish()
   const intersectionObjects = objectZod.and(optionalNestedObject)
+  const unionInput = [objectZod, stringZod] as const
+  const unionObjectString = z.union(unionInput)
   it("Passes these ts tests", () => {
     //arrange
     const testZods = z.object({
@@ -214,8 +216,9 @@ describe("zodToSnakeCaseShapeRecursive", () => {
       nullableArrayObjectNested,
       nullableStringZod,
       nullableObject,
-      //! this is crashing due to CamelCasePropertiesDeep not being able to solve the intersections properly, I will have to split things at some point, the fact that the types are right in the tests for intersections in its tests is good enough for me (and ofc the test is passing as well)
+      //! this is crashing due to CamelCasePropertiesDeep not being able to solve the intersections and unions properly, I will have to split things at some point, the fact that the types are right in the tests for intersections/unions in their tests is good enough for me (and ofc the test is passing as well)
       // intersectionObjects,
+      // unionObjectString
     })
     type TestZods = z.infer<typeof testZods>
     type TestZodsSnakeCasedInferred = SnakeCasedPropertiesDeep<TestZods>
@@ -465,9 +468,9 @@ describe("zodToSnakeCaseShapeRecursive", () => {
     const { intersection_objects } = setupTest({
       intersectionObjects,
     }).shape
-    const testSubject = intersection_objects
-    expect(testSubject).toBeInstanceOf(z.ZodIntersection)
-    const { left, right } = testSubject._def
+    const subject = intersection_objects
+    expect(subject).toBeInstanceOf(z.ZodIntersection)
+    const { left, right } = subject._def
     expect(left).toBeInstanceOf(z.ZodObject)
     expect(left.shape).toHaveProperty("number_zod")
     // seems like working on runtime but ts does not accept this
@@ -480,5 +483,19 @@ describe("zodToSnakeCaseShapeRecursive", () => {
     expect(unwrappedNestedShape).toHaveProperty("string_zod")
     expect(unwrappedNestedShape.string_zod).toBeInstanceOf(z.ZodOptional)
     expect(unwrappedNestedShape.string_zod.unwrap()).toBeInstanceOf(z.ZodString)
+  })
+  it("Works with unions", () => {
+    const { union_object_string: subject } = setupTest({
+      unionObjectString,
+    }).shape
+
+    expect(subject).toBeInstanceOf(z.ZodUnion)
+    const unionOpts = subject.options
+    expect(unionOpts).toHaveLength(unionInput.length)
+    const [objectZod, stringZod] = unionOpts
+    expect(objectZod).toBeInstanceOf(z.ZodObject)
+    expect(stringZod).toBeInstanceOf(z.ZodString)
+    expect(objectZod.shape).toHaveProperty("number_zod")
+    expect(objectZod.shape.number_zod).toBeInstanceOf(z.ZodNumber)
   })
 })
