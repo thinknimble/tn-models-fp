@@ -225,9 +225,9 @@ const testPostPaginatedServiceCall = (() => {
   return createPaginatedServiceCall(
     {
       inputShape: {
-        d: {
+        d: z.object({
           d1: z.number(),
-        },
+        }),
         e: z.string(),
       },
       outputShape: entityZodShape,

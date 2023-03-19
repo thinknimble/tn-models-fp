@@ -3,20 +3,10 @@ import { AxiosInstance, Axios } from "axios"
 import { z } from "zod"
 import { IPagination } from "./pagination"
 import { parseResponse } from "./response"
-import {
-  CallbackUtils,
-  createApiUtils,
-  GetInferredFromRaw,
-  GetInferredRecursiveShape,
-  getPaginatedSnakeCasedZod,
-  Prettify,
-  recursiveShapeToValidZodRawShape,
-  ZodPrimitives,
-  ZodRecursiveShape,
-  zodRecursiveShapeToSnakeCase,
-} from "./utils"
+import { CallbackUtils, createApiUtils, GetInferredFromRaw, getPaginatedSnakeCasedZod, ZodPrimitives } from "./utils"
 import { getPaginatedShape, getPaginatedZod } from "./utils/pagination"
 import { Pagination } from "./pagination"
+import { zodObjectRecursive } from "./utils/zod"
 
 const paginationFiltersZod = z
   .object({
@@ -38,23 +28,23 @@ const filtersZod = z
 
 const uuidZod = z.string().uuid()
 
-type InferCallbackInput<TInput extends ZodRecursiveShape | z.ZodType> = TInput extends z.ZodRawShape
+type InferCallbackInput<TInput extends z.ZodRawShape | z.ZodType> = TInput extends z.ZodRawShape
   ? GetInferredFromRaw<TInput>
-  : TInput extends ZodRecursiveShape<infer Res>
-  ? GetInferredRecursiveShape<TInput>
+  : TInput extends z.ZodRawShape
+  ? GetInferredFromRaw<TInput>
   : TInput extends z.ZodType
   ? z.infer<TInput>
   : never
 
-type CallbackInput<TInput extends ZodRecursiveShape | ZodPrimitives> = TInput extends z.ZodVoid
+type CallbackInput<TInput extends z.ZodRawShape | ZodPrimitives> = TInput extends z.ZodVoid
   ? unknown
   : {
       input: InferCallbackInput<TInput>
     }
 
 type CustomServiceCallback<
-  TInput extends ZodRecursiveShape | ZodPrimitives = z.ZodVoid,
-  TOutput extends ZodRecursiveShape | ZodPrimitives = z.ZodVoid
+  TInput extends z.ZodRawShape | ZodPrimitives = z.ZodVoid,
+  TOutput extends z.ZodRawShape | ZodPrimitives = z.ZodVoid
 > = (
   params: {
     client: AxiosInstance
@@ -65,23 +55,19 @@ type CustomServiceCallback<
   } & CallbackUtils<TInput, TOutput> &
     CallbackInput<TInput>
 ) => Promise<
-  TOutput extends ZodRecursiveShape<infer Res>
-    ? GetInferredRecursiveShape<Res>
-    : TOutput extends z.ZodTypeAny
-    ? z.infer<TOutput>
-    : never
+  TOutput extends z.ZodRawShape ? GetInferredFromRaw<TOutput> : TOutput extends z.ZodTypeAny ? z.infer<TOutput> : never
 >
 
-type CustomServiceCallInputObj<TInput extends ZodRecursiveShape | ZodPrimitives = z.ZodUndefined> = {
+type CustomServiceCallInputObj<TInput extends z.ZodRawShape | ZodPrimitives = z.ZodUndefined> = {
   inputShape: TInput
 }
-type CustomServiceCallOutputObj<TOutput extends ZodRecursiveShape | ZodPrimitives = z.ZodUndefined> = {
+type CustomServiceCallOutputObj<TOutput extends z.ZodRawShape | ZodPrimitives = z.ZodUndefined> = {
   outputShape: TOutput
 }
 
 type CustomServiceCallOpts<
-  TInput extends ZodRecursiveShape | ZodPrimitives = z.ZodUndefined,
-  TOutput extends ZodRecursiveShape | ZodPrimitives = z.ZodUndefined
+  TInput extends z.ZodRawShape | ZodPrimitives = z.ZodUndefined,
+  TOutput extends z.ZodRawShape | ZodPrimitives = z.ZodUndefined
 > = CustomServiceCallInputObj<TInput> &
   CustomServiceCallOutputObj<TOutput> & { callback: CustomServiceCallback<TInput, TOutput> }
 
@@ -90,8 +76,8 @@ type CustomServiceCallOpts<
  * Create a custom type-inferred service call with both input and output
  */
 export function createCustomServiceCall<
-  TInput extends ZodRecursiveShape | ZodPrimitives,
-  TOutput extends ZodRecursiveShape | ZodPrimitives
+  TInput extends z.ZodRawShape | ZodPrimitives,
+  TOutput extends z.ZodRawShape | ZodPrimitives
 >(
   models: CustomServiceCallInputObj<TInput> & CustomServiceCallOutputObj<TOutput>,
   cb: CustomServiceCallback<TInput, TOutput>
@@ -99,14 +85,14 @@ export function createCustomServiceCall<
 /**
  * Create a custom type-inferred service call with input only
  */
-export function createCustomServiceCall<TInput extends ZodRecursiveShape | ZodPrimitives>(
+export function createCustomServiceCall<TInput extends z.ZodRawShape | ZodPrimitives>(
   models: CustomServiceCallInputObj<TInput>,
   cb: CustomServiceCallback<TInput, z.ZodVoid>
 ): CustomServiceCallOpts<TInput, z.ZodVoid>
 /**
  * Create a custom type-inferred service call with output only
  */
-export function createCustomServiceCall<TOutput extends ZodRecursiveShape | ZodPrimitives>(
+export function createCustomServiceCall<TOutput extends z.ZodRawShape | ZodPrimitives>(
   models: CustomServiceCallOutputObj<TOutput>,
   cb: CustomServiceCallback<z.ZodVoid, TOutput>
 ): CustomServiceCallOpts<z.ZodVoid, TOutput>
@@ -167,14 +153,14 @@ type CustomServiceCallPlaceholder = {
 type CustomServiceCallsRecord<TOpts extends object> = TOpts extends Record<string, CustomServiceCallPlaceholder>
   ? {
       [TKey in keyof TOpts]: (
-        inputs: TOpts[TKey]["inputShape"] extends ZodRecursiveShape<infer TInputShape>
-          ? GetInferredRecursiveShape<TInputShape>
+        inputs: TOpts[TKey]["inputShape"] extends z.ZodRawShape
+          ? GetInferredFromRaw<TOpts[TKey]["inputShape"]>
           : TOpts[TKey]["inputShape"] extends z.ZodTypeAny
           ? z.infer<TOpts[TKey]["inputShape"]>
           : never
       ) => Promise<
-        TOpts[TKey]["outputShape"] extends ZodRecursiveShape<infer TOutputShape>
-          ? GetInferredRecursiveShape<TOutputShape>
+        TOpts[TKey]["outputShape"] extends z.ZodRawShape
+          ? GetInferredFromRaw<TOpts[TKey]["outputShape"]>
           : TOpts[TKey]["outputShape"] extends z.ZodTypeAny
           ? z.infer<TOpts[TKey]["outputShape"]>
           : never
@@ -183,21 +169,21 @@ type CustomServiceCallsRecord<TOpts extends object> = TOpts extends Record<strin
   : never
 
 type BareApiService<
-  TEntity extends ZodRecursiveShape,
-  TCreate extends ZodRecursiveShape,
+  TEntity extends z.ZodRawShape,
+  TCreate extends z.ZodRawShape,
   TExtraFilters extends z.ZodRawShape = never
 > = {
   client: AxiosInstance
-  retrieve(id: string): Promise<GetInferredRecursiveShape<TEntity>>
-  create(inputs: GetInferredRecursiveShape<TCreate>): Promise<GetInferredRecursiveShape<TEntity>>
+  retrieve(id: string): Promise<GetInferredFromRaw<TEntity>>
+  create(inputs: GetInferredFromRaw<TCreate>): Promise<GetInferredFromRaw<TEntity>>
   list(params?: {
     filters?: GetInferredFromRaw<TExtraFilters> & z.infer<typeof filtersZod>
     pagination?: IPagination
   }): Promise<z.infer<ReturnType<typeof getPaginatedZod<TEntity>>>>
 }
 type ApiService<
-  TEntity extends ZodRecursiveShape,
-  TCreate extends ZodRecursiveShape,
+  TEntity extends z.ZodRawShape,
+  TCreate extends z.ZodRawShape,
   //extending from record makes it so that if you try to access anything it would not error, we want to actually error if there is no key in TCustomServiceCalls that does not belong to it
   TCustomServiceCalls extends object,
   TExtraFilters extends z.ZodRawShape = never
@@ -213,8 +199,8 @@ type ApiService<
 }
 
 type ApiBaseParams<
-  TApiEntity extends ZodRecursiveShape,
-  TApiCreate extends ZodRecursiveShape,
+  TApiEntity extends z.ZodRawShape,
+  TApiCreate extends z.ZodRawShape,
   TExtraFilters extends z.ZodRawShape = never
 > = {
   /**
@@ -255,8 +241,8 @@ type ApiBaseParams<
 }
 
 export function createApi<
-  TApiEntity extends ZodRecursiveShape,
-  TApiCreate extends ZodRecursiveShape,
+  TApiEntity extends z.ZodRawShape,
+  TApiCreate extends z.ZodRawShape,
   TExtraFilters extends z.ZodRawShape = never,
   TCustomServiceCalls extends Record<string, CustomServiceCallPlaceholder> = never
 >(
@@ -268,14 +254,14 @@ export function createApi<
 ): ApiService<TApiEntity, TApiCreate, TCustomServiceCalls, TExtraFilters>
 
 export function createApi<
-  TApiEntity extends ZodRecursiveShape,
-  TApiCreate extends ZodRecursiveShape,
+  TApiEntity extends z.ZodRawShape,
+  TApiCreate extends z.ZodRawShape,
   TExtraFilters extends z.ZodRawShape = never
 >(base: ApiBaseParams<TApiEntity, TApiCreate, TExtraFilters>): BareApiService<TApiEntity, TApiCreate, TExtraFilters>
 
 export function createApi<
-  TApiEntity extends ZodRecursiveShape,
-  TApiCreate extends ZodRecursiveShape,
+  TApiEntity extends z.ZodRawShape,
+  TApiCreate extends z.ZodRawShape,
   TExtraFilters extends z.ZodRawShape = never,
   TCustomServiceCalls extends Record<string, CustomServiceCallPlaceholder> = never
 >(
@@ -331,7 +317,7 @@ export function createApi<
     const parsed = parseResponse({
       identifier: `${retrieve.name} ${uri}`,
       data: res.data,
-      zod: z.object(recursiveShapeToValidZodRawShape(zodRecursiveShapeToSnakeCase(models.entity))),
+      zod: zodObjectRecursive(z.object(models.entity)),
     })
     return objectToCamelCase(parsed)
   }
@@ -339,11 +325,11 @@ export function createApi<
   const create = async (inputs: TApiCreate) => {
     const snaked = objectToSnakeCase(inputs)
     const res = await client.post(slashEndingEndpoint, snaked)
-    const snakedEntityShape = recursiveShapeToValidZodRawShape(zodRecursiveShapeToSnakeCase(models.entity))
+    const snakedEntityShape = zodObjectRecursive(z.object(models.entity))
     const parsed = parseResponse({
       identifier: `${create.name} ${endpoint}`,
       data: res.data,
-      zod: z.object(snakedEntityShape),
+      zod: snakedEntityShape,
     })
     return objectToCamelCase(parsed)
   }
@@ -400,22 +386,22 @@ const paginationObjShape = {
 }
 
 export function createPaginatedServiceCall<
-  TOutput extends ZodRecursiveShape
+  TOutput extends z.ZodRawShape
   // TFilters extends z.ZodRawShape= never
 >(
   models: CustomServiceCallOutputObj<TOutput>,
   opts: PaginatedServiceCallOptions
 ): CustomServiceCallOpts<typeof paginationObjShape, ReturnType<typeof getPaginatedShape<TOutput>>>
 export function createPaginatedServiceCall<
-  TOutput extends ZodRecursiveShape,
-  TInput extends ZodRecursiveShape
+  TOutput extends z.ZodRawShape,
+  TInput extends z.ZodRawShape
   // TFilters extends z.ZodRawShape= never
 >(
   models: CustomServiceCallInputObj<TInput> & CustomServiceCallOutputObj<TOutput>,
   opts: PaginatedServiceCallOptions
 ): CustomServiceCallOpts<TInput & typeof paginationObjShape, ReturnType<typeof getPaginatedShape<TOutput>>>
 
-export function createPaginatedServiceCall<TOutput extends ZodRecursiveShape, TInput extends ZodRecursiveShape>(
+export function createPaginatedServiceCall<TOutput extends z.ZodRawShape, TInput extends z.ZodRawShape>(
   models: object,
   { uri, httpMethod = "get" }: PaginatedServiceCallOptions
 ): CustomServiceCallOpts<any, any> {
@@ -425,10 +411,7 @@ export function createPaginatedServiceCall<TOutput extends ZodRecursiveShape, TI
   }
   const outputShape = models.outputShape as TOutput
   const newOutputShape = getPaginatedShape(outputShape)
-  const inputShape =
-    "inputShape" in models && models.inputShape
-      ? { ...models.inputShape, pagination: z.instanceof(Pagination) }
-      : undefined
+
   const callback: CustomServiceCallback<
     TInput & typeof paginationObjShape,
     ReturnType<typeof getPaginatedShape<TOutput>>
@@ -465,7 +448,7 @@ export function createPaginatedServiceCall<TOutput extends ZodRecursiveShape, TI
     const rawResponse = paginatedZod.parse(res.data)
     //! although this claims not to be of the same type than our converted TOutput, it actually is, but all the added type complexity with camel casing util makes TS to think it is something different. It should be safe to cast this, we should definitely check this at runtime with tests
     const result: unknown = { ...rawResponse, results: rawResponse.results.map((r) => objectToCamelCase(r)) }
-    return result as GetInferredRecursiveShape<ReturnType<typeof getPaginatedShape<TOutput>>>
+    return result as GetInferredFromRaw<ReturnType<typeof getPaginatedShape<TOutput>>>
   }
   if ("inputShape" in models) {
     return {

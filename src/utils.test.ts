@@ -2,7 +2,7 @@
 import { CamelCasedPropertiesDeep, SnakeCasedPropertiesDeep } from "@thinknimble/tn-utils"
 import { describe, expect, it } from "vitest"
 import { z } from "zod"
-import { createApiUtils, GetInferredRecursiveShape, recursiveShapeToValidZodRawShape } from "./utils"
+import { createApiUtils, GetInferredFromRaw } from "./utils"
 import { ZodRawShapeToSnakedRecursive, zodObjectRecursive } from "./utils/zod"
 
 describe("createApiUtils", () => {
@@ -85,52 +85,6 @@ describe("createApiUtils", () => {
     ]
     expect("toApi" in utils).toEqual(true)
     expect("fromApi" in utils).toEqual(true)
-  })
-})
-
-describe("objectToValidZodShape", () => {
-  it("Takes a nested shape and turns it into the corresponding zod", () => {
-    //arrange
-    const shape = {
-      a: {
-        a1: z.string(),
-      },
-      b: {
-        b1: {
-          b11: z.string(),
-          b12: {
-            b121: z.string(),
-          },
-        },
-      },
-      c: z.string(),
-    }
-    const expectedParsePass: GetInferredRecursiveShape<typeof shape> = {
-      a: {
-        a1: "a1",
-      },
-      b: {
-        b1: {
-          b11: "b11",
-          b12: {
-            b121: "hello",
-          },
-        },
-      },
-      c: "c",
-    }
-    type ExpectedParsePassType = typeof expectedParsePass
-    //act
-    const validZodShape = recursiveShapeToValidZodRawShape(shape)
-    const result = z.object(validZodShape)
-    type test = z.infer<typeof result>
-    type typeTests = [
-      Expect<Equals<test["c"], ExpectedParsePassType["c"]>>,
-      Expect<Equals<test["a"], ExpectedParsePassType["a"]>>,
-      Expect<Equals<test["b"], ExpectedParsePassType["b"]>>
-    ]
-    //assert
-    expect(() => result.parse(expectedParsePass)).not.toThrow()
   })
 })
 
