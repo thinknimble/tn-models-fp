@@ -14,6 +14,10 @@ export const isZodNullable = (input: z.ZodTypeAny): input is z.ZodNullable<z.Zod
   return input.isNullable()
 }
 
+export const isZodIntersection = (input: z.ZodTypeAny): input is z.ZodIntersection<z.ZodTypeAny, z.ZodTypeAny> => {
+  return input instanceof z.ZodIntersection
+}
+
 type InferZodArray<T extends z.ZodArray<z.ZodTypeAny>> = T extends z.ZodArray<infer TEl>
   ? z.ZodArray<ZodRecursiveResult<TEl>>
   : never
@@ -28,6 +32,14 @@ type InferZodOptional<T extends z.ZodOptional<z.ZodTypeAny>> = T extends z.ZodOp
 
 type InferZodNullable<T extends z.ZodNullable<z.ZodTypeAny>> = T extends z.ZodNullable<infer TNull>
   ? z.ZodNullable<ZodRecursiveResult<TNull>>
+  : never
+
+// I don't think this is going to work properly to be completely honest. I feel intersection and unions should have their own branch in this inference given that for those we need two types so it is going to be weird.
+type InferZodIntersection<T extends z.ZodIntersection<z.ZodTypeAny, z.ZodTypeAny>> = T extends z.ZodIntersection<
+  infer TLeft,
+  infer TRight
+>
+  ? z.ZodIntersection<ZodRecursiveResult<TLeft>, ZodRecursiveResult<TRight>>
   : never
 
 /**
@@ -45,6 +57,8 @@ export type ZodRawShapeToSnakedRecursive<T extends z.ZodRawShape> = {
     ? InferZodObject<T[K]>
     : T[K] extends z.ZodArray<z.ZodTypeAny>
     ? InferZodArray<T[K]>
+    : T[K] extends z.ZodIntersection<z.ZodTypeAny, z.ZodTypeAny>
+    ? InferZodIntersection<T[K]>
     : T[K]
 }
 type ZodRecursiveResult<T extends z.ZodTypeAny> = T extends z.ZodObject<z.ZodRawShape>
@@ -55,6 +69,8 @@ type ZodRecursiveResult<T extends z.ZodTypeAny> = T extends z.ZodObject<z.ZodRaw
   ? InferZodOptional<T>
   : T extends z.ZodNullable<z.ZodTypeAny>
   ? InferZodNullable<T>
+  : T extends z.ZodIntersection<z.ZodTypeAny, z.ZodTypeAny>
+  ? InferZodIntersection<T>
   : T
 
 function resolveRecursiveZod<T extends z.ZodTypeAny>(zod: T) {
@@ -70,6 +86,9 @@ function resolveRecursiveZod<T extends z.ZodTypeAny>(zod: T) {
   }
   if (isZodNullable(zod)) {
     return zodNullableRecursive(zod)
+  }
+  if (isZodIntersection(zod)) {
+    return zodIntersectionRecursive(zod)
   }
   return zod
 }
@@ -92,6 +111,11 @@ function zodOptionalRecursive<T extends z.ZodTypeAny>(zodOptional: z.ZodOptional
   // : InferZodOptional<z.ZodOptional<T>>
   const unwrapped = zodOptional.unwrap()
   return resolveRecursiveZod(unwrapped).optional()
+}
+
+export function zodIntersectionRecursive<T extends z.ZodIntersection<z.ZodTypeAny, z.ZodTypeAny>>(zod: T): any {
+  const { left, right } = zod._def
+  return resolveRecursiveZod(left).and(resolveRecursiveZod(right))
 }
 
 /**

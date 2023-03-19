@@ -139,6 +139,7 @@ const setupTest = <T extends z.ZodRawShape>(zodShape: T) => {
 }
 
 describe("zodToSnakeCaseShapeRecursive", () => {
+  //TODO:  This became huge, I would like to split this one at least into multiple files that only address certain features of zodToSnakeCaseShapeRecursive, zod-optional.test.ts, zod-intersection.test.ts etc
   const stringZod = z.string()
   const objectZod = z.object({
     numberZod: z.number(),
@@ -195,9 +196,10 @@ describe("zodToSnakeCaseShapeRecursive", () => {
         .nullish(),
     })
     .nullish()
+  const intersectionObjects = objectZod.and(optionalNestedObject)
   it("Passes these ts tests", () => {
     //arrange
-    const myZod = z.object({
+    const testZods = z.object({
       stringZod,
       objectZod,
       arrayObjZod,
@@ -212,20 +214,30 @@ describe("zodToSnakeCaseShapeRecursive", () => {
       nullableArrayObjectNested,
       nullableStringZod,
       nullableObject,
+      //! this is crashing due to CamelCasePropertiesDeep not being able to solve the intersections properly, I will have to split things at some point, the fact that the types are right in the tests for intersections in its tests is good enough for me (and ofc the test is passing as well)
+      // intersectionObjects,
     })
-    type MyZod = z.infer<typeof myZod>
+    type TestZods = z.infer<typeof testZods>
+    type TestZodsSnakeCasedInferred = SnakeCasedPropertiesDeep<TestZods>
     //act
-    const shape = myZod.shape
+    const shape = testZods.shape
     const result = setupTest(shape)
+
     type ResultType = z.ZodObject<ZodRawShapeToSnakedRecursive<typeof shape>>
+    type InferredResultType = z.infer<ResultType>
+    type ResultTypeCamelCasedInferred = CamelCasedPropertiesDeep<z.infer<ResultType>>
+
     type ResultTypeOriginal = typeof result
+    type InferredResultTypeOriginal = z.infer<ResultTypeOriginal>
+    type ResultTypeOriginalCamelCasedInferred = CamelCasedPropertiesDeep<InferredResultTypeOriginal>
+
     //assert
     //check both ways
     type tests = [
-      Expect<Equals<MyZod, CamelCasedPropertiesDeep<z.infer<ResultType>>>>,
-      Expect<Equals<SnakeCasedPropertiesDeep<MyZod>, z.infer<ResultType>>>,
-      Expect<Equals<MyZod, CamelCasedPropertiesDeep<z.infer<ResultTypeOriginal>>>>,
-      Expect<Equals<SnakeCasedPropertiesDeep<MyZod>, z.infer<ResultTypeOriginal>>>
+      Expect<Equals<TestZods, ResultTypeCamelCasedInferred>>,
+      Expect<Equals<TestZodsSnakeCasedInferred, InferredResultType>>,
+      Expect<Equals<TestZods, ResultTypeOriginalCamelCasedInferred>>,
+      Expect<Equals<TestZodsSnakeCasedInferred, InferredResultTypeOriginal>>
     ]
   })
   it("Works on primitives", () => {
@@ -448,5 +460,25 @@ describe("zodToSnakeCaseShapeRecursive", () => {
     const optionalStringZodUnwrapped = nextUnwrapped.shape.string_zod.unwrap()
     expect(optionalStringZodUnwrapped).toBeInstanceOf(z.ZodNullable)
     expect(optionalStringZodUnwrapped.unwrap()).toBeInstanceOf(z.ZodString)
+  })
+  it("Works with intersections", () => {
+    const { intersection_objects } = setupTest({
+      intersectionObjects,
+    }).shape
+    const testSubject = intersection_objects
+    expect(testSubject).toBeInstanceOf(z.ZodIntersection)
+    const { left, right } = testSubject._def
+    expect(left).toBeInstanceOf(z.ZodObject)
+    expect(left.shape).toHaveProperty("number_zod")
+    // seems like working on runtime but ts does not accept this
+    expect(left.shape.number_zod).toBeInstanceOf(z.ZodNumber)
+    expect(right).toBeInstanceOf(z.ZodOptional)
+    const unwrappedShape = right.unwrap().shape
+    expect(unwrappedShape).toHaveProperty("object_zod")
+    expect(unwrappedShape.object_zod).toBeInstanceOf(z.ZodOptional)
+    const unwrappedNestedShape = unwrappedShape.object_zod.unwrap().shape
+    expect(unwrappedNestedShape).toHaveProperty("string_zod")
+    expect(unwrappedNestedShape.string_zod).toBeInstanceOf(z.ZodOptional)
+    expect(unwrappedNestedShape.string_zod.unwrap()).toBeInstanceOf(z.ZodString)
   })
 })
