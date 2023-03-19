@@ -1,5 +1,11 @@
 # @thinknimble/tn-models-fp
 
+## 2.0.0
+
+### Major Changes
+
+- 1af70d0: Re-add zod shapes as main way of validating input and outputs. Add support for zod operators: optional, nullable, nullish, or/union, and/intersection
+
 ## 1.2.0
 
 ### Minor Changes
