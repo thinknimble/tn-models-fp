@@ -2,11 +2,18 @@ import { objectToCamelCase, objectToSnakeCase } from "@thinknimble/tn-utils"
 import { AxiosInstance, Axios } from "axios"
 import { z } from "zod"
 import { IPagination } from "./pagination"
-import { parseResponse } from "./response"
-import { CallbackUtils, createApiUtils, GetInferredFromRaw, ZodPrimitives } from "./utils"
-import { getPaginatedShape, getPaginatedSnakeCasedZod, getPaginatedZod } from "./utils/pagination"
 import { Pagination } from "./pagination"
-import { zodObjectRecursive } from "./utils/zod"
+import {
+  CallbackUtils,
+  createApiUtils,
+  GetInferredFromRaw,
+  getPaginatedShape,
+  getPaginatedSnakeCasedZod,
+  getPaginatedZod,
+  parseResponse,
+  zodObjectRecursive,
+  ZodPrimitives,
+} from "./utils"
 
 const paginationFiltersZod = z
   .object({

@@ -7,7 +7,8 @@ import { beforeEach, describe, expect, it, Mocked, vi } from "vitest"
 import { z } from "zod"
 import { createApi, createCustomServiceCall, createPaginatedServiceCall } from "./api"
 import { Pagination } from "./pagination"
-import { GetInferredFromRaw, getPaginatedSnakeCasedZod, Prettify } from "./utils"
+import { GetInferredFromRaw, Prettify } from "./utils"
+import { getPaginatedSnakeCasedZod } from "./utils/pagination"
 
 vi.mock("axios")
 

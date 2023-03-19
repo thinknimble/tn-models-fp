@@ -2,8 +2,8 @@
 import { CamelCasedPropertiesDeep, SnakeCasedPropertiesDeep } from "@thinknimble/tn-utils"
 import { describe, expect, it } from "vitest"
 import { z } from "zod"
-import { createApiUtils, GetInferredFromRaw } from "./utils"
-import { ZodRawShapeToSnakedRecursive, zodObjectRecursive } from "./utils/zod"
+import { createApiUtils, GetInferredFromRaw } from "."
+import { ZodRawShapeToSnakedRecursive, zodObjectRecursive } from "./zod"
 
 describe("createApiUtils", () => {
   it("returns undefined when both input output are primitives", () => {
