@@ -406,7 +406,7 @@ export function createPaginatedServiceCall<
 >(
   models: CustomServiceCallInputObj<TInput> & CustomServiceCallOutputObj<TOutput>,
   opts: PaginatedServiceCallOptions
-): CustomServiceCallOpts<TInput & typeof paginationObjShape, ReturnType<typeof getPaginatedShape<TOutput>>>
+): CustomServiceCallOpts<TInput & typeof paginationObjShape, ReturnType<typeof getPaginatedZod<TOutput>>["shape"]>
 
 export function createPaginatedServiceCall<TOutput extends z.ZodRawShape, TInput extends z.ZodRawShape>(
   models: object,

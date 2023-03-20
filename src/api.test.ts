@@ -614,6 +614,9 @@ describe("v2 api tests", async () => {
       })
       //act
       const response = await testApi.csc.testSimplePaginatedCall({ pagination: new Pagination({ page: 1 }) })
+      type testType = Awaited<
+        ReturnType<(typeof testApi)["csc"]["testPostPaginatedServiceCall"]>
+      >["results"][0]["firstName"]
       //assert
       expect(response).toBeTruthy()
       expect(response.results).toHaveLength(2)
