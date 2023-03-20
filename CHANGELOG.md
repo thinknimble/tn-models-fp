@@ -1,5 +1,11 @@
 # @thinknimble/tn-models-fp
 
+## 2.0.2
+
+### Patch Changes
+
+- 9404505: Fix fromApi not using the right zod to compare
+
 ## 2.0.1
 
 ### Patch Changes
