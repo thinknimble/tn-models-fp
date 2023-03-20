@@ -1,5 +1,11 @@
 # @thinknimble/tn-models-fp
 
+## 2.0.1
+
+### Patch Changes
+
+- b5dbef0: Fix issue with createPaginatedServiceCall not properly inferring return type of entity lit
+
 ## 2.0.0
 
 ### Major Changes
