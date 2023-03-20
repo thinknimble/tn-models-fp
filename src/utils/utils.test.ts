@@ -86,6 +86,43 @@ describe("createApiUtils", () => {
     expect("toApi" in utils).toEqual(true)
     expect("fromApi" in utils).toEqual(true)
   })
+  it("fromApi makes the right key conversion", () => {
+    //arrange
+    const { utils } = createApiUtils({
+      outputShape: {
+        testBoolean: z.boolean(),
+      },
+      name: "fromApi",
+    })
+    const input = {
+      test_boolean: false,
+    }
+    //act
+    const trial = utils.fromApi(input)
+    //assert
+    expect(trial).toEqual({
+      testBoolean: false,
+    })
+  })
+
+  it("toApi makes the right key conversion", () => {
+    //arrange
+    const { utils } = createApiUtils({
+      inputShape: {
+        testBoolean: z.boolean(),
+      },
+      name: "toApi",
+    })
+    const input = {
+      testBoolean: false,
+    }
+    //act
+    const trial = utils.toApi(input)
+    //assert
+    expect(trial).toEqual({
+      test_boolean: false,
+    })
+  })
 })
 
 const setupTest = <T extends z.ZodRawShape>(zodShape: T) => {

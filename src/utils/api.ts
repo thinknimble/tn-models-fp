@@ -86,12 +86,13 @@ const createFromApiHandler = <T extends z.ZodRawShape | ZodPrimitives>(outputSha
   // since this checks for the api response, which we don't control, we can't strict parse, else we would break the flow. We'd rather safe parse and show a warning if there's a mismatch
   return isOutputZodPrimitive
     ? undefined
-    : (((obj: object) =>
-        parseResponse({
+    : (((obj: object) => {
+        return parseResponse({
           identifier: callerName,
           data: objectToCamelCase(obj) ?? {},
-          zod: zodObjectRecursive(z.object(outputShape)),
-        })) as FromApiCall<T>)
+          zod: z.object(outputShape),
+        })
+      }) as FromApiCall<T>)
 }
 
 export function createApiUtils<
