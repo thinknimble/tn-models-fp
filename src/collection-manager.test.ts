@@ -45,10 +45,10 @@ const mockedPaginatedEntity = {
 }
 
 describe("collection manager v2 tests", () => {
-  const testEndpoint = "users"
+  const testBaseUri = "users"
   const testApi = createApi({
     client: mockedAxios,
-    endpoint: testEndpoint,
+    baseUri: testBaseUri,
     models: {
       create: createZodShape,
       entity: entityZodShape,
@@ -130,7 +130,7 @@ describe("collection manager v2 tests", () => {
       //act
       await collectionManager.refresh()
       //assert
-      expect(getSpy).toHaveBeenCalledWith(testEndpoint + "/", {
+      expect(getSpy).toHaveBeenCalledWith(testBaseUri + "/", {
         params: {
           ...feedFiltersSnakeCased,
           page: feedPagination.page.toString(),

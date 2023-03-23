@@ -55,10 +55,7 @@ type CustomServiceCallback<
 > = (
   params: {
     client: AxiosInstance
-    /**
-     * This uri has a trailing slash. Regardless of whether you added it on createApi call or not.
-     */
-    endpoint: string
+    slashEndingBaseUri: string
   } & CallbackUtils<TInput, TOutput> &
     CallbackInput<TInput>
 ) => Promise<
@@ -147,7 +144,7 @@ type CustomServiceCallPlaceholder = {
   inputShape: object
   outputShape: object
   callback: (params: {
-    endpoint: string
+    slashEndingBaseUri: string
     client: AxiosInstance
     input: any
     utils: FromApiPlaceholder & ToApiPlaceholder
@@ -238,9 +235,9 @@ type ApiBaseParams<
     extraFilters?: TExtraFilters
   }
   /**
-   * The base endpoint for te api to hit. We append this to request's uris for listing, retrieving and creating
+   * The base uri for te api to hit. We append this to request's uris for listing, retrieving and creating
    */
-  readonly endpoint: string
+  readonly baseUri: string
   /**
    * The axios instance created for the app.
    */
@@ -275,7 +272,7 @@ export function createApi<
   {
     models,
     client,
-    endpoint,
+    baseUri,
   }: ApiBaseParams<
     TApiEntity,
     TApiCreate,
@@ -284,7 +281,9 @@ export function createApi<
   >,
   customServiceCalls: TCustomServiceCalls | undefined = undefined
 ) {
-  const slashEndingEndpoint = endpoint[endpoint.length - 1] === "/" ? endpoint : endpoint + "/"
+  //standardize the uri
+  const slashEndingBaseUri = baseUri[baseUri.length - 1] === "/" ? baseUri : baseUri + "/"
+
   const createCustomServiceCallHandler =
     (
       serviceCallOpts: any,
@@ -302,7 +301,7 @@ export function createApi<
       const inputResult = input ? { input } : {}
       return serviceCallOpts.callback({
         client,
-        endpoint: slashEndingEndpoint,
+        slashEndingBaseUri,
         ...inputResult,
         ...(utilsResult ? utilsResult : {}),
       })
@@ -319,7 +318,7 @@ export function createApi<
     if (!uuidZod.safeParse(id).success) {
       console.warn("The passed id is not a valid UUID, check your input")
     }
-    const uri = `${slashEndingEndpoint}${id}/`
+    const uri = `${slashEndingBaseUri}${id}/`
     const res = await client.get(uri)
     const parsed = parseResponse({
       identifier: `${retrieve.name} ${uri}`,
@@ -331,10 +330,10 @@ export function createApi<
 
   const create = async (inputs: TApiCreate) => {
     const snaked = objectToSnakeCase(inputs)
-    const res = await client.post(slashEndingEndpoint, snaked)
+    const res = await client.post(slashEndingBaseUri, snaked)
     const snakedEntityShape = zodObjectRecursive(z.object(models.entity))
     const parsed = parseResponse({
-      identifier: `${create.name} ${endpoint}`,
+      identifier: `${create.name} ${baseUri}`,
       data: res.data,
       zod: snakedEntityShape,
     })
@@ -365,7 +364,7 @@ export function createApi<
 
     const paginatedZod = getPaginatedSnakeCasedZod(models.entity)
 
-    const res = await client.get(slashEndingEndpoint, {
+    const res = await client.get(slashEndingBaseUri, {
       params: snakedCleanParsedFilters,
     })
     const rawResponse = paginatedZod.parse(res.data)
@@ -422,7 +421,7 @@ export function createPaginatedServiceCall<TOutput extends z.ZodRawShape, TInput
   const callback: CustomServiceCallback<
     TInput & typeof paginationObjShape,
     ReturnType<typeof getPaginatedShape<TOutput>>
-  > = async ({ client, endpoint, utils, input }) => {
+  > = async ({ client, slashEndingBaseUri , utils, input }) => {
     const allFilters = {
       ...(input.pagination ? { page: input.pagination.page, pageSize: input.pagination.size } : {}),
     }
@@ -439,7 +438,8 @@ export function createPaginatedServiceCall<TOutput extends z.ZodRawShape, TInput
       : undefined
 
     let res
-    const fullUri = `${endpoint}${uri}`
+    //TODO: add check for trailing slash
+    const fullUri = `${slashEndingBaseUri}${uri}`
     if (httpMethod === "get") {
       res = await client.get(fullUri, {
         params: snakedCleanParsedFilters,

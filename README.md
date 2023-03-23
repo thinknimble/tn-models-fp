@@ -67,7 +67,7 @@ const createShape = {
 
 export const todoApi = createApi({
   client: axios.create(),
-  endpoint: "api/todo",
+  baseUri: "api/todo",
   models: {
     create: createShape,
     entity: { id: z.string().uuid(), ...createShape },
@@ -123,9 +123,9 @@ const updatePartial = createCustomServiceCall(
     inputShape: partialUpdateShape,
     outputShape: entityShape,
   },
-  async ({ client, endpoint, input, utils: { toApi, fromApi } }) => {
+  async ({ client, slashEndingBaseUri, input, utils: { toApi, fromApi } }) => {
     const { id, ...rest } = toApi(input)
-    const res = await client.patch(`${endpoint}/${id}`, rest)
+    const res = await client.patch(`${slashEndingBaseUri}${id}`, rest)
     return fromApi(res.data)
   }
 )
@@ -150,7 +150,7 @@ Snippet:
 ```typescript
 export const todoApi = createApi({
   client, // AxiosInstance
-  endpoint, //string base endpoint
+  baseUri, //string base uri
   models: {
     create: createZodRaw, // ZodRawShape
     entity: entityZodRaw, // ZodRawShape
@@ -232,9 +232,9 @@ const deleteTodo = createCustomServiceCall(
   {
     inputShape: z.number(), //define your input shape (in this case is a ZodPrimitive)
   },
-  async ({ input, client, endpoint }) => {
-    //you get your parsed input, the axios client and the base endpoint you defined in `createApi`
-    await client.delete(`${endpoint}/${input}`)
+  async ({ input, client, slashEndingBaseUri }) => {
+    //you get your parsed input, the axios client and the base uri you defined in `createApi`
+    await client.delete(`${slashEndingBaseUri}${input}`)
   }
 )
 
@@ -243,10 +243,10 @@ const updatePartial = createCustomServiceCall(
     inputShape: partialUpdateZodRaw, //you can also pass `ZodRawShape`s
     outputShape: entityZodRaw,
   },
-  async ({ client, endpoint, input, utils: { toApi, fromApi } }) => {
+  async ({ client, slashEndingBaseUri, input, utils: { toApi, fromApi } }) => {
     // we provide util methods to convert from and to api within your custom call so have you them in handy to use here.
     const { id, ...rest } = toApi(input)
-    const res = await client.patch(`${endpoint}/${id}`, rest)
+    const res = await client.patch(`${slashEndingBaseUri}${id}`, rest)
     return fromApi(res.data)
   }
 )
@@ -260,7 +260,7 @@ IG: (same as first createApi example but with custom calls)
 export const todoApi = createApi(
   {
     client,
-    endpoint,
+    baseUri,
     models: {
       create: createZodRaw,
       entity: entityZodRaw,
@@ -280,7 +280,7 @@ We also added a `csc` alias in case you feel `customServiceCall` is too long.
 
 Allows users to create paginated calls that are not directly related with the `list` endpoint of their resource. Such as when an endpoint retrieves a paginated list of things that are not exactly the resource ig: a search. You can also use this if you did not define a resource service the same way as this library expects (to have a `/list` endpoint).
 
-This returns the paginated response. As of now (2.0.0) we don't have support for filter params but will soon! [#15](https://github.com/thinknimble/tn-models-fp/issues/15) [#32](https://github.com/thinknimble/tn-models-fp/issues/32)
+This returns the paginated response. As of now (~2.0.0) we don't have support for filter params but will soon! [#15](https://github.com/thinknimble/tn-models-fp/issues/15) [#32](https://github.com/thinknimble/tn-models-fp/issues/32)
 
 IG
 
@@ -349,9 +349,9 @@ We could be interested in passing certain input to our call and constructing the
   myCustomServiceCall: createCustomServiceCall({
     inputShape:z.string()
     outputShape:z.number()
-    callback: async( {client, input, utils} ) =>{
-      const res = await client.post(endpoint,utils.toApi( { myCustomInput: input } )
-      return utils.fromApi(res.data)
+    callback: async( { client, input, utils, slashEndingBaseUri } ) =>{
+      const res = await client.post( slashEndingBaseUri, utils.toApi( { myCustomInput: input } )
+      return utils.fromApi( res.data )
 }
 ```
 

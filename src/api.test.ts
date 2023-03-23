@@ -238,11 +238,11 @@ const testPostPaginatedServiceCall = (() => {
 })()
 
 describe("v2 api tests", async () => {
-  const testEndpoint = "users"
+  const testBaseUri = "users"
   const testApi = createApi(
     {
       client: mockedAxios,
-      endpoint: testEndpoint,
+      baseUri: testBaseUri,
       models: {
         create: createZodShape,
         entity: entityZodShape,
@@ -263,7 +263,7 @@ describe("v2 api tests", async () => {
         },
         async ({ client, input, utils }) => {
           const toApiInput = utils.toApi(input)
-          const res = await client.post(testEndpoint, toApiInput)
+          const res = await client.post(testBaseUri, toApiInput)
           const parsed = utils.fromApi(res.data)
           return parsed
         }
@@ -278,8 +278,8 @@ describe("v2 api tests", async () => {
           return
         }
       ),
-      testEndpointParam: createCustomServiceCall({ outputShape: z.string() }, async ({ endpoint }) => {
-        return endpoint
+      testBaseUriParam: createCustomServiceCall({ outputShape: z.string() }, async ({ slashEndingBaseUri }) => {
+        return slashEndingBaseUri
       }),
       // custom calls that include type tests
       testInputOutputObjects,
@@ -321,7 +321,7 @@ describe("v2 api tests", async () => {
       //act
       await testApi.create(createInput)
       //assert
-      expect(postSpy).toHaveBeenCalledWith(`${testEndpoint}/`, {
+      expect(postSpy).toHaveBeenCalledWith(`${testBaseUri}/`, {
         age: createInput.age,
         last_name: createInput.lastName,
         first_name: createInput.firstName,
@@ -356,7 +356,7 @@ describe("v2 api tests", async () => {
       //act
       const response = await testApi.retrieve(randomUuid)
       //assert
-      expect(getSpy).toHaveBeenCalledWith(`${testEndpoint}/${randomUuid}/`)
+      expect(getSpy).toHaveBeenCalledWith(`${testBaseUri}/${randomUuid}/`)
       expect(response).toEqual({
         age: entityResponse.age,
         firstName: entityResponse.first_name,
@@ -427,7 +427,7 @@ describe("v2 api tests", async () => {
         pagination,
       })
       //assert
-      expect(getSpy).toHaveBeenCalledWith(testEndpoint + "/", {
+      expect(getSpy).toHaveBeenCalledWith(testBaseUri + "/", {
         params: {
           an_extra_filter: filters.anExtraFilter,
           page: pagination.page.toString(),
@@ -464,7 +464,7 @@ describe("v2 api tests", async () => {
       //act
       await testApi.customServiceCalls.testPost(input)
       //assert
-      expect(postSpy).toHaveBeenCalledWith(testEndpoint, {
+      expect(postSpy).toHaveBeenCalledWith(testBaseUri, {
         another_input: input.anotherInput,
       })
     })
@@ -478,7 +478,7 @@ describe("v2 api tests", async () => {
       //act
       await testApi.csc.testPost(input)
       //assert
-      expect(postSpy).toHaveBeenCalledWith(testEndpoint, {
+      expect(postSpy).toHaveBeenCalledWith(testBaseUri, {
         another_input: input.anotherInput,
       })
     })
@@ -496,9 +496,9 @@ describe("v2 api tests", async () => {
       //assert
       expect(res).toEqual(expected)
     })
-    it("receives endpoint as parameter within the callback and has a trailing slash", async () => {
-      const res = await testApi.customServiceCalls.testEndpointParam()
-      expect(res).toEqual(`${testEndpoint}/`)
+    it("receives baseUri as parameter within the callback and does not have a trailing slash", async () => {
+      const res = await testApi.customServiceCalls.testBaseUriParam()
+      expect(res).toEqual(`${testBaseUri}/`)
     })
     it("checks output only overload", async () => {
       const res = await testApi.customServiceCalls.testNoInputPlainZodOutput()
@@ -513,7 +513,7 @@ describe("v2 api tests", async () => {
       expect(res).toBeUndefined()
     })
     it("verifies these ts tests", async () => {
-      //customEndpoints ts tests
+      //customServiceCalls ts tests
       try {
         //@ts-expect-error when passing string rather than number
         await testApi.customServiceCalls.testInputOutputPlainZods(5)
@@ -551,7 +551,7 @@ describe("v2 api tests", async () => {
       })
       //act
       await testApi.csc.testSimplePaginatedCall({ pagination: new Pagination({ page: 1 }) })
-      expect(getSpy).toHaveBeenCalledWith(`${testEndpoint}/testSimplePaginatedCall`, {
+      expect(getSpy).toHaveBeenCalledWith(`${testBaseUri}/testSimplePaginatedCall`, {
         params: {
           page: "1",
           page_size: "25",
@@ -578,7 +578,7 @@ describe("v2 api tests", async () => {
       await testApi.csc.testPostPaginatedServiceCall({ ...body, pagination: new Pagination({ page: 1 }) })
       //assert
       expect(getSpy).not.toHaveBeenCalled()
-      expect(postSpy).toHaveBeenCalledWith(`${testEndpoint}/testPostPaginatedServiceCall`, body, {
+      expect(postSpy).toHaveBeenCalledWith(`${testBaseUri}/testPostPaginatedServiceCall`, body, {
         params: {
           page: "1",
           page_size: "25",
@@ -600,7 +600,7 @@ describe("v2 api tests", async () => {
       //act
       await testApi.csc.testPagePaginatedServiceCall({ pagination: new Pagination({ page: 10, size: 100 }) })
       //assert
-      expect(getSpy).toHaveBeenCalledWith(`${testEndpoint}/testPagePaginatedServiceCall`, {
+      expect(getSpy).toHaveBeenCalledWith(`${testBaseUri}/testPagePaginatedServiceCall`, {
         params: {
           page: "10",
           page_size: "100",
