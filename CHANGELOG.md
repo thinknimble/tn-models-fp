@@ -1,5 +1,11 @@
 # @thinknimble/tn-models-fp
 
+## 2.1.0
+
+### Minor Changes
+
+- bc4193f: Change `endpoint` for `baseUri`. Update custom service calls baseUri parameter to have a better name and hint users they should consider that baseUri to contain a trailing slash
+
 ## 2.0.2
 
 ### Patch Changes
