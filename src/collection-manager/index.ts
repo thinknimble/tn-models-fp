@@ -1,4 +1,4 @@
-import { Pagination, IPagination } from "./pagination"
+import { Pagination, IPagination } from "../utils/pagination"
 
 type PaginationResult<TEntity> = {
   count: number

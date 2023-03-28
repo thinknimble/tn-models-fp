@@ -5,10 +5,12 @@ import { SnakeCasedPropertiesDeep } from "@thinknimble/tn-utils"
 import axios from "axios"
 import { beforeEach, describe, expect, it, Mocked, vi } from "vitest"
 import { z } from "zod"
-import { createApi, createCustomServiceCall, createPaginatedServiceCall } from "./api"
-import { Pagination } from "./pagination"
-import { GetInferredFromRaw, Prettify } from "./utils"
-import { getPaginatedSnakeCasedZod } from "./utils/pagination"
+import { createApi } from "./create-api"
+import { Pagination } from "../utils"
+import { GetInferredFromRaw, Prettify } from "../utils"
+import { getPaginatedSnakeCasedZod } from "../utils/pagination"
+import { createCustomServiceCall } from "./create-custom-call"
+import { createPaginatedServiceCall } from "./create-paginated-call"
 
 vi.mock("axios")
 
