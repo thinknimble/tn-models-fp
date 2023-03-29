@@ -27,6 +27,22 @@ const entityZodShape = {
 }
 
 // testApi custom calls + createCustomServiceCall TS tests!
+const testPost = createCustomServiceCall(
+  {
+    inputShape: {
+      anotherInput: z.string(),
+    },
+    outputShape: {
+      justAny: z.any(),
+    },
+  },
+  async ({ client, input, utils, slashEndingBaseUri }) => {
+    const toApiInput = utils.toApi(input)
+    const res = await client.post(slashEndingBaseUri, toApiInput)
+    const parsed = utils.fromApi(res.data)
+    return parsed
+  }
+)
 const testInputOutputObjects = (() => {
   const inputShape = { myInput: z.string() }
   const outputShape = {
@@ -254,22 +270,7 @@ describe("v2 api tests", async () => {
       },
     },
     {
-      testPost: createCustomServiceCall(
-        {
-          inputShape: {
-            anotherInput: z.string(),
-          },
-          outputShape: {
-            justAny: z.any(),
-          },
-        },
-        async ({ client, input, utils }) => {
-          const toApiInput = utils.toApi(input)
-          const res = await client.post(testBaseUri, toApiInput)
-          const parsed = utils.fromApi(res.data)
-          return parsed
-        }
-      ),
+      testPost,
       testNoInputNorOutput: createCustomServiceCall(
         async ({
           //@ts-expect-error no input available
@@ -298,6 +299,67 @@ describe("v2 api tests", async () => {
     }
   )
 
+  describe("general checks + TS", () => {
+    it("does not expose any method if no models were passed", () => {
+      type ExpectedReturn = ReturnType<typeof createApi>
+      type tests = [
+        //@ts-expect-error should not include list method
+        ExpectedReturn["list"],
+        //@ts-expect-error should not include retrieve method
+        ExpectedReturn["retrieve"],
+        //@ts-expect-error should not include create method
+        ExpectedReturn["create"]
+      ]
+      const testApiNoModels = createApi({
+        baseUri: "",
+        client: mockedAxios,
+      })
+      expect(testApiNoModels).not.toHaveProperty("list")
+      expect(testApiNoModels).not.toHaveProperty("retrieve")
+      expect(testApiNoModels).not.toHaveProperty("create")
+    })
+    it("only exposes retrieve and list if only `entity` is passed", () => {
+      //@ts-expect-error don't mind this it is hard for TS to determine which overload it should check, on the tests below it is picking up the correct one!
+      type ExpectedReturn = ReturnType<typeof createApi<{ entity: typeof entityZodShape }>>
+      type tests = [
+        ExpectedReturn["list"],
+        ExpectedReturn["retrieve"],
+        //@ts-expect-error should not include create method
+        ExpectedReturn["create"],
+        //@ts-expect-error should not include customServiceCalls
+        ExpectedReturn["customServiceCalls"],
+        //@ts-expect-error should not include  csc
+        ExpectedReturn["csc"]
+      ]
+
+      const testApiOnlyEntity = createApi({
+        baseUri: "",
+        client: mockedAxios,
+        models: {
+          entity: entityZodShape,
+        },
+      })
+      expect(testApiOnlyEntity).not.toHaveProperty("create")
+      expect(testApiOnlyEntity).toHaveProperty("list")
+      expect(testApiOnlyEntity).toHaveProperty("retrieve")
+      expect(testApiOnlyEntity).not.toHaveProperty("csc")
+      expect(testApiOnlyEntity).not.toHaveProperty("customServiceCalls")
+    })
+    it("does not allow to pass only create or only extra filters model", () => {
+      //@ts-expect-error should not allow to create this api with just the "create" model (create needs entity)
+      type ExpectedReturn = ReturnType<typeof createApi<{ create: typeof entityZodShape }>>
+      expect(() => {
+        //@ts-expect-error this should error on TS but checking runtime throw here!
+        createApi({
+          baseUri: "",
+          client: mockedAxios,
+          models: {
+            create: createZodShape,
+          },
+        })
+      }).toThrow()
+    })
+  })
   describe("create", () => {
     beforeEach(() => {
       mockedAxios.post.mockReset()
@@ -315,7 +377,6 @@ describe("v2 api tests", async () => {
       first_name: createInput.firstName,
       id: randomId,
     }
-
     it("calls api with snake_case", async () => {
       //arrange
       const postSpy = vi.spyOn(mockedAxios, "post")
@@ -466,7 +527,7 @@ describe("v2 api tests", async () => {
       //act
       await testApi.customServiceCalls.testPost(input)
       //assert
-      expect(postSpy).toHaveBeenCalledWith(testBaseUri, {
+      expect(postSpy).toHaveBeenCalledWith(`${testBaseUri}/`, {
         another_input: input.anotherInput,
       })
     })
@@ -480,7 +541,7 @@ describe("v2 api tests", async () => {
       //act
       await testApi.csc.testPost(input)
       //assert
-      expect(postSpy).toHaveBeenCalledWith(testBaseUri, {
+      expect(postSpy).toHaveBeenCalledWith(`${testBaseUri}/`, {
         another_input: input.anotherInput,
       })
     })
@@ -516,6 +577,7 @@ describe("v2 api tests", async () => {
     })
     it("verifies these ts tests", async () => {
       //customServiceCalls ts tests
+      //TODO: improve I think we can use some type utils to do these instead of trycatching runtinme...
       try {
         //@ts-expect-error when passing string rather than number
         await testApi.customServiceCalls.testInputOutputPlainZods(5)
@@ -524,6 +586,31 @@ describe("v2 api tests", async () => {
       } catch {
         //ignore
       }
+    })
+    it("works well if no models are passed", async () => {
+      //replicating another test just for the sake of this passing with this config
+      //arrange
+      const baseUri = "testPost"
+      const testApiWithoutModels = createApi(
+        {
+          baseUri: baseUri,
+          client: mockedAxios,
+        },
+        {
+          testPost,
+        }
+      )
+      const postSpy = vi.spyOn(mockedAxios, "post")
+      mockedAxios.post.mockResolvedValueOnce({
+        data: { justAny: "any" },
+      })
+      const input = { anotherInput: "testing" }
+      //act
+      await testApiWithoutModels.csc.testPost(input)
+      //assert
+      expect(postSpy).toHaveBeenCalledWith(`${baseUri}/`, {
+        another_input: input.anotherInput,
+      })
     })
   })
 

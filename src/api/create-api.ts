@@ -15,6 +15,14 @@ import {
 
 const uuidZod = z.string().uuid()
 
+type BaseModelsPlaceholder<
+  TE extends z.ZodRawShape = z.ZodRawShape,
+  TC extends z.ZodRawShape = z.ZodRawShape,
+  TEx extends z.ZodRawShape = z.ZodRawShape
+> = TE extends z.ZodRawShape
+  ? (EntityModelObj<TE> & ExtraFiltersObj<TEx>) | (EntityModelObj<TE> & ExtraFiltersObj<TEx> & CreateModelObj<TC>)
+  : unknown
+
 /**
  * Base type for custom service calls which serves as a placeholder to later take advantage of inference
  */
@@ -51,35 +59,46 @@ type CustomServiceCallsRecord<TOpts extends object> = TOpts extends Record<strin
       >
     }
   : never
-//TODO: this should probably actually merge unknown in the end based on the different T's that are passed
-// type BaseApiCalls = {
-//   retrieve(id: string): Promise<GetInferredFromRaw<TEntity>>
-//   create(inputs: GetInferredFromRaw<TCreate>): Promise<GetInferredFromRaw<TEntity>>
-//   list(params?: {
-//     filters?: GetInferredFromRaw<TExtraFilters> & z.infer<typeof filtersZod>
-//     pagination?: IPagination
-//   }): Promise<z.infer<ReturnType<typeof getPaginatedZod<TEntity>>>>
-// }
-type BareApiService<
-  TEntity extends z.ZodRawShape,
-  TCreate extends z.ZodRawShape,
-  TExtraFilters extends z.ZodRawShape = never
-> = {
-  client: AxiosInstance
-  retrieve(id: string): Promise<GetInferredFromRaw<TEntity>>
-  create(inputs: GetInferredFromRaw<TCreate>): Promise<GetInferredFromRaw<TEntity>>
-  list(params?: {
+type RetrieveCallObj<TEntity extends z.ZodRawShape> = { retrieve: (id: string) => Promise<GetInferredFromRaw<TEntity>> }
+type ListCallObj<TEntity extends z.ZodRawShape, TExtraFilters extends z.ZodRawShape = never> = {
+  list: (params?: {
     filters?: GetInferredFromRaw<TExtraFilters> & z.infer<typeof filtersZod>
     pagination?: IPagination
-  }): Promise<z.infer<ReturnType<typeof getPaginatedZod<TEntity>>>>
+  }) => Promise<z.infer<ReturnType<typeof getPaginatedZod<TEntity>>>>
 }
+type CreateCallObj<TEntity extends z.ZodRawShape, TCreate extends z.ZodRawShape> = {
+  create: (inputs: GetInferredFromRaw<TCreate>) => Promise<GetInferredFromRaw<TEntity>>
+}
+
+type WithCreateModelCall<TModels extends BaseModelsPlaceholder> = TModels extends EntityModelObj<infer TE>
+  ? TModels extends CreateModelObj<infer TC>
+    ? CreateCallObj<TE, TC>
+    : unknown
+  : unknown
+type WithEntityModelCall<TModels extends BaseModelsPlaceholder> = TModels extends EntityModelObj<infer TE>
+  ? RetrieveCallObj<TE>
+  : unknown
+type WithExtraFiltersModelCall<TModels extends BaseModelsPlaceholder> = TModels extends EntityModelObj<infer TE>
+  ? TModels extends ExtraFiltersObj<infer TEx>
+    ? ListCallObj<TE, TEx>
+    : ListCallObj<TE>
+  : unknown
+
+type BaseApiCalls<TModels extends BaseModelsPlaceholder> = WithCreateModelCall<TModels> &
+  WithEntityModelCall<TModels> &
+  WithExtraFiltersModelCall<TModels>
+
+type BareApiService<TModels extends BaseModelsPlaceholder | unknown> = TModels extends BaseModelsPlaceholder
+  ? {
+      client: AxiosInstance
+    } & BaseApiCalls<TModels>
+  : { client: AxiosInstance }
+
 type ApiService<
-  TEntity extends z.ZodRawShape,
-  TCreate extends z.ZodRawShape,
+  TModels extends BaseModelsPlaceholder | unknown,
   //extending from record makes it so that if you try to access anything it would not error, we want to actually error if there is no key in TCustomServiceCalls that does not belong to it
-  TCustomServiceCalls extends object,
-  TExtraFilters extends z.ZodRawShape = never
-> = BareApiService<TEntity, TCreate, TExtraFilters> & {
+  TCustomServiceCalls extends object
+> = BareApiService<TModels> & {
   /**
    * The custom calls you declared as input but as plain functions and wrapped for type safety
    */
@@ -119,24 +138,7 @@ type EntityModelObj<TApiEntity extends z.ZodRawShape> = {
   entity: TApiEntity
 }
 
-type ApiBaseModels<
-  TApiEntity extends z.ZodRawShape,
-  TApiCreate extends z.ZodRawShape,
-  TExtraFilters extends z.ZodRawShape = never
-> = TApiEntity extends z.ZodRawShape
-  ? {
-      /**
-       * Zod raw shapes to use as models. All these should be the frontend camelCased version
-       */
-      models: EntityModelObj<TApiEntity> & CreateModelObj<TApiCreate> & ExtraFiltersObj<TExtraFilters>
-    }
-  : unknown
-
-type ApiBaseParams<
-  TApiEntity extends z.ZodRawShape,
-  TApiCreate extends z.ZodRawShape,
-  TExtraFilters extends z.ZodRawShape = never
-> = {
+type BaseApiParams = {
   /**
    * The base uri for te api to hit. We append this to request's uris for listing, retrieving and creating
    */
@@ -145,45 +147,45 @@ type ApiBaseParams<
    * The axios instance created for the app.
    */
   client: AxiosInstance
-} & ApiBaseModels<TApiEntity, TApiCreate, TExtraFilters>
+}
 
 export function createApi<
-  TApiEntity extends z.ZodRawShape,
-  TApiCreate extends z.ZodRawShape,
-  TExtraFilters extends z.ZodRawShape = never,
-  TCustomServiceCalls extends Record<string, CustomServiceCallPlaceholder> = never
+  TModels extends BaseModelsPlaceholder,
+  TCustomServiceCalls extends Record<string, CustomServiceCallPlaceholder>
 >(
-  base: ApiBaseParams<TApiEntity, TApiCreate, TExtraFilters>,
+  base: BaseApiParams & {
+    models: TModels
+  },
   /**
    * Create your own custom service calls to use with this API. Tools for case conversion are provided.
    */
   customServiceCalls: TCustomServiceCalls
-): ApiService<TApiEntity, TApiCreate, TCustomServiceCalls, TExtraFilters>
+): ApiService<TModels, TCustomServiceCalls>
+
+export function createApi<TCustomServiceCalls extends Record<string, CustomServiceCallPlaceholder> = never>(
+  base: BaseApiParams,
+  /**
+   * Create your own custom service calls to use with this API. Tools for case conversion are provided.
+   */
+  customServiceCalls: TCustomServiceCalls
+): ApiService<unknown, TCustomServiceCalls>
+
+export function createApi<TModels extends BaseModelsPlaceholder>(
+  base: BaseApiParams & { models: TModels }
+): BareApiService<TModels>
+
+export function createApi(base: BaseApiParams): BareApiService<unknown>
 
 export function createApi<
-  TApiEntity extends z.ZodRawShape,
-  TApiCreate extends z.ZodRawShape,
-  TExtraFilters extends z.ZodRawShape = never
->(base: ApiBaseParams<TApiEntity, TApiCreate, TExtraFilters>): BareApiService<TApiEntity, TApiCreate, TExtraFilters>
-
-export function createApi<
-  TApiEntity extends z.ZodRawShape,
-  TApiCreate extends z.ZodRawShape,
-  TExtraFilters extends z.ZodRawShape = never,
+  TModels extends BaseModelsPlaceholder,
   TCustomServiceCalls extends Record<string, CustomServiceCallPlaceholder> = never
 >(
-  {
-    models,
-    client,
-    baseUri,
-  }: ApiBaseParams<
-    TApiEntity,
-    TApiCreate,
-    //? I don't get why I did this? --
-    TCustomServiceCalls extends z.ZodRawShape ? TCustomServiceCalls : TExtraFilters
-  >,
+  { models, client, baseUri }: BaseApiParams & { models?: TModels },
   customServiceCalls: TCustomServiceCalls | undefined = undefined
 ) {
+  if (models && "create" in models && !("entity" in models)) {
+    throw new Error("You should not pass `create` model without an `entity` model")
+  }
   //standardize the uri
   const slashEndingBaseUri = baseUri[baseUri.length - 1] === "/" ? baseUri : baseUri + "/"
 
@@ -216,6 +218,39 @@ export function createApi<
       ) as CustomServiceCallsRecord<TCustomServiceCalls>)
     : undefined
 
+  //if there are no models at all don't even bother creating the unused methods
+  if (!models && modifiedCustomServiceCalls) {
+    return {
+      client,
+      customServiceCalls: modifiedCustomServiceCalls,
+      csc: modifiedCustomServiceCalls,
+    }
+  }
+  if (!models || !models.entity) {
+    return { client }
+  }
+  type TApiEntityShape = TModels extends EntityModelObj<infer TE> ? TE : z.ZodRawShape
+
+  /**
+   * Placeholder to include or not the create method in the return based on models
+   */
+  let createObj: object = {}
+  if ("create" in models) {
+    type TApiCreateShape = TModels extends CreateCallObj<TApiEntityShape, infer TC> ? TC : z.ZodRawShape
+    type TApiCreate = GetInferredFromRaw<TApiCreateShape>
+    const create = async (inputs: TApiCreate) => {
+      const snaked = objectToSnakeCase(inputs)
+      const res = await client.post(slashEndingBaseUri, snaked)
+      const snakedEntityShape = zodObjectRecursive(z.object(models.entity))
+      const parsed = parseResponse({
+        identifier: `${create.name} ${baseUri}`,
+        data: res.data,
+        zod: snakedEntityShape,
+      })
+      return objectToCamelCase(parsed)
+    }
+    createObj = { create }
+  }
   const retrieve = async (id: string) => {
     //TODO: should we allow the user to set their own id zod schema?
     if (!uuidZod.safeParse(id).success) {
@@ -231,19 +266,7 @@ export function createApi<
     return objectToCamelCase(parsed)
   }
 
-  const create = async (inputs: TApiCreate) => {
-    const snaked = objectToSnakeCase(inputs)
-    const res = await client.post(slashEndingBaseUri, snaked)
-    const snakedEntityShape = zodObjectRecursive(z.object(models.entity))
-    const parsed = parseResponse({
-      identifier: `${create.name} ${baseUri}`,
-      data: res.data,
-      zod: snakedEntityShape,
-    })
-    return objectToCamelCase(parsed)
-  }
-
-  const list = async (params: Parameters<BareApiService<TApiEntity, TApiCreate, TExtraFilters>["list"]>[0]) => {
+  const list = async (params: Parameters<BareApiService<TModels>["list"]>[0]) => {
     const filters = params ? params.filters : undefined
     const pagination = params ? params.pagination : undefined
     // Filters parsing, throws if the fields do not comply with the zod schema
@@ -274,7 +297,7 @@ export function createApi<
     return { ...rawResponse, results: rawResponse.results.map((r) => objectToCamelCase(r)) }
   }
 
-  const baseReturn = { client, retrieve, create, list }
+  const baseReturn = { client, retrieve, list, ...createObj }
 
   if (!modifiedCustomServiceCalls) return baseReturn
 
