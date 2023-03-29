@@ -95,7 +95,7 @@ type BareApiService<TModels extends BaseModelsPlaceholder | unknown> = TModels e
   : { client: AxiosInstance }
 
 type ApiService<
-  TModels extends BaseModelsPlaceholder,
+  TModels extends BaseModelsPlaceholder | unknown,
   //extending from record makes it so that if you try to access anything it would not error, we want to actually error if there is no key in TCustomServiceCalls that does not belong to it
   TCustomServiceCalls extends object
 > = BareApiService<TModels> & {
@@ -151,7 +151,7 @@ type BaseApiParams = {
 
 export function createApi<
   TModels extends BaseModelsPlaceholder,
-  TCustomServiceCalls extends Record<string, CustomServiceCallPlaceholder> = never
+  TCustomServiceCalls extends Record<string, CustomServiceCallPlaceholder>
 >(
   base: BaseApiParams & {
     models: TModels
@@ -161,6 +161,14 @@ export function createApi<
    */
   customServiceCalls: TCustomServiceCalls
 ): ApiService<TModels, TCustomServiceCalls>
+
+export function createApi<TCustomServiceCalls extends Record<string, CustomServiceCallPlaceholder> = never>(
+  base: BaseApiParams,
+  /**
+   * Create your own custom service calls to use with this API. Tools for case conversion are provided.
+   */
+  customServiceCalls: TCustomServiceCalls
+): ApiService<unknown, TCustomServiceCalls>
 
 export function createApi<TModels extends BaseModelsPlaceholder>(
   base: BaseApiParams & { models: TModels }
