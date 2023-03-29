@@ -298,6 +298,59 @@ describe("v2 api tests", async () => {
     }
   )
 
+  describe("general checks + TS", () => {
+    it("does not expose any method if no models were passed", () => {
+      type ExpectedReturn = ReturnType<typeof createApi>
+      type tests = [
+        //@ts-expect-error should not include list method
+        ExpectedReturn["list"],
+        //@ts-expect-error should not include retrieve method
+        ExpectedReturn["retrieve"],
+        //@ts-expect-error should not include create method
+        ExpectedReturn["create"]
+      ]
+      const testApiNoModels = createApi({
+        baseUri: "",
+        client: mockedAxios,
+      })
+      expect(testApiNoModels).not.toHaveProperty("list")
+      expect(testApiNoModels).not.toHaveProperty("retrieve")
+      expect(testApiNoModels).not.toHaveProperty("create")
+    })
+    it("only exposes retrieve and list if only `entity` is passed", () => {
+      type ExpectedReturn = ReturnType<typeof createApi<{ entity: typeof entityZodShape }>>
+      type tests = [
+        ExpectedReturn["list"],
+        ExpectedReturn["retrieve"],
+        //@ts-expect-error should not include create method
+        ExpectedReturn["create"]
+      ]
+      const testApiOnlyEntity = createApi({
+        baseUri: "",
+        client: mockedAxios,
+        models: {
+          entity: entityZodShape,
+        },
+      })
+      expect(testApiOnlyEntity).not.toHaveProperty("create")
+      expect(testApiOnlyEntity).toHaveProperty("list")
+      expect(testApiOnlyEntity).toHaveProperty("retrieve")
+    })
+    it("does not allow to pass only create or only extra filters model", () => {
+      //@ts-expect-error should not allow to create this api with just the "create" model (create needs entity)
+      type ExpectedReturn = ReturnType<typeof createApi<{ create: typeof entityZodShape }>>
+      expect(() => {
+        //@ts-expect-error this should error on TS but checking runtime throw here!
+        createApi({
+          baseUri: "",
+          client: mockedAxios,
+          models: {
+            create: createZodShape,
+          },
+        })
+      }).toThrow()
+    })
+  })
   describe("create", () => {
     beforeEach(() => {
       mockedAxios.post.mockReset()
@@ -315,7 +368,6 @@ describe("v2 api tests", async () => {
       first_name: createInput.firstName,
       id: randomId,
     }
-
     it("calls api with snake_case", async () => {
       //arrange
       const postSpy = vi.spyOn(mockedAxios, "post")
