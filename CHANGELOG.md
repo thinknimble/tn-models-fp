@@ -1,5 +1,11 @@
 # @thinknimble/tn-models-fp
 
+## 2.2.0
+
+### Minor Changes
+
+- c6e3f47: Allow users to skip including models in their api creation. Models now is completely optional and types are properly inferred based on which models are passed. `create` model is not allowed to be passed alone, same for `extraFilters`.
+
 ## 2.1.0
 
 ### Minor Changes
