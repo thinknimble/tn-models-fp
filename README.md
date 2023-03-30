@@ -115,7 +115,7 @@ To do this you pass an object with the service callbacks. These should be create
 
 First parameter are the models for your input and output shapes of the call.
 
-Second parameter is the actual service call, this callback is powered up with multiple arguments that provide you with all the tools we think you need to make a type-safe call.
+Second parameter is the actual service call, this callback is powered up with multiple arguments that provide you with all the tools we think you need to make a type-safe call:
 
 ```typescript
 const updatePartial = createCustomServiceCall(
@@ -275,6 +275,31 @@ export const todoApi = createApi(
 ```
 
 We also added a `csc` alias in case you feel `customServiceCall` is too long.
+
+### On the service callback parameters
+
+We provide a set of parameters in the custom service callback:
+
+- client: a type-wrapped axios instance that makes sure you call the apis with slash ending uris.
+
+For this client to consume your uri strings you should either cast them `as const` or define them as template strings directly in the call
+
+```typescript
+  client.get(`${slashEndingBaseUri}`) // slashEndingBaseUri is an `as const` variable
+  client.get(`${slashEndingBaseUri}/ending/`) // ✅ define the template string directly in the function call
+
+  const uriSampleOutsideOfCall =`${slashEndingBaseUri}my-uri/not-const/`
+  client.get(uriSample)// ❌ this does not check, you'll get error, template string is already evaluated outside so it is considered `string`
+
+  const uriSampleOutsideOfCallAsConst = `${slashEndingBaseUri}my-uri/not-const/` as const
+  client get(uriSampleOutsideOfCallAsConst)//s checks, since it was cast as const outside of the call
+```
+
+- slashEndingBaseUri: gives you a reference to the endpoint you passed when you created the api so you can use it within the callback
+- input:the parsed input based on the `inputShape` you passed
+- utils: set of utilities to convert from and to api models (handles object casing)
+  - fromApi: convert a response object from the api (coming in snake casing) to its camelCase version
+  - toApi: convert an input into an snake_cased object so that you can feed it to the api.
 
 ## `createPaginatedServiceCall`
 

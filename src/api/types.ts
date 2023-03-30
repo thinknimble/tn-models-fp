@@ -1,4 +1,4 @@
-import { AxiosInstance } from "axios"
+import { AxiosRequestConfig, AxiosResponse } from "axios"
 import { z } from "zod"
 import { CallbackUtils, GetInferredFromRaw, ZodPrimitives } from "../utils"
 
@@ -23,13 +23,36 @@ type CallbackInput<TInput extends z.ZodRawShape | ZodPrimitives> = TInput extend
       input: InferCallbackInput<TInput>
     }
 
+type StringTrailingSlash = `${string}/`
+type AxiosCall = <TUri extends StringTrailingSlash, T = any, R = AxiosResponse<T>, D = any>(
+  url: TUri,
+  config?: AxiosRequestConfig<D>
+) => Promise<R>
+type BodyAxiosCall = <TUri extends StringTrailingSlash, T = any, R = AxiosResponse<T>, D = any>(
+  url: StringTrailingSlash,
+  data?: D,
+  config?: AxiosRequestConfig<D>
+) => Promise<R>
+
+export type AxiosLike = {
+  get: AxiosCall
+  post: BodyAxiosCall
+  delete: AxiosCall
+  put: BodyAxiosCall
+  patch: BodyAxiosCall
+  options: AxiosCall
+  postForm: BodyAxiosCall
+  putForm: BodyAxiosCall
+  patchForm: BodyAxiosCall
+}
+
 export type CustomServiceCallback<
   TInput extends z.ZodRawShape | ZodPrimitives = z.ZodVoid,
   TOutput extends z.ZodRawShape | ZodPrimitives = z.ZodVoid
 > = (
   params: {
-    client: AxiosInstance
-    slashEndingBaseUri: string
+    client: AxiosLike
+    slashEndingBaseUri: `${string}/`
   } & CallbackUtils<TInput, TOutput> &
     CallbackInput<TInput>
 ) => Promise<

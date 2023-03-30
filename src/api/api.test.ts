@@ -255,6 +255,21 @@ const testPostPaginatedServiceCall = (() => {
   )
 })()
 
+const testSlashEndingUri = createCustomServiceCall(async ({ client, slashEndingBaseUri }) => {
+  type TClient = typeof client
+  type UriParameter = Parameters<TClient["get"]>[0]
+  type tests = [
+    Expect<Equals<UriParameter, typeof slashEndingBaseUri>>,
+    Expect<Extends<UriParameter, `slashEndinguri/`>>,
+    //@ts-expect-error non slash ending uri should error on ts
+    Expect<Extends<UriParameter, `nonSlashEnding`>>
+  ]
+  //@ts-expect-error should error bc we're not ending the url with a slash
+  client.get(`${slashEndingBaseUri}/slashEndingUri`)
+  client.get(`${slashEndingBaseUri}`)
+  client.get(`${slashEndingBaseUri}/ending/`)
+})
+
 describe("v2 api tests", async () => {
   const testBaseUri = "users"
   const testApi = createApi(
@@ -640,7 +655,7 @@ describe("v2 api tests", async () => {
       })
       //act
       await testApi.csc.testSimplePaginatedCall({ pagination: new Pagination({ page: 1 }) })
-      expect(getSpy).toHaveBeenCalledWith(`${testBaseUri}/testSimplePaginatedCall`, {
+      expect(getSpy).toHaveBeenCalledWith(`${testBaseUri}/testSimplePaginatedCall/`, {
         params: {
           page: "1",
           page_size: "25",
@@ -667,7 +682,7 @@ describe("v2 api tests", async () => {
       await testApi.csc.testPostPaginatedServiceCall({ ...body, pagination: new Pagination({ page: 1 }) })
       //assert
       expect(getSpy).not.toHaveBeenCalled()
-      expect(postSpy).toHaveBeenCalledWith(`${testBaseUri}/testPostPaginatedServiceCall`, body, {
+      expect(postSpy).toHaveBeenCalledWith(`${testBaseUri}/testPostPaginatedServiceCall/`, body, {
         params: {
           page: "1",
           page_size: "25",
@@ -689,7 +704,7 @@ describe("v2 api tests", async () => {
       //act
       await testApi.csc.testPagePaginatedServiceCall({ pagination: new Pagination({ page: 10, size: 100 }) })
       //assert
-      expect(getSpy).toHaveBeenCalledWith(`${testBaseUri}/testPagePaginatedServiceCall`, {
+      expect(getSpy).toHaveBeenCalledWith(`${testBaseUri}/testPagePaginatedServiceCall/`, {
         params: {
           page: "10",
           page_size: "100",

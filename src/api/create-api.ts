@@ -12,6 +12,7 @@ import {
   parseResponse,
   zodObjectRecursive,
 } from "../utils"
+import { AxiosLike } from "./types"
 
 const uuidZod = z.string().uuid()
 
@@ -32,8 +33,8 @@ type CustomServiceCallPlaceholder = {
   inputShape: object
   outputShape: object
   callback: (params: {
-    slashEndingBaseUri: string
-    client: AxiosInstance
+    slashEndingBaseUri: `${string}/`
+    client: AxiosLike
     input: any
     utils: FromApiPlaceholder & ToApiPlaceholder
   }) => Promise<unknown>
@@ -90,9 +91,9 @@ type BaseApiCalls<TModels extends BaseModelsPlaceholder> = WithCreateModelCall<T
 
 type BareApiService<TModels extends BaseModelsPlaceholder | unknown> = TModels extends BaseModelsPlaceholder
   ? {
-      client: AxiosInstance
+      client: AxiosLike
     } & BaseApiCalls<TModels>
-  : { client: AxiosInstance }
+  : { client: AxiosLike }
 
 type ApiService<
   TModels extends BaseModelsPlaceholder | unknown,
@@ -187,8 +188,8 @@ export function createApi<
     throw new Error("You should not pass `create` model without an `entity` model")
   }
   //standardize the uri
-  const slashEndingBaseUri = baseUri[baseUri.length - 1] === "/" ? baseUri : baseUri + "/"
-
+  const slashEndingBaseUri = (baseUri[baseUri.length - 1] === "/" ? baseUri : baseUri + "/") as `${string}/`
+  const axiosLikeClient = client as AxiosLike
   const createCustomServiceCallHandler =
     (
       serviceCallOpts: any,
@@ -205,7 +206,7 @@ export function createApi<
       })
       const inputResult = input ? { input } : {}
       return serviceCallOpts.callback({
-        client,
+        client: axiosLikeClient,
         slashEndingBaseUri,
         ...inputResult,
         ...(utilsResult ? utilsResult : {}),
@@ -221,13 +222,13 @@ export function createApi<
   //if there are no models at all don't even bother creating the unused methods
   if (!models && modifiedCustomServiceCalls) {
     return {
-      client,
+      client: axiosLikeClient,
       customServiceCalls: modifiedCustomServiceCalls,
       csc: modifiedCustomServiceCalls,
     }
   }
   if (!models || !models.entity) {
-    return { client }
+    return { client: axiosLikeClient }
   }
   type TApiEntityShape = TModels extends EntityModelObj<infer TE> ? TE : z.ZodRawShape
 
@@ -240,7 +241,7 @@ export function createApi<
     type TApiCreate = GetInferredFromRaw<TApiCreateShape>
     const create = async (inputs: TApiCreate) => {
       const snaked = objectToSnakeCase(inputs)
-      const res = await client.post(slashEndingBaseUri, snaked)
+      const res = await axiosLikeClient.post(slashEndingBaseUri, snaked)
       const snakedEntityShape = zodObjectRecursive(z.object(models.entity))
       const parsed = parseResponse({
         identifier: `${create.name} ${baseUri}`,
@@ -256,8 +257,8 @@ export function createApi<
     if (!uuidZod.safeParse(id).success) {
       console.warn("The passed id is not a valid UUID, check your input")
     }
-    const uri = `${slashEndingBaseUri}${id}/`
-    const res = await client.get(uri)
+    const uri = `${slashEndingBaseUri}${id}/` as `${string}/`
+    const res = await axiosLikeClient.get(uri)
     const parsed = parseResponse({
       identifier: `${retrieve.name} ${uri}`,
       data: res.data,
@@ -290,14 +291,14 @@ export function createApi<
 
     const paginatedZod = getPaginatedSnakeCasedZod(models.entity)
 
-    const res = await client.get(slashEndingBaseUri, {
+    const res = await axiosLikeClient.get(slashEndingBaseUri, {
       params: snakedCleanParsedFilters,
     })
     const rawResponse = paginatedZod.parse(res.data)
     return { ...rawResponse, results: rawResponse.results.map((r) => objectToCamelCase(r)) }
   }
 
-  const baseReturn = { client, retrieve, list, ...createObj }
+  const baseReturn = { client: axiosLikeClient, retrieve, list, ...createObj }
 
   if (!modifiedCustomServiceCalls) return baseReturn
 
