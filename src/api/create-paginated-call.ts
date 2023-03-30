@@ -72,8 +72,8 @@ export function createPaginatedServiceCall<TOutput extends z.ZodRawShape, TInput
       : undefined
 
     let res
-    //TODO: add check for trailing slash
-    const fullUri = `${slashEndingBaseUri}${uri}`
+    const slashEndingUri = uri[uri.length - 1] === "/" ? uri : uri + "/"
+    const fullUri = `${slashEndingBaseUri}${slashEndingUri}` as `${string}/`
     if (httpMethod === "get") {
       res = await client.get(fullUri, {
         params: snakedCleanParsedFilters,

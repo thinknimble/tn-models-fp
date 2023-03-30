@@ -1,4 +1,4 @@
-import { AxiosInstance } from "axios"
+import { AxiosRequestConfig, AxiosResponse } from "axios"
 import { z } from "zod"
 import { CallbackUtils, GetInferredFromRaw, ZodPrimitives } from "../utils"
 
@@ -23,13 +23,37 @@ type CallbackInput<TInput extends z.ZodRawShape | ZodPrimitives> = TInput extend
       input: InferCallbackInput<TInput>
     }
 
+type ExpectTrailingSlash<T extends string> = T extends `${string}/` ? T : "Include a triling slash in the uri"
+
+type AxiosCall = <T = any, R = AxiosResponse<T>, D = any, TUri extends string = string>(
+  url: ExpectTrailingSlash<TUri>,
+  config?: AxiosRequestConfig<D>
+) => Promise<R>
+type BodyAxiosCall = <T = any, R = AxiosResponse<T>, D = any, TUri extends string = string>(
+  url: ExpectTrailingSlash<TUri>,
+  data?: D,
+  config?: AxiosRequestConfig<D>
+) => Promise<R>
+
+export type AxiosLike = {
+  get: AxiosCall
+  post: BodyAxiosCall
+  delete: AxiosCall
+  put: BodyAxiosCall
+  patch: BodyAxiosCall
+  options: AxiosCall
+  postForm: BodyAxiosCall
+  putForm: BodyAxiosCall
+  patchForm: BodyAxiosCall
+}
+
 export type CustomServiceCallback<
   TInput extends z.ZodRawShape | ZodPrimitives = z.ZodVoid,
   TOutput extends z.ZodRawShape | ZodPrimitives = z.ZodVoid
 > = (
   params: {
-    client: AxiosInstance
-    slashEndingBaseUri: string
+    client: AxiosLike
+    slashEndingBaseUri: `${string}/`
   } & CallbackUtils<TInput, TOutput> &
     CallbackInput<TInput>
 ) => Promise<
