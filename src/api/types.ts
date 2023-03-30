@@ -23,14 +23,13 @@ type CallbackInput<TInput extends z.ZodRawShape | ZodPrimitives> = TInput extend
       input: InferCallbackInput<TInput>
     }
 
-type ExpectTrailingSlash<T extends string> = T extends `${string}/` ? T : "Include a triling slash in the uri"
-
-type AxiosCall = <T = any, R = AxiosResponse<T>, D = any, TUri extends string = string>(
-  url: ExpectTrailingSlash<TUri>,
+type StringTrailingSlash = `${string}/`
+type AxiosCall = <TUri extends StringTrailingSlash, T = any, R = AxiosResponse<T>, D = any>(
+  url: TUri,
   config?: AxiosRequestConfig<D>
 ) => Promise<R>
-type BodyAxiosCall = <T = any, R = AxiosResponse<T>, D = any, TUri extends string = string>(
-  url: ExpectTrailingSlash<TUri>,
+type BodyAxiosCall = <TUri extends StringTrailingSlash, T = any, R = AxiosResponse<T>, D = any>(
+  url: StringTrailingSlash,
   data?: D,
   config?: AxiosRequestConfig<D>
 ) => Promise<R>
