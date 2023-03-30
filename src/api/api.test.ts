@@ -255,6 +255,22 @@ const testPostPaginatedServiceCall = (() => {
   )
 })()
 
+const testSlashEndingUri = createCustomServiceCall(async ({ client, slashEndingBaseUri }) => {
+  type TClient = typeof client
+  type UriParameter = Parameters<TClient["get"]>[0]
+  const templateStringNonSlashEndingUri = `${slashEndingBaseUri}/slashEndingUri`
+  const templateStringSlashEndingUri = `${slashEndingBaseUri}${templateStringNonSlashEndingUri}/`
+  type tests = [
+    Expect<Equals<UriParameter, typeof slashEndingBaseUri>>,
+    Expect<Extends<UriParameter, `slashEndinguri/`>>,
+    //@ts-expect-error non slash ending uri should error on ts
+    Expect<Extends<UriParameter, `nonSlashEnding`>>
+  ]
+  client.get(`${templateStringNonSlashEndingUri}/`)
+  //TODO: okay this should not error...
+  client.get(templateStringSlashEndingUri)
+})
+
 describe("v2 api tests", async () => {
   const testBaseUri = "users"
   const testApi = createApi(
