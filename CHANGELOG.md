@@ -1,5 +1,11 @@
 # @thinknimble/tn-models-fp
 
+## 2.4.0
+
+### Minor Changes
+
+- 6f39fad: createCustomServiceCall: allow output shapes to be arrays. Improve createApiUtils so that output shpaes can also be arrays and manage them properly.
+
 ## 2.3.0
 
 ### Minor Changes
