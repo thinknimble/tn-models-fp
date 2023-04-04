@@ -13,7 +13,7 @@ import {
  */
 export function createCustomServiceCall<
   TInput extends z.ZodRawShape | ZodPrimitives,
-  TOutput extends z.ZodRawShape | ZodPrimitives
+  TOutput extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny>
 >(
   models: CustomServiceCallInputObj<TInput> & CustomServiceCallOutputObj<TOutput>,
   cb: CustomServiceCallback<TInput, TOutput>

@@ -123,6 +123,25 @@ describe("createApiUtils", () => {
       test_boolean: false,
     })
   })
+
+  it("returns fromApi when outputShape is zod array", () => {
+    //arrange
+    const { utils } = createApiUtils({
+      inputShape: z.number(),
+      outputShape: z.array(
+        z.object({
+          testString: z.string(),
+          testNumber: z.number(),
+        })
+      ),
+      name: "fromApiZodArray",
+    })
+    const output = [{ test_string: "testString", test_number: 9 }]
+    //act
+    const trial = utils.fromApi(output)
+    //assert
+    expect(trial).toEqual([{ testString: "testString", testNumber: 9 }])
+  })
 })
 
 const setupTest = <T extends z.ZodRawShape>(zodShape: T) => {
