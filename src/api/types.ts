@@ -5,7 +5,9 @@ import { CallbackUtils, GetInferredFromRaw, ZodPrimitives } from "../utils"
 export type CustomServiceCallInputObj<TInput extends z.ZodRawShape | ZodPrimitives = z.ZodUndefined> = {
   inputShape: TInput
 }
-export type CustomServiceCallOutputObj<TOutput extends z.ZodRawShape | ZodPrimitives = z.ZodUndefined> = {
+export type CustomServiceCallOutputObj<
+  TOutput extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny> = z.ZodUndefined
+> = {
   outputShape: TOutput
 }
 
@@ -25,7 +27,7 @@ type CallbackInput<TInput extends z.ZodRawShape | ZodPrimitives> = TInput extend
 
 export type CustomServiceCallback<
   TInput extends z.ZodRawShape | ZodPrimitives = z.ZodVoid,
-  TOutput extends z.ZodRawShape | ZodPrimitives = z.ZodVoid
+  TOutput extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny> = z.ZodVoid
 > = (
   params: {
     client: AxiosInstance
@@ -38,6 +40,6 @@ export type CustomServiceCallback<
 
 export type CustomServiceCallOpts<
   TInput extends z.ZodRawShape | ZodPrimitives = z.ZodUndefined,
-  TOutput extends z.ZodRawShape | ZodPrimitives = z.ZodUndefined
+  TOutput extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny> = z.ZodUndefined
 > = CustomServiceCallInputObj<TInput> &
   CustomServiceCallOutputObj<TOutput> & { callback: CustomServiceCallback<TInput, TOutput> }

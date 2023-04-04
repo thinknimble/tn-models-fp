@@ -153,6 +153,7 @@ function zodUnionRecursive<T extends z.ZodUnion<readonly [z.ZodTypeAny]>>(zod: T
 
 /**
  * Recursively convert a zod object into its snake_cased equivalent
+ * !! This is the core method of the library.
  */
 export function zodObjectRecursive<T extends z.ZodRawShape>(
   zodObj: z.ZodObject<T>

@@ -36,7 +36,7 @@ export type FromApiCall<TOutput extends z.ZodRawShape | z.ZodTypeAny> = (
   obj: object
 ) => TOutput extends z.ZodRawShape ? GetInferredFromRaw<TOutput> : TOutput extends z.ZodType ? z.infer<TOutput> : never
 
-type FromApiUtil<T extends z.ZodRawShape | ZodPrimitives> = {
+type FromApiUtil<T extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny>> = {
   /**
    * Given an object, parses the response based on outputShape, it turns the result keys into camelCase. It also shows a warning if the outputShape does not match the passed object
    */
@@ -51,7 +51,7 @@ type ToApiUtil<T extends z.ZodRawShape | ZodPrimitives> = {
 
 export type CallbackUtils<
   TInput extends z.ZodRawShape | ZodPrimitives,
-  TOutput extends z.ZodRawShape | ZodPrimitives,
+  TOutput extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny>,
   TInputIsPrimitive extends boolean = TInput extends ZodPrimitives ? true : false,
   TOutputIsPrimitive extends boolean = TOutput extends ZodPrimitives ? true : false
 > = TInput extends z.ZodVoid
@@ -81,9 +81,22 @@ const createToApiHandler = <T extends z.ZodRawShape | ZodPrimitives>(inputShape:
     : (((obj: object) => zodObjectRecursive(z.object(inputShape)).parse(objectToSnakeCase(obj))) as ToApiCall<T>)
 }
 
-const createFromApiHandler = <T extends z.ZodRawShape | ZodPrimitives>(outputShape: T, callerName: string) => {
+const createFromApiHandler = <T extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny>>(
+  outputShape: T,
+  callerName: string
+) => {
+  const isOutputZodArray = outputShape instanceof z.ZodArray
   const isOutputZodPrimitive = outputShape instanceof z.ZodSchema
+
   // since this checks for the api response, which we don't control, we can't strict parse, else we would break the flow. We'd rather safe parse and show a warning if there's a mismatch
+  if (isOutputZodArray) {
+    return (obj: object[]) =>
+      parseResponse({
+        identifier: callerName,
+        data: obj.map((o) => objectToCamelCase(o)),
+        zod: outputShape,
+      })
+  }
   return isOutputZodPrimitive
     ? undefined
     : (((obj: object) => {
@@ -97,7 +110,7 @@ const createFromApiHandler = <T extends z.ZodRawShape | ZodPrimitives>(outputSha
 
 export function createApiUtils<
   TInput extends z.ZodRawShape | ZodPrimitives,
-  TOutput extends z.ZodRawShape | ZodPrimitives
+  TOutput extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny>
 >(
   args: { name: string } & (
     | { inputShape: TInput; outputShape: TOutput }
