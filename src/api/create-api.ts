@@ -240,15 +240,13 @@ export function createApi<
     type TApiCreateShape = TModels extends CreateCallObj<TApiEntityShape, infer TC> ? TC : z.ZodRawShape
     type TApiCreate = GetInferredFromRaw<TApiCreateShape>
     const create = async (inputs: TApiCreate) => {
-      const snaked = objectToSnakeCase(inputs)
-      const res = await axiosLikeClient.post(slashEndingBaseUri, snaked)
-      const snakedEntityShape = zodObjectRecursive(z.object(models.entity))
-      const parsed = parseResponse({
-        identifier: `${create.name} ${baseUri}`,
-        data: res.data,
-        zod: snakedEntityShape,
+      const { utils } = createApiUtils({
+        inputShape: models.create,
+        name: create.name,
+        outputShape: models.entity,
       })
-      return objectToCamelCase(parsed)
+      const res = await axiosLikeClient.post(slashEndingBaseUri, utils.toApi(inputs))
+      return utils.fromApi(res.data)
     }
     createObj = { create }
   }
@@ -257,14 +255,12 @@ export function createApi<
     if (!uuidZod.safeParse(id).success) {
       console.warn("The passed id is not a valid UUID, check your input")
     }
-    const uri = `${slashEndingBaseUri}${id}/` as `${string}/`
-    const res = await axiosLikeClient.get(uri)
-    const parsed = parseResponse({
-      identifier: `${retrieve.name} ${uri}`,
-      data: res.data,
-      zod: zodObjectRecursive(z.object(models.entity)),
+    const { utils } = createApiUtils({
+      name: retrieve.name,
+      outputShape: models.entity,
     })
-    return objectToCamelCase(parsed)
+    const res = await axiosLikeClient.get(`${slashEndingBaseUri}${id}/`)
+    return utils.fromApi(res.data)
   }
 
   const list = async (params: Parameters<BareApiService<TModels>["list"]>[0]) => {
