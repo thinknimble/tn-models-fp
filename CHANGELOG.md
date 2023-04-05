@@ -1,5 +1,11 @@
 # @thinknimble/tn-models-fp
 
+## 2.5.0
+
+### Minor Changes
+
+- 25b3716: Fix issue where object fields of arrays were not properly cased
+
 ## 2.4.0
 
 ### Minor Changes
