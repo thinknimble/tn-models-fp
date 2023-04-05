@@ -2,7 +2,7 @@
 import { CamelCasedPropertiesDeep, SnakeCasedPropertiesDeep } from "@thinknimble/tn-utils"
 import { describe, expect, it } from "vitest"
 import { z } from "zod"
-import { createApiUtils, GetInferredFromRaw, objectToCamelCaseArr } from "."
+import { createApiUtils, objectToCamelCaseArr } from "./api"
 import { ZodRawShapeToSnakedRecursive, zodObjectRecursive } from "./zod"
 
 describe("createApiUtils", () => {
