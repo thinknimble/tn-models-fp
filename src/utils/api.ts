@@ -1,4 +1,11 @@
-import { objectToCamelCase, objectToSnakeCase, SnakeCasedPropertiesDeep } from "@thinknimble/tn-utils"
+import {
+  CamelCasedPropertiesDeep,
+  objectToCamelCase,
+  objectToSnakeCase,
+  SnakeCasedPropertiesDeep,
+  toCamelCase,
+  toSnakeCase,
+} from "@thinknimble/tn-utils"
 import { z } from "zod"
 import { parseResponse } from "./response"
 import { zodObjectRecursive } from "./zod"
@@ -73,6 +80,18 @@ export type CallbackUtils<
             utils: FromApiUtil<TOutput>
           })
 
+//TODO: this should probably move to tn-utils but will keep it here for a quick release
+export const objectToCamelCaseArr = <T extends object>(obj: T): CamelCasedPropertiesDeep<T> => {
+  if (typeof obj !== "object") return obj
+  if (Array.isArray(obj)) return obj.map((o) => objectToCamelCaseArr(o)) as CamelCasedPropertiesDeep<T>
+  const entries = Object.entries(obj)
+  const newEntries = []
+  for (const [k, v] of entries) {
+    newEntries.push([toCamelCase(k), objectToCamelCaseArr(v)])
+  }
+  return Object.fromEntries(newEntries)
+}
+
 const createToApiHandler = <T extends z.ZodRawShape | ZodPrimitives>(inputShape: T) => {
   const isInputZodPrimitive = inputShape instanceof z.ZodSchema
   // Given that this is under our control, we should not do safe parse, if the parsing fails means something is wrong (you're not complying with the schema you defined)
@@ -102,7 +121,7 @@ const createFromApiHandler = <T extends z.ZodRawShape | ZodPrimitives | z.ZodArr
     : (((obj: object) => {
         return parseResponse({
           identifier: callerName,
-          data: objectToCamelCase(obj) ?? {},
+          data: objectToCamelCaseArr(obj) ?? {},
           zod: z.object(outputShape),
         })
       }) as FromApiCall<T>)
