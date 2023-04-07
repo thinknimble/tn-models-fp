@@ -79,8 +79,8 @@ export function createPaginatedServiceCall<TOutput extends z.ZodRawShape, TInput
         params: snakedCleanParsedFilters,
       })
     } else {
-      const { pagination, ...body } = input ?? {}
-      const validBody = Object.keys(body).length !== 0 ? objectToSnakeCase(body) : undefined
+      const { pagination, ...body } = utils.toApi(input) ?? {}
+      const validBody = Object.keys(body).length !== 0 ? body : undefined
       res = await client.post(fullUri, validBody, {
         params: snakedCleanParsedFilters,
       })
