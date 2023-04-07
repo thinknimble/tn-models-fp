@@ -1,5 +1,11 @@
 # @thinknimble/tn-models-fp
 
+## 2.5.2
+
+### Patch Changes
+
+- c31e928: `createPaginatedServiceCall` uri parameter now is optional, and it is now also properly handled if it is an empty string
+
 ## 2.5.1
 
 ### Patch Changes
