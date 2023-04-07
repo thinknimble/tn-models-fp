@@ -240,20 +240,18 @@ const testPagePaginatedServiceCall = (() => {
     { uri: "testPagePaginatedServiceCall" }
   )
 })()
-const testPostPaginatedServiceCall = (() => {
-  return createPaginatedServiceCall(
-    {
-      inputShape: {
-        d: z.object({
-          d1: z.number(),
-        }),
-        e: z.string(),
-      },
-      outputShape: entityZodShape,
+const testPostPaginatedServiceCall = createPaginatedServiceCall(
+  {
+    inputShape: {
+      dObj: z.object({
+        dObj1: z.number(),
+      }),
+      eString: z.string(),
     },
-    { uri: "testPostPaginatedServiceCall", httpMethod: "post" }
-  )
-})()
+    outputShape: entityZodShape,
+  },
+  { uri: "testPostPaginatedServiceCall", httpMethod: "post" }
+)
 
 const testSlashEndingUri = createCustomServiceCall(async ({ client, slashEndingBaseUri }) => {
   type TClient = typeof client
@@ -672,22 +670,54 @@ describe("v2 api tests", async () => {
       mockedAxios.post.mockResolvedValueOnce({
         data: listResponse,
       })
-      const body = {
-        d: {
-          d1: 1,
+      const body: Omit<GetInferredFromRaw<(typeof testPostPaginatedServiceCall)["inputShape"]>, "pagination"> = {
+        dObj: {
+          dObj1: 1,
         },
-        e: "e",
+        eString: "eString",
+      }
+      //act
+      await testApi.csc.testPostPaginatedServiceCall({
+        ...body,
+        pagination: new Pagination({ page: 1 }),
+      })
+      //assert
+      expect(getSpy).not.toHaveBeenCalled()
+      expect(postSpy).toHaveBeenCalledOnce()
+    })
+    it("calls api and posts with the right casing in its body", async () => {
+      //arrange
+      const postSpy = vi.spyOn(mockedAxios, "post")
+      mockedAxios.get.mockResolvedValueOnce({
+        data: listResponse,
+      })
+      mockedAxios.post.mockResolvedValueOnce({
+        data: listResponse,
+      })
+      const body: Omit<GetInferredFromRaw<(typeof testPostPaginatedServiceCall)["inputShape"]>, "pagination"> = {
+        dObj: {
+          dObj1: 1,
+        },
+        eString: "eString",
       }
       //act
       await testApi.csc.testPostPaginatedServiceCall({ ...body, pagination: new Pagination({ page: 1 }) })
       //assert
-      expect(getSpy).not.toHaveBeenCalled()
-      expect(postSpy).toHaveBeenCalledWith(`${testBaseUri}/testPostPaginatedServiceCall/`, body, {
-        params: {
-          page: "1",
-          page_size: "25",
+      expect(postSpy).toHaveBeenCalledWith(
+        `${testBaseUri}/testPostPaginatedServiceCall/`,
+        {
+          d_obj: {
+            d_obj1: body.dObj.dObj1,
+          },
+          e_string: body.eString,
         },
-      })
+        {
+          params: {
+            page: "1",
+            page_size: "25",
+          },
+        }
+      )
     })
     it("calls api with right pagination params", async () => {
       //arrange
