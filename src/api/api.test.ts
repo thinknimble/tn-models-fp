@@ -647,6 +647,67 @@ describe("v2 api tests", async () => {
       ],
     }
     const [joseph, jotaro] = listResponse.results
+
+    it("allows not passing a uri and calls api with the right uri", async () => {
+      //arrange
+      const postSpy = vi.spyOn(mockedAxios, "post")
+      const paginatedServiceCall = createPaginatedServiceCall(
+        {
+          inputShape: {
+            myInput: z.string(),
+          },
+          outputShape: {
+            myOutput: z.string(),
+          },
+        },
+        { httpMethod: "post" }
+      )
+      mockedAxios.post.mockResolvedValueOnce({
+        data: { count: 1, next: null, previous: null, results: [{ my_output: "myOutput" }] },
+      })
+      const api = createApi({ baseUri: testBaseUri, client: mockedAxios }, { paginatedServiceCall })
+      const pagination = new Pagination({ page: 1 })
+      const input = { myInput: "myInput" }
+      //act
+      await api.csc.paginatedServiceCall({ ...input, pagination })
+      //assert
+      expect(postSpy).toHaveBeenCalledWith(`${testBaseUri}/`, input, {
+        params: {
+          page: pagination.page.toString(),
+          page_size: pagination.size.toString(),
+        },
+      })
+    })
+    it("calls api with the right uri even if uri param is empty", async () => {
+      //arrange
+      const postSpy = vi.spyOn(mockedAxios, "post")
+      const paginatedServiceCall = createPaginatedServiceCall(
+        {
+          inputShape: {
+            myInput: z.string(),
+          },
+          outputShape: {
+            myOutput: z.string(),
+          },
+        },
+        { httpMethod: "post", uri: "" }
+      )
+      mockedAxios.post.mockResolvedValueOnce({
+        data: { count: 1, next: null, previous: null, results: [{ my_output: "myOutput" }] },
+      })
+      const api = createApi({ baseUri: testBaseUri, client: mockedAxios }, { paginatedServiceCall })
+      const pagination = new Pagination({ page: 1 })
+      const input = { myInput: "myInput" }
+      //act
+      await api.csc.paginatedServiceCall({ ...input, pagination })
+      //assert
+      expect(postSpy).toHaveBeenCalledWith(`${testBaseUri}/`, input, {
+        params: {
+          page: pagination.page.toString(),
+          page_size: pagination.size.toString(),
+        },
+      })
+    })
     it("calls api with the right uri", async () => {
       //arrange
       const getSpy = vi.spyOn(mockedAxios, "get")

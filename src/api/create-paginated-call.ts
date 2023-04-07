@@ -17,7 +17,7 @@ import {
 } from "./types"
 
 type PaginatedServiceCallOptions = {
-  uri: string
+  uri?: string
   httpMethod?: keyof Pick<Axios, "get" | "post">
 }
 
@@ -72,7 +72,7 @@ export function createPaginatedServiceCall<TOutput extends z.ZodRawShape, TInput
       : undefined
 
     let res
-    const slashEndingUri = uri[uri.length - 1] === "/" ? uri : uri + "/"
+    const slashEndingUri = uri ? (uri[uri.length - 1] === "/" ? uri : uri + "/") : ""
     const fullUri = `${slashEndingBaseUri}${slashEndingUri}` as `${string}/`
     if (httpMethod === "get") {
       res = await client.get(fullUri, {
