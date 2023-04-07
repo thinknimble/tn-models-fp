@@ -1,5 +1,11 @@
 # @thinknimble/tn-models-fp
 
+## 2.5.1
+
+### Patch Changes
+
+- 8270dfe: Fix `createPaginatedServiceCall` not snake casing the request properly. @paribaker
+
 ## 2.5.0
 
 ### Minor Changes
