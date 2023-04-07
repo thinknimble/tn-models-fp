@@ -669,12 +669,16 @@ describe("v2 api tests", async () => {
       //act
       await api.csc.paginatedServiceCall({ ...input, pagination })
       //assert
-      expect(postSpy).toHaveBeenCalledWith(`${testBaseUri}/`, input, {
-        params: {
-          page: pagination.page.toString(),
-          page_size: pagination.size.toString(),
-        },
-      })
+      expect(postSpy).toHaveBeenCalledWith(
+        `${testBaseUri}/`,
+        { my_input: input.myInput },
+        {
+          params: {
+            page: pagination.page.toString(),
+            page_size: pagination.size.toString(),
+          },
+        }
+      )
     })
     it("calls api with the right uri even if uri param is empty", async () => {
       //arrange
@@ -699,12 +703,16 @@ describe("v2 api tests", async () => {
       //act
       await api.csc.paginatedServiceCall({ ...input, pagination })
       //assert
-      expect(postSpy).toHaveBeenCalledWith(`${testBaseUri}/`, input, {
-        params: {
-          page: pagination.page.toString(),
-          page_size: pagination.size.toString(),
-        },
-      })
+      expect(postSpy).toHaveBeenCalledWith(
+        `${testBaseUri}/`,
+        { my_input: input.myInput },
+        {
+          params: {
+            page: pagination.page.toString(),
+            page_size: pagination.size.toString(),
+          },
+        }
+      )
     })
     it("calls api with the right uri", async () => {
       //arrange
