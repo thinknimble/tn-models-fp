@@ -1,5 +1,11 @@
 # @thinknimble/tn-models-fp
 
+## 2.5.3
+
+### Patch Changes
+
+- dc5421e: Fix issue with nulls being considered of type object in js. Mischeck was crashing library on null values
+
 ## 2.5.2
 
 ### Patch Changes
