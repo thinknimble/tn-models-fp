@@ -82,7 +82,7 @@ export type CallbackUtils<
 
 //TODO: this should probably move to tn-utils but will keep it here for a quick release
 export const objectToCamelCaseArr = <T extends object>(obj: T): CamelCasedPropertiesDeep<T> => {
-  if (typeof obj !== "object") return obj
+  if (typeof obj !== "object" || obj === null) return obj
   if (Array.isArray(obj)) return obj.map((o) => objectToCamelCaseArr(o)) as CamelCasedPropertiesDeep<T>
   const entries = Object.entries(obj)
   const newEntries = []
