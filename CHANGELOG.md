@@ -1,5 +1,11 @@
 # @thinknimble/tn-models-fp
 
+## 2.5.4
+
+### Patch Changes
+
+- b7f9346: Fix `createPaginatedServiceCall` erroring when not passing opts param. Now it should allow you to skip the second parameter and thus use its built-in defaults ( uri = '' , httpMethod = 'get' )
+
 ## 2.5.3
 
 ### Patch Changes
