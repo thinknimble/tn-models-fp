@@ -30,7 +30,7 @@ export function createPaginatedServiceCall<
   // TFilters extends z.ZodRawShape= never
 >(
   models: CustomServiceCallOutputObj<TOutput>,
-  opts: PaginatedServiceCallOptions
+  opts?: PaginatedServiceCallOptions
 ): CustomServiceCallOpts<typeof paginationObjShape, ReturnType<typeof getPaginatedZod<TOutput>>["shape"]>
 export function createPaginatedServiceCall<
   TOutput extends z.ZodRawShape,
@@ -38,13 +38,14 @@ export function createPaginatedServiceCall<
   // TFilters extends z.ZodRawShape= never
 >(
   models: CustomServiceCallInputObj<TInput> & CustomServiceCallOutputObj<TOutput>,
-  opts: PaginatedServiceCallOptions
+  opts?: PaginatedServiceCallOptions
 ): CustomServiceCallOpts<TInput & typeof paginationObjShape, ReturnType<typeof getPaginatedZod<TOutput>>["shape"]>
 
 export function createPaginatedServiceCall<TOutput extends z.ZodRawShape, TInput extends z.ZodRawShape>(
   models: object,
-  { uri, httpMethod = "get" }: PaginatedServiceCallOptions
+  opts: PaginatedServiceCallOptions | undefined
 ): CustomServiceCallOpts<any, any> {
+  const { uri, httpMethod = "get" } = opts ?? {}
   // The output shape should still be the camelCased one so as long as we make sure that we return the same we should be able to cast the result right?. OutputShape will always be camelCased from the user input...
   if (!("outputShape" in models)) {
     throw new Error("You should provide an output shape ")

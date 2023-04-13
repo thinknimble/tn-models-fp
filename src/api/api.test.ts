@@ -841,5 +841,13 @@ describe("v2 api tests", async () => {
         ],
       })
     })
+    it("Allows calling it without params (and use defaults)", async () => {
+      //act + assert -- should not TS error
+      const response = createPaginatedServiceCall({
+        outputShape: {
+          testString: z.string(),
+        },
+      })
+    })
   })
 })
