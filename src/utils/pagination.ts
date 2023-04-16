@@ -106,7 +106,7 @@ export class Pagination implements IPagination {
   }
 
   get hasNextPage(): boolean {
-    if (this.calcTotalPages) {
+    if (this.calcTotalPages(this)) {
       return this.page !== this.calcTotalPages(this)
     } else {
       return false
