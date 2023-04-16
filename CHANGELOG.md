@@ -1,5 +1,11 @@
 # @thinknimble/tn-models-fp
 
+## 2.5.5
+
+### Patch Changes
+
+- 9679bd2: Fix missing argument in `Pagination.hasNextPage`
+
 ## 2.5.4
 
 ### Patch Changes
