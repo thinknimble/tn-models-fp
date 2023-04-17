@@ -1,5 +1,11 @@
 # @thinknimble/tn-models-fp
 
+## 2.6.1
+
+### Patch Changes
+
+- ddecbf6: Fix paginated requests doing strict parse of responses instead of safe parse. Remove use of `parse` in `list` and `createPaginatedServiceCall`
+
 ## 2.6.0
 
 ### Minor Changes
