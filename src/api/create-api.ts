@@ -290,8 +290,12 @@ export function createApi<
     const res = await axiosLikeClient.get(slashEndingBaseUri, {
       params: snakedCleanParsedFilters,
     })
-    //TODO: #61 address whether we should parse or safeparse
-    const rawResponse = paginatedZod.parse(res.data)
+    const rawResponse = parseResponse({
+      identifier: list.name,
+      data: res.data,
+      zod: paginatedZod,
+    })
+
     return { ...rawResponse, results: rawResponse.results.map((r) => objectToCamelCase(r)) }
   }
 
