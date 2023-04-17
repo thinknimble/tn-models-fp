@@ -1,15 +1,20 @@
 import { AxiosRequestConfig, AxiosResponse } from "axios"
 import { z } from "zod"
-import { CallbackUtils, GetInferredFromRaw, ZodPrimitives } from "../utils"
+import { CallbackUtils, GetInferredFromRaw, ZodPrimitives, UnknownIfNever } from "../utils"
 
-export type CustomServiceCallInputObj<TInput extends z.ZodRawShape | ZodPrimitives = z.ZodUndefined> = {
-  inputShape: TInput
-}
+export type CustomServiceCallInputObj<TInput extends z.ZodRawShape | ZodPrimitives = z.ZodUndefined> = UnknownIfNever<
+  TInput,
+  { inputShape: TInput }
+>
+
 export type CustomServiceCallOutputObj<
   TOutput extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny> = z.ZodUndefined
-> = {
-  outputShape: TOutput
-}
+> = UnknownIfNever<
+  TOutput,
+  {
+    outputShape: TOutput
+  }
+>
 
 type InferCallbackInput<TInput extends z.ZodRawShape | z.ZodType> = TInput extends z.ZodRawShape
   ? GetInferredFromRaw<TInput>
