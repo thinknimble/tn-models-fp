@@ -2,6 +2,7 @@ import { objectToCamelCase, objectToSnakeCase } from "@thinknimble/tn-utils"
 import { Axios } from "axios"
 import { z } from "zod"
 import {
+  filtersZod,
   GetInferredFromRaw,
   getPaginatedShape,
   getPaginatedSnakeCasedZod,
@@ -9,6 +10,9 @@ import {
   Pagination,
   paginationFiltersZod,
   parseResponse,
+  IsNever,
+  UnknownIfNever,
+  PartializeShape,
 } from "../utils"
 import {
   CustomServiceCallback,
@@ -26,27 +30,45 @@ const paginationObjShape = {
   pagination: z.instanceof(Pagination),
 }
 
-export function createPaginatedServiceCall<
-  TOutput extends z.ZodRawShape
-  // TFilters extends z.ZodRawShape= never
->(
-  models: CustomServiceCallOutputObj<TOutput>,
+type ResolveFilters<T extends z.ZodRawShape = never> = IsNever<T> extends true
+  ? unknown
+  : T extends z.ZodRawShape
+  ? { filtersShape: T }
+  : unknown
+
+export function createPaginatedServiceCall<TOutput extends z.ZodRawShape, TFilters extends z.ZodRawShape = never>(
+  models: CustomServiceCallOutputObj<TOutput> & ResolveFilters<TFilters>,
   opts?: PaginatedServiceCallOptions
-): CustomServiceCallOpts<typeof paginationObjShape, ReturnType<typeof getPaginatedZod<TOutput>>["shape"]>
+): CustomServiceCallOpts<
+  typeof paginationObjShape &
+    UnknownIfNever<TFilters, { filters: z.ZodOptional<z.ZodObject<PartializeShape<TFilters>>> }>,
+  ReturnType<typeof getPaginatedZod<TOutput>>["shape"]
+>
 export function createPaginatedServiceCall<
   TOutput extends z.ZodRawShape,
-  TInput extends z.ZodRawShape
-  // TFilters extends z.ZodRawShape= never
+  TFilters extends z.ZodRawShape = never,
+  TInput extends z.ZodRawShape = never
 >(
-  models: CustomServiceCallInputObj<TInput> & CustomServiceCallOutputObj<TOutput>,
+  models: CustomServiceCallInputObj<TInput> & CustomServiceCallOutputObj<TOutput> & ResolveFilters<TFilters>,
   opts?: PaginatedServiceCallOptions
-): CustomServiceCallOpts<TInput & typeof paginationObjShape, ReturnType<typeof getPaginatedZod<TOutput>>["shape"]>
+): CustomServiceCallOpts<
+  UnknownIfNever<TInput> &
+    typeof paginationObjShape &
+    UnknownIfNever<TFilters, { filters: z.ZodOptional<z.ZodObject<PartializeShape<TFilters>>> }>,
+  ReturnType<typeof getPaginatedZod<TOutput>>["shape"]
+>
 
-export function createPaginatedServiceCall<TOutput extends z.ZodRawShape, TInput extends z.ZodRawShape>(
-  models: object,
-  opts: PaginatedServiceCallOptions | undefined
-): CustomServiceCallOpts<any, any> {
-  const { uri, httpMethod = "get" } = opts ?? {}
+export function createPaginatedServiceCall<
+  TOutput extends z.ZodRawShape,
+  TFilters extends z.ZodRawShape = never,
+  TInput extends z.ZodRawShape = never
+>(models: object, opts: PaginatedServiceCallOptions | undefined): CustomServiceCallOpts<any, any> {
+  const uri = opts?.uri
+  const httpMethod = opts?.httpMethod ?? "get"
+  const filtersShape =
+    "filtersShape" in models && Object.keys(models.filtersShape as TFilters).length
+      ? (models.filtersShape as TFilters)
+      : undefined
   // The output shape should still be the camelCased one so as long as we make sure that we return the same we should be able to cast the result right?. OutputShape will always be camelCased from the user input...
   if (!("outputShape" in models)) {
     throw new Error("You should provide an output shape ")
@@ -55,13 +77,21 @@ export function createPaginatedServiceCall<TOutput extends z.ZodRawShape, TInput
   const newOutputShape = getPaginatedShape(outputShape)
 
   const callback: CustomServiceCallback<
-    TInput & typeof paginationObjShape,
+    typeof paginationObjShape &
+      UnknownIfNever<TInput> &
+      (IsNever<TFilters> extends true ? unknown : { filters: GetInferredFromRaw<TFilters> }),
     ReturnType<typeof getPaginatedShape<TOutput>>
   > = async ({ client, slashEndingBaseUri, utils, input }) => {
+    const filters = "filters" in input ? (input.filters as TFilters) : undefined
     const allFilters = {
+      ...(filters ?? {}),
       ...(input.pagination ? { page: input.pagination.page, pageSize: input.pagination.size } : {}),
     }
-    const filtersParsed = paginationFiltersZod.parse(allFilters)
+    const filtersParsed = (
+      filtersShape
+        ? z.object(filtersShape).partial().and(filtersZod).and(paginationFiltersZod)
+        : filtersZod.and(paginationFiltersZod)
+    ).parse(allFilters)
     const snakedFilters = filtersParsed ? objectToSnakeCase(filtersParsed) : undefined
     const snakedCleanParsedFilters = snakedFilters
       ? Object.fromEntries(

@@ -166,3 +166,7 @@ export function zodObjectRecursive<T extends z.ZodRawShape>(
   ) as ZodRawShapeToSnakedRecursive<T>
   return z.object(resultingShape)
 }
+
+export type PartializeShape<T extends z.ZodRawShape> = {
+  [K in keyof T]: z.ZodOptional<T[K]>
+}
