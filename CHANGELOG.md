@@ -1,5 +1,11 @@
 # @thinknimble/tn-models-fp
 
+## 2.6.0
+
+### Minor Changes
+
+- e64ed54: Allow passing filters to `createPaginatedServiceCall`. For this there's a new `models` field that can be used to pass the filters shape: `filtersShape`. You'll then get a `filters` optional key when using the service call which will allow you to pass the filters you declared
+
 ## 2.5.5
 
 ### Patch Changes
