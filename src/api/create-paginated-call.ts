@@ -9,6 +9,9 @@ import {
   getPaginatedZod,
   Pagination,
   paginationFiltersZod,
+  IsNever,
+  UnknownIfNever,
+  PartializeShape,
 } from "../utils"
 import {
   CustomServiceCallback,
@@ -16,7 +19,6 @@ import {
   CustomServiceCallOpts,
   CustomServiceCallOutputObj,
 } from "./types"
-import { IsNever, UnknownIfNever } from "../utils/common"
 
 type PaginatedServiceCallOptions = {
   uri?: string
@@ -37,7 +39,8 @@ export function createPaginatedServiceCall<TOutput extends z.ZodRawShape, TFilte
   models: CustomServiceCallOutputObj<TOutput> & ResolveFilters<TFilters>,
   opts?: PaginatedServiceCallOptions
 ): CustomServiceCallOpts<
-  typeof paginationObjShape & UnknownIfNever<TFilters, { filters: z.ZodOptional<z.ZodObject<TFilters>> }>,
+  typeof paginationObjShape &
+    UnknownIfNever<TFilters, { filters: z.ZodOptional<z.ZodObject<PartializeShape<TFilters>>> }>,
   ReturnType<typeof getPaginatedZod<TOutput>>["shape"]
 >
 export function createPaginatedServiceCall<
@@ -50,7 +53,7 @@ export function createPaginatedServiceCall<
 ): CustomServiceCallOpts<
   UnknownIfNever<TInput> &
     typeof paginationObjShape &
-    UnknownIfNever<TFilters, { filters: z.ZodOptional<z.ZodObject<TFilters>> }>,
+    UnknownIfNever<TFilters, { filters: z.ZodOptional<z.ZodObject<PartializeShape<TFilters>>> }>,
   ReturnType<typeof getPaginatedZod<TOutput>>["shape"]
 >
 
@@ -61,7 +64,10 @@ export function createPaginatedServiceCall<
 >(models: object, opts: PaginatedServiceCallOptions | undefined): CustomServiceCallOpts<any, any> {
   const uri = opts?.uri
   const httpMethod = opts?.httpMethod ?? "get"
-  const filtersShape = "filtersShape" in models ? (models.filtersShape as TFilters) : undefined
+  const filtersShape =
+    "filtersShape" in models && Object.keys(models.filtersShape as TFilters).length
+      ? (models.filtersShape as TFilters)
+      : undefined
   // The output shape should still be the camelCased one so as long as we make sure that we return the same we should be able to cast the result right?. OutputShape will always be camelCased from the user input...
   if (!("outputShape" in models)) {
     throw new Error("You should provide an output shape ")

@@ -856,6 +856,7 @@ describe("v2 api tests", async () => {
         outputShape: entityZodShape,
         filtersShape: {
           myExtraFilter: z.string(),
+          anotherExtraFilter: z.number(),
         },
       })
       const api = createApi(
@@ -876,9 +877,7 @@ describe("v2 api tests", async () => {
       //act
       await api.csc.testPaginatedCallWithFilters({
         pagination,
-        filters: {
-          myExtraFilter,
-        },
+        filters: { myExtraFilter },
       })
       //assert
       expect(getSpy).toHaveBeenCalledWith(`${testBaseUri}/`, {
