@@ -843,9 +843,49 @@ describe("v2 api tests", async () => {
     })
     it("Allows calling it without params (and use defaults)", async () => {
       //act + assert -- should not TS error
-      const response = createPaginatedServiceCall({
+      const paginatedServiceCall = createPaginatedServiceCall({
         outputShape: {
           testString: z.string(),
+        },
+      })
+    })
+    it("calls api with the right filters", async () => {
+      //TODO: should probably add a couple more that check the filtering but no time atm
+      //arrange
+      const testPaginatedCallWithFilters = createPaginatedServiceCall({
+        outputShape: entityZodShape,
+        filtersShape: {
+          myExtraFilter: z.string(),
+        },
+      })
+      const api = createApi(
+        {
+          baseUri: testBaseUri,
+          client: mockedAxios,
+        },
+        {
+          testPaginatedCallWithFilters,
+        }
+      )
+      const getSpy = vi.spyOn(mockedAxios, "get")
+      mockedAxios.get.mockResolvedValueOnce({
+        data: listResponse,
+      })
+      const pagination = new Pagination({ page: 1, size: 20 })
+      const myExtraFilter = "test"
+      //act
+      await api.csc.testPaginatedCallWithFilters({
+        pagination,
+        filters: {
+          myExtraFilter,
+        },
+      })
+      //assert
+      expect(getSpy).toHaveBeenCalledWith(`${testBaseUri}/`, {
+        params: {
+          page: pagination.page.toString(),
+          page_size: pagination.size.toString(),
+          my_extra_filter: myExtraFilter,
         },
       })
     })
