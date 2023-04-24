@@ -1,5 +1,11 @@
 # @thinknimble/tn-models-fp
 
+## 2.7.0
+
+### Minor Changes
+
+- d17171e: Add `standAlone` function to `createCustomServiceCall`. This fn allows users to create a service call that does not need to be attached to any api, it can work on its own. The only extra requirement for this call is the axios client.
+
 ## 2.6.1
 
 ### Patch Changes
