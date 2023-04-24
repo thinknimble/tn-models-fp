@@ -2,15 +2,16 @@ import { objectToCamelCase, objectToSnakeCase } from "@thinknimble/tn-utils"
 import { AxiosInstance } from "axios"
 import { z } from "zod"
 import {
-  createApiUtils,
-  filtersZod,
   GetInferredFromRaw,
+  IPagination,
+  InferShapeOrZod,
+  createApiUtils,
+  createCustomServiceCallHandler,
+  filtersZod,
   getPaginatedSnakeCasedZod,
   getPaginatedZod,
-  IPagination,
   paginationFiltersZod,
   parseResponse,
-  zodObjectRecursive,
 } from "../utils"
 import { AxiosLike } from "./types"
 
@@ -24,11 +25,11 @@ type BaseModelsPlaceholder<
   ? (EntityModelObj<TE> & ExtraFiltersObj<TEx>) | (EntityModelObj<TE> & ExtraFiltersObj<TEx> & CreateModelObj<TC>)
   : unknown
 
+type FromApiPlaceholder = { fromApi: (obj: object) => any }
+type ToApiPlaceholder = { toApi: (obj: object) => any }
 /**
  * Base type for custom service calls which serves as a placeholder to later take advantage of inference
  */
-type FromApiPlaceholder = { fromApi: (obj: object) => any }
-type ToApiPlaceholder = { toApi: (obj: object) => any }
 type CustomServiceCallPlaceholder = {
   inputShape: object
   outputShape: object
@@ -45,19 +46,9 @@ type CustomServiceCallPlaceholder = {
  */
 type CustomServiceCallsRecord<TOpts extends object> = TOpts extends Record<string, CustomServiceCallPlaceholder>
   ? {
-      [TKey in keyof TOpts]: (
-        inputs: TOpts[TKey]["inputShape"] extends z.ZodRawShape
-          ? GetInferredFromRaw<TOpts[TKey]["inputShape"]>
-          : TOpts[TKey]["inputShape"] extends z.ZodTypeAny
-          ? z.infer<TOpts[TKey]["inputShape"]>
-          : never
-      ) => Promise<
-        TOpts[TKey]["outputShape"] extends z.ZodRawShape
-          ? GetInferredFromRaw<TOpts[TKey]["outputShape"]>
-          : TOpts[TKey]["outputShape"] extends z.ZodTypeAny
-          ? z.infer<TOpts[TKey]["outputShape"]>
-          : never
-      >
+      [K in keyof TOpts]: (
+        inputs: InferShapeOrZod<TOpts[K]["inputShape"]>
+      ) => Promise<InferShapeOrZod<TOpts[K]["outputShape"]>>
     }
   : never
 type RetrieveCallObj<TEntity extends z.ZodRawShape> = { retrieve: (id: string) => Promise<GetInferredFromRaw<TEntity>> }
@@ -162,7 +153,6 @@ export function createApi<
    */
   customServiceCalls: TCustomServiceCalls
 ): ApiService<TModels, TCustomServiceCalls>
-
 export function createApi<TCustomServiceCalls extends Record<string, CustomServiceCallPlaceholder> = never>(
   base: BaseApiParams,
   /**
@@ -170,11 +160,9 @@ export function createApi<TCustomServiceCalls extends Record<string, CustomServi
    */
   customServiceCalls: TCustomServiceCalls
 ): ApiService<unknown, TCustomServiceCalls>
-
 export function createApi<TModels extends BaseModelsPlaceholder>(
   base: BaseApiParams & { models: TModels }
 ): BareApiService<TModels>
-
 export function createApi(base: BaseApiParams): BareApiService<unknown>
 
 export function createApi<
@@ -190,32 +178,18 @@ export function createApi<
   //standardize the uri
   const slashEndingBaseUri = (baseUri[baseUri.length - 1] === "/" ? baseUri : baseUri + "/") as `${string}/`
   const axiosLikeClient = client as AxiosLike
-  const createCustomServiceCallHandler =
-    (
-      serviceCallOpts: any,
-      /**
-       * This name allow us to keep record of which method it is, so that we can identify in case of output mismatch
-       */
-      name: string
-    ) =>
-    async (input: unknown) => {
-      const utilsResult = createApiUtils({
-        name,
-        inputShape: serviceCallOpts.inputShape,
-        outputShape: serviceCallOpts.outputShape,
-      })
-      const inputResult = input ? { input } : {}
-      return serviceCallOpts.callback({
-        client: axiosLikeClient,
-        slashEndingBaseUri,
-        ...inputResult,
-        ...(utilsResult ? utilsResult : {}),
-      })
-    }
 
   const modifiedCustomServiceCalls = customServiceCalls
     ? (Object.fromEntries(
-        Object.entries(customServiceCalls).map(([k, v]) => [k, createCustomServiceCallHandler(v, k)])
+        Object.entries(customServiceCalls).map(([k, v]) => [
+          k,
+          createCustomServiceCallHandler({
+            client: axiosLikeClient,
+            serviceCallOpts: v,
+            baseUri: slashEndingBaseUri,
+            name: k,
+          }),
+        ])
       ) as CustomServiceCallsRecord<TCustomServiceCalls>)
     : undefined
 
