@@ -19,7 +19,7 @@ export const parseResponse = <T extends z.ZodType, Z = z.infer<T>>({
 
   if (!parsed.success) {
     // If a request does not return what you expect, we don't let that go unnoticed, you'll get a warning that your frontend model is/has become outdated.
-    console.warn(
+    console.debug(
       `Response to service call with identifier < ${identifier} > did not match expected type,\n errors:`,
       parsed.error
     )

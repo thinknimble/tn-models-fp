@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
+import { faker } from "@faker-js/faker"
 import { CamelCasedPropertiesDeep, SnakeCasedPropertiesDeep } from "@thinknimble/tn-utils"
 import { describe, expect, it } from "vitest"
 import { z } from "zod"
@@ -141,6 +142,46 @@ describe("createApiUtils", () => {
     const trial = utils.fromApi(output)
     //assert
     expect(trial).toEqual([{ testString: "testString", testNumber: 9 }])
+  })
+
+  it("returns toApi when inputShape is zod array", () => {
+    //arrange
+    const { utils } = createApiUtils({
+      outputShape: z.number(),
+      inputShape: z.array(
+        z.object({
+          testString: z.string(),
+          testNumber: z.number(),
+        })
+      ),
+      name: "fromApiZodArray",
+    })
+    const input = [{ testString: "testString", testNumber: 9 }]
+    //act
+    const trial = utils.toApi(input)
+    //assert
+    expect(trial).toEqual([{ test_string: "testString", test_number: 9 }])
+  })
+
+  it("properly processes input and output as arrays", () => {
+    const { utils } = createApiUtils({
+      inputShape: z
+        .object({
+          testInput: z.number(),
+        })
+        .array(),
+      outputShape: z
+        .object({
+          testOutput: z.string(),
+        })
+        .array(),
+      name: "test input output array",
+    })
+    const input = [{ testInput: faker.datatype.number() }, { testInput: faker.datatype.number() }]
+    const output = [{ test_output: faker.datatype.string() }, { test_output: faker.datatype.string() }]
+    const [trialInput, trialOutput] = [utils.toApi(input), utils.fromApi(output)]
+    expect(trialInput).toEqual([{ test_input: input[0]?.testInput }, { test_input: input[1]?.testInput }])
+    expect(trialOutput).toEqual([{ testOutput: output[0]?.test_output }, { testOutput: output[1]?.test_output }])
   })
 })
 
