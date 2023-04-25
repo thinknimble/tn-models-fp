@@ -33,7 +33,6 @@ describe("objectToCamelCaseArr", () => {
         { testSnake: 5, testSnakeOther: 9 },
       ],
     })
-    //TODO:
   })
   it("properly handles an object with more than one field that is an array", () => {
     //arrange
@@ -84,17 +83,17 @@ describe("objectToCamelCaseArr", () => {
   })
 
   it("handles a super nested array", () => {
-    //arrange
-    const createSuperNestedArrayWithClosure = (deepObject: any, levels: number) => {
+    const createSuperNestedArrayWithClosure = <T extends number>(deepObject: unknown, levels: T) => {
       let currentLevel = levels
-      const mainArray: any[] = []
+      const mainArray: unknown[] = []
       let lastLevel = mainArray
       while (currentLevel !== 0) {
-        lastLevel[0] = []
+        const firstLastLevel: unknown[] = []
+        lastLevel[0] = firstLastLevel
         if (currentLevel === 1) {
           lastLevel[0] = deepObject
         } else {
-          lastLevel = lastLevel[0]
+          lastLevel = firstLastLevel
         }
         currentLevel--
       }

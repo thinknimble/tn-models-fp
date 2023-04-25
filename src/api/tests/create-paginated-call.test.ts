@@ -1,50 +1,12 @@
-import { faker } from "@faker-js/faker"
-import { Mocked, describe, expect, it, vi } from "vitest"
+/* eslint-disable @typescript-eslint/no-unused-vars */
+import { describe, expect, it, vi } from "vitest"
 import { z } from "zod"
 import { GetInferredFromRaw, Pagination } from "../../utils"
-import { getPaginatedSnakeCasedZod } from "../../utils/pagination"
 import { createApi } from "../create-api"
 import { createPaginatedServiceCall } from "../create-paginated-call"
-import axios from "axios"
-
-vi.mock("axios")
-
-const mockedAxios = axios as Mocked<typeof axios>
-
-const createZodShape = {
-  firstName: z.string(),
-  lastName: z.string(),
-  age: z.number(),
-}
-const entityZodShape = {
-  ...createZodShape,
-  id: z.string().uuid(),
-}
+import { entityZodShape, listResponse, mockEntity1, mockEntity2, mockedAxios } from "./mocks"
 
 describe("createPaginatedServiceCall", () => {
-  const createEntityMock: () => GetInferredFromRaw<typeof entityZodShape> = () => ({
-    id: faker.datatype.uuid(),
-    age: faker.datatype.number({ min: 1, max: 100 }),
-    firstName: faker.name.firstName(),
-    lastName: faker.name.lastName(),
-  })
-  const mock1 = createEntityMock()
-  const mock2 = createEntityMock()
-  const listResponse: z.infer<ReturnType<typeof getPaginatedSnakeCasedZod<typeof entityZodShape>>> = {
-    count: 10,
-    next: null,
-    previous: null,
-    results: [
-      { ...mock1, first_name: mock1.firstName, last_name: mock1.lastName },
-      {
-        ...mock2,
-        first_name: mock2.firstName,
-        last_name: mock2.lastName,
-      },
-    ],
-  }
-  const [mock1Snaked, mock2Snaked] = listResponse.results
-
   it("allows not passing a uri and calls api with the right uri", async () => {
     //arrange
     const postSpy = vi.spyOn(mockedAxios, "post")
@@ -160,7 +122,7 @@ describe("createPaginatedServiceCall", () => {
       expect(response.results).toHaveLength(2)
       expect(response).toEqual({
         ...listResponse,
-        results: [mock1, mock2],
+        results: [mockEntity1, mockEntity2],
       })
     })
   })

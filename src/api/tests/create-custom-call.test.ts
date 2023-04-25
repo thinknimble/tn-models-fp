@@ -1,15 +1,12 @@
-import { Mocked, describe, it, vi, expect } from "vitest"
-import axios from "axios"
-import { createCustomServiceCall } from "../create-custom-call"
-import { createApi } from "../create-api"
+/* eslint-disable @typescript-eslint/no-unused-vars */
+import { faker } from "@faker-js/faker"
+import { SnakeCasedPropertiesDeep } from "@thinknimble/tn-utils"
+import { describe, expect, it, vi } from "vitest"
 import { z } from "zod"
 import { GetInferredFromRaw } from "../../utils"
-import { SnakeCasedPropertiesDeep } from "@thinknimble/tn-utils"
-import { faker } from "@faker-js/faker"
-
-vi.mock("axios")
-
-const mockedAxios = axios as Mocked<typeof axios>
+import { createApi } from "../create-api"
+import { createCustomServiceCall } from "../create-custom-call"
+import { mockedAxios } from "./mocks"
 
 describe("createCustomServiceCall", () => {
   const testPost = createCustomServiceCall(
@@ -232,6 +229,16 @@ describe("createCustomServiceCall", () => {
     expect(res).toBeUndefined()
   })
   it("verifies these ts tests", async () => {
+    const testNoInputNorOutput = createCustomServiceCall(
+      async ({
+        //@ts-expect-error no input available
+        input,
+        //@ts-expect-error no utils available
+        utils,
+      }) => {
+        return
+      }
+    )
     const testInputOutputPlainZods = (() => {
       const inputShape = z.string()
       const outputShape = z.number()

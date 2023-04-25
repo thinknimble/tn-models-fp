@@ -1,78 +1,34 @@
-/* eslint-disable @typescript-eslint/no-non-null-assertion */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { faker } from "@faker-js/faker"
 import { SnakeCasedPropertiesDeep } from "@thinknimble/tn-utils"
-import axios from "axios"
-import { beforeEach, describe, expect, it, Mocked, vi } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 import { z } from "zod"
+import { GetInferredFromRaw, Pagination } from "../../utils"
 import { createApi } from "../create-api"
-import { Pagination } from "../../utils"
-import { GetInferredFromRaw, Prettify } from "../../utils"
-import { getPaginatedSnakeCasedZod } from "../../utils/pagination"
 import { createCustomServiceCall } from "../create-custom-call"
-import { createPaginatedServiceCall } from "../create-paginated-call"
+import {
+  createZodShape,
+  entityZodShape,
+  listResponse,
+  mockEntity1,
+  mockEntity1Snaked,
+  mockEntity2,
+  mockedAxios,
+} from "./mocks"
 
-vi.mock("axios")
-
-const mockedAxios = axios as Mocked<typeof axios>
-
-const createZodShape = {
-  firstName: z.string(),
-  lastName: z.string(),
-  age: z.number(),
-}
-const entityZodShape = {
-  ...createZodShape,
-  id: z.string().uuid(),
-}
-
-//TS-test slash ending urls
-createCustomServiceCall(async ({ client, slashEndingBaseUri }) => {
-  type TClient = typeof client
-  type UriParameter = Parameters<TClient["get"]>[0]
-  type tests = [
-    Expect<Equals<UriParameter, typeof slashEndingBaseUri>>,
-    Expect<Extends<UriParameter, `slashEndingUri/`>>,
-    //@ts-expect-error non slash ending uri should error on ts
-    Expect<Extends<UriParameter, `nonSlashEnding`>>
-  ]
-  //@ts-expect-error should error bc we're not ending the url with a slash
-  client.get(`${slashEndingBaseUri}/slashEndingUri`)
-  client.get(`${slashEndingBaseUri}`)
-  client.get(`${slashEndingBaseUri}/ending/`)
-})
-
-describe("v2 api tests", async () => {
+describe("createApi", async () => {
   const testBaseUri = "users"
-  const testApi = createApi(
-    {
-      client: mockedAxios,
-      baseUri: testBaseUri,
-      models: {
-        create: createZodShape,
-        entity: entityZodShape,
-        extraFilters: {
-          anExtraFilter: z.string(),
-        },
+  const testApi = createApi({
+    client: mockedAxios,
+    baseUri: testBaseUri,
+    models: {
+      create: createZodShape,
+      entity: entityZodShape,
+      extraFilters: {
+        anExtraFilter: z.string(),
       },
     },
-    {
-      testNoInputNorOutput: createCustomServiceCall(
-        async ({
-          //@ts-expect-error no input available
-          input,
-          //@ts-expect-error no utils available
-          utils,
-        }) => {
-          return
-        }
-      ),
-      testBaseUriParam: createCustomServiceCall({ outputShape: z.string() }, async ({ slashEndingBaseUri }) => {
-        return slashEndingBaseUri
-      }),
-      // custom calls that include type tests
-    }
-  )
+  })
 
   describe("general checks + TS", () => {
     it("does not expose any method if no models were passed", () => {
@@ -135,6 +91,7 @@ describe("v2 api tests", async () => {
       }).toThrow()
     })
   })
+
   describe("create", () => {
     beforeEach(() => {
       mockedAxios.post.mockReset()
@@ -182,24 +139,17 @@ describe("v2 api tests", async () => {
 
     it("returns camelCased entity", async () => {
       //arrange
-      const randomUuid = faker.datatype.uuid()
-      const entityResponse: SnakeCasedPropertiesDeep<GetInferredFromRaw<typeof entityZodShape>> = {
-        age: 18,
-        first_name: "John",
-        last_name: "Doe",
-        id: randomUuid,
-      }
-      mockedAxios.get.mockResolvedValue({ data: entityResponse })
+      mockedAxios.get.mockResolvedValue({ data: mockEntity1Snaked })
       const getSpy = vi.spyOn(mockedAxios, "get")
       //act
-      const response = await testApi.retrieve(randomUuid)
+      const response = await testApi.retrieve(mockEntity1Snaked.id)
       //assert
-      expect(getSpy).toHaveBeenCalledWith(`${testBaseUri}/${randomUuid}/`)
+      expect(getSpy).toHaveBeenCalledWith(`${testBaseUri}/${mockEntity1Snaked.id}/`)
       expect(response).toEqual({
-        age: entityResponse.age,
-        firstName: entityResponse.first_name,
-        lastName: entityResponse.last_name,
-        id: randomUuid,
+        age: mockEntity1Snaked.age,
+        firstName: mockEntity1Snaked.first_name,
+        lastName: mockEntity1Snaked.last_name,
+        id: mockEntity1Snaked.id,
       })
     })
   })
@@ -208,23 +158,7 @@ describe("v2 api tests", async () => {
     beforeEach(() => {
       mockedAxios.get.mockReset()
     })
-    const josephId = faker.datatype.uuid()
-    const jotaroId = faker.datatype.uuid()
-    const listResponse: z.infer<ReturnType<typeof getPaginatedSnakeCasedZod<typeof entityZodShape>>> = {
-      count: 10,
-      next: null,
-      previous: null,
-      results: [
-        { age: 68, first_name: "Joseph", last_name: "Joestar", id: josephId },
-        {
-          age: 17,
-          first_name: "Jotaro",
-          last_name: "Kujo",
-          id: jotaroId,
-        },
-      ],
-    }
-    const [joseph, jotaro] = listResponse.results
+
     it("returns camelCased paginated result", async () => {
       //arrange
       mockedAxios.get.mockResolvedValueOnce({ data: listResponse })
@@ -235,20 +169,7 @@ describe("v2 api tests", async () => {
       expect(response.results).toHaveLength(2)
       expect(response).toEqual({
         ...listResponse,
-        results: [
-          {
-            age: joseph!.age,
-            firstName: joseph!.first_name,
-            lastName: joseph!.last_name,
-            id: joseph!.id,
-          },
-          {
-            age: jotaro!.age,
-            firstName: jotaro!.first_name,
-            lastName: jotaro!.last_name,
-            id: jotaro!.id,
-          },
-        ],
+        results: [mockEntity1, mockEntity2],
       })
     })
     it("uses snake case for sending filters to api", async () => {
@@ -288,6 +209,25 @@ describe("v2 api tests", async () => {
       } catch {
         //ignore
       }
+    })
+  })
+
+  describe("slash ending url", () => {
+    it("passes these TS tests", () => {
+      createCustomServiceCall(async ({ client, slashEndingBaseUri }) => {
+        type TClient = typeof client
+        type UriParameter = Parameters<TClient["get"]>[0]
+        type tests = [
+          Expect<Equals<UriParameter, typeof slashEndingBaseUri>>,
+          Expect<Extends<UriParameter, `slashEndingUri/`>>,
+          //@ts-expect-error non slash ending uri should error on ts
+          Expect<Extends<UriParameter, `nonSlashEnding`>>
+        ]
+        //@ts-expect-error should error bc we're not ending the url with a slash
+        client.get(`${slashEndingBaseUri}/slashEndingUri`)
+        client.get(`${slashEndingBaseUri}`)
+        client.get(`${slashEndingBaseUri}/ending/`)
+      })
     })
   })
 })
