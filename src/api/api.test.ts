@@ -268,6 +268,8 @@ const testSlashEndingUri = createCustomServiceCall(async ({ client, slashEndingB
   client.get(`${slashEndingBaseUri}/slashEndingUri`)
   client.get(`${slashEndingBaseUri}`)
   client.get(`${slashEndingBaseUri}/ending/`)
+  const uriSample = `${slashEndingBaseUri}my-uri/not-const/`
+  client.get(`${slashEndingBaseUri} my-uri/not-const/`) // ❌ this does not check, you'll get errorclient.get(`${slashEndingBaseUri}/slashEndingUri`) //
 })
 
 describe("v2 api tests", async () => {
