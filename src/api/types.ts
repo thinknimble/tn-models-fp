@@ -1,4 +1,4 @@
-import { AxiosInstance, AxiosRequestConfig, AxiosResponse } from "axios"
+import { AxiosRequestConfig, AxiosResponse } from "axios"
 import { z } from "zod"
 import { And, CallbackUtils, GetInferredFromRaw, InferShapeOrZod, Is, UnknownIfNever, ZodPrimitives } from "../utils"
 
@@ -15,6 +15,11 @@ export type CustomServiceCallOutputObj<
   }
 >
 
+export type CustomServiceCallFiltersObj<T extends z.ZodRawShape | z.ZodVoid = z.ZodVoid> = UnknownIfNever<
+  T,
+  { filtersShape?: T }
+>
+
 type InferCallbackInput<TInput extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny>> =
   TInput extends z.ZodRawShape
     ? GetInferredFromRaw<TInput>
@@ -29,6 +34,9 @@ type CallbackInput<TInput extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.Z
   : {
       input: InferCallbackInput<TInput>
     }
+type CallbackFilters<TFilters extends z.ZodRawShape | z.ZodVoid> = TFilters extends z.ZodRawShape
+  ? { filters?: GetInferredFromRaw<TFilters> }
+  : unknown
 
 type StringTrailingSlash = `${string}/`
 type AxiosCall = <TUri extends StringTrailingSlash, T = any, R = AxiosResponse<T>, D = any>(
@@ -53,16 +61,11 @@ export type AxiosLike = {
   patchForm: BodyAxiosCall
 }
 
-export type ServiceCallFn<TInput extends object = never, TOutput extends object = never> = And<
-  Is<TInput, never>,
-  Is<TOutput, never>
-> extends true
-  ? () => Promise<void>
-  : And<Is<TInput, never>, Is<TOutput, z.ZodRawShape | z.ZodTypeAny>> extends true
-  ? () => Promise<InferShapeOrZod<TOutput>>
-  : And<Is<TInput, z.ZodRawShape | z.ZodTypeAny>, Is<TOutput, never>> extends true
-  ? (inputs: InferShapeOrZod<TInput>) => Promise<void>
-  : (inputs: InferShapeOrZod<TInput>) => Promise<InferShapeOrZod<TOutput>>
+export type ServiceCallFn<
+  TInput extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny> = z.ZodVoid,
+  TOutput extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny> = z.ZodVoid,
+  TFilters extends z.ZodRawShape | z.ZodVoid = z.ZodVoid
+> = (...args: ResolveServiceCallArgs<TInput, TFilters>) => Promise<InferShapeOrZod<TOutput>>
 
 {
   // Test suite for ServiceCallFn
@@ -73,11 +76,11 @@ export type ServiceCallFn<TInput extends object = never, TOutput extends object 
     Expect<
       Equals<
         ServiceCallFn<inputShapeMock, outputShapeMock>,
-        (input: InferShapeOrZod<inputShapeMock>) => Promise<InferShapeOrZod<outputShapeMock>>
+        (args: { input: InferShapeOrZod<inputShapeMock> }) => Promise<InferShapeOrZod<outputShapeMock>>
       >
     >,
-    Expect<Equals<ServiceCallFn<inputShapeMock>, (input: InferShapeOrZod<inputShapeMock>) => Promise<void>>>,
-    Expect<Equals<ServiceCallFn<never, outputShapeMock>, () => Promise<InferShapeOrZod<outputShapeMock>>>>,
+    Expect<Equals<ServiceCallFn<inputShapeMock>, (args: { input: InferShapeOrZod<inputShapeMock> }) => Promise<void>>>,
+    Expect<Equals<ServiceCallFn<z.ZodVoid, outputShapeMock>, () => Promise<InferShapeOrZod<outputShapeMock>>>>,
     Expect<Equals<ServiceCallFn, () => Promise<void>>>
   ]
 }
@@ -88,27 +91,64 @@ type BaseUriInput = {
 
 export type CustomServiceCallback<
   TInput extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny> = z.ZodVoid,
-  TOutput extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny> = z.ZodVoid
+  TOutput extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny> = z.ZodVoid,
+  TFilters extends z.ZodRawShape | z.ZodVoid = z.ZodVoid
 > = (
   params: {
     client: AxiosLike
   } & BaseUriInput &
     CallbackUtils<TInput, TOutput> &
-    CallbackInput<TInput>
-) => Promise<InferShapeOrZod<TOutput>>
-
-export type CustomServiceStandAloneCallback<
-  TInput extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny> = z.ZodVoid,
-  TOutput extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny> = z.ZodVoid
-> = (
-  params: {
-    client: AxiosInstance
-  } & CallbackUtils<TInput, TOutput> &
-    CallbackInput<TInput>
+    CallbackInput<TInput> &
+    CallbackFilters<TFilters>
 ) => Promise<InferShapeOrZod<TOutput>>
 
 export type CustomServiceCallOpts<
   TInput extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny> = z.ZodUndefined,
-  TOutput extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny> = z.ZodUndefined
+  TOutput extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny> = z.ZodUndefined,
+  TFilters extends z.ZodRawShape | z.ZodVoid = z.ZodVoid
 > = CustomServiceCallInputObj<TInput> &
-  CustomServiceCallOutputObj<TOutput> & { callback: CustomServiceCallback<TInput, TOutput> }
+  CustomServiceCallOutputObj<TOutput> & {
+    callback: CustomServiceCallback<TInput, TOutput, TFilters>
+  } & CustomServiceCallFiltersObj<TFilters>
+
+type FromApiPlaceholder = { fromApi: (obj: object) => any }
+type ToApiPlaceholder = { toApi: (obj: object) => any }
+
+/**
+ * Base type for custom service calls which serves as a placeholder to later take advantage of inference
+ */
+export type CustomServiceCallPlaceholder<
+  TInput extends z.ZodRawShape | ZodPrimitives | z.ZodVoid = any,
+  TOutput extends object = any,
+  TFilters extends z.ZodRawShape | z.ZodVoid = any
+> = {
+  inputShape: TInput
+  outputShape: TOutput
+  filtersShape?: TFilters
+  callback: (params: {
+    slashEndingBaseUri: `${string}/`
+    client: AxiosLike
+    input: InferShapeOrZod<TInput>
+    utils: FromApiPlaceholder & ToApiPlaceholder
+  }) => Promise<InferShapeOrZod<TOutput>>
+}
+
+type ResolveServiceCallArgs<TInput extends z.ZodRawShape | z.ZodType, TFilters extends z.ZodRawShape | z.ZodVoid> = And<
+  [Is<TInput, z.ZodVoid>, Is<TFilters, z.ZodVoid>]
+> extends true
+  ? []
+  : [
+      params: (Is<TInput, z.ZodVoid> extends true ? unknown : { input: InferShapeOrZod<TInput> }) &
+        (Is<TFilters, z.ZodVoid> extends true ? unknown : { filters?: Partial<InferShapeOrZod<TFilters>> })
+    ]
+
+/**
+ * Get resulting custom service call from `createApi`
+ */
+export type CustomServiceCallsRecord<TOpts extends object> = TOpts extends Record<string, CustomServiceCallPlaceholder>
+  ? {
+      [K in keyof TOpts]: TOpts[K] extends CustomServiceCallPlaceholder<infer TInput, infer TOutput, infer TFilters>
+        ? (...args: ResolveServiceCallArgs<TInput, TFilters>) => Promise<InferShapeOrZod<TOutput>>
+        : "Invalid entry does not match CustomServiceCall type"
+    }
+  : "This should be a record of custom calls"

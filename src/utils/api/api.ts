@@ -5,6 +5,7 @@ import { isZod, isZodArray, resolveRecursiveZod, zodObjectRecursive, ZodPrimitiv
 import { CallbackUtils, FromApiCall, ToApiCall } from "./types"
 import { AxiosInstance } from "axios"
 import { AxiosLike } from "../../api/types"
+import { parseFilters } from "../filters"
 
 //TODO: this should probably move to tn-utils but will keep it here for a quick release
 export const objectToCamelCaseArr = <T extends object>(obj: T): CamelCasedPropertiesDeep<T> => {
@@ -102,17 +103,23 @@ export const createCustomServiceCallHandler =
     name?: string
     baseUri?: string
   }) =>
-  async (input: unknown) => {
-    const utilsResult = createApiUtils({
+  async (args: { input?: unknown; filters?: unknown }) => {
+    const utils = createApiUtils({
       name: name ?? "No-Name call",
       inputShape: serviceCallOpts.inputShape,
       outputShape: serviceCallOpts.outputShape,
     })
-    const inputResult = input ? { input } : {}
-    return serviceCallOpts.callback({
+    const utilsResult = utils ?? {}
+    const parsedFilters = parseFilters(serviceCallOpts.filtersShape, args?.filters)
+    const filtersResult = parsedFilters ? { filters: parsedFilters } : {}
+    const inputResult = args?.input ? { input: args.input } : {}
+
+    const resultArgs = {
       client,
       slashEndingBaseUri: baseUri,
       ...inputResult,
-      ...(utilsResult ? utilsResult : {}),
-    })
+      ...utilsResult,
+      ...filtersResult,
+    }
+    return serviceCallOpts.callback(resultArgs)
   }

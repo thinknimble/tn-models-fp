@@ -9,14 +9,16 @@ import { createCustomServiceCall } from "../create-custom-call"
 import { mockedAxios } from "./mocks"
 
 describe("createCustomServiceCall", () => {
+  const inputShape = {
+    anotherInput: z.string(),
+  }
+  const outputShape = {
+    justAny: z.any(),
+  }
   const testPost = createCustomServiceCall(
     {
-      inputShape: {
-        anotherInput: z.string(),
-      },
-      outputShape: {
-        justAny: z.any(),
-      },
+      inputShape,
+      outputShape,
     },
     async ({ client, input, utils, slashEndingBaseUri }) => {
       const toApiInput = utils.toApi(input)
@@ -25,6 +27,7 @@ describe("createCustomServiceCall", () => {
       return parsed
     }
   )
+
   it("calls api with snake case", async () => {
     //arrange
     const baseUri = "callsApiWithSnakeCase"
@@ -43,7 +46,7 @@ describe("createCustomServiceCall", () => {
     })
     const input = { anotherInput: "testing" }
     //act
-    await testApi.customServiceCalls.testPost(input)
+    await testApi.customServiceCalls.testPost({ input })
     //assert
     expect(postSpy).toHaveBeenCalledWith(`${baseUri}/`, {
       another_input: input.anotherInput,
@@ -67,7 +70,7 @@ describe("createCustomServiceCall", () => {
       }
     )
     //act
-    await testApi.csc.testPost(input)
+    await testApi.csc.testPost({ input })
     //assert
     expect(postSpy).toHaveBeenCalledWith(`${baseUri}/`, {
       another_input: input.anotherInput,
@@ -122,7 +125,9 @@ describe("createCustomServiceCall", () => {
     }
     //act
     const res = await testApi.customServiceCalls.testInputOutputObjects({
-      myInput,
+      input: {
+        myInput,
+      },
     })
     //assert
     expect(res).toEqual(expected)
@@ -201,7 +206,7 @@ describe("createCustomServiceCall", () => {
         testNoOutputPlainZodInput,
       }
     )
-    const res = await testApi.customServiceCalls.testNoOutputPlainZodInput(10)
+    const res = await testApi.customServiceCalls.testNoOutputPlainZodInput({ input: 10 })
     expect(res).toBeUndefined()
   })
   it("checks no input no output overload", async () => {
@@ -272,7 +277,7 @@ describe("createCustomServiceCall", () => {
     testApi.customServiceCalls.nonExisting
 
     type tests = [
-      Expect<Equals<string, Parameters<(typeof testApi)["customServiceCalls"]["testInputOutputPlainZods"]>[0]>>
+      Expect<Equals<string, Parameters<(typeof testApi)["customServiceCalls"]["testInputOutputPlainZods"]>[0]["input"]>>
     ]
   })
   it("works well if no models are passed", async () => {
@@ -294,11 +299,14 @@ describe("createCustomServiceCall", () => {
     })
     const input = { anotherInput: "testing" }
     //act
-    await testApiWithoutModels.csc.testPost(input)
+    await testApiWithoutModels.csc.testPost({ input })
     //assert
     expect(postSpy).toHaveBeenCalledWith(`${baseUri}/`, {
       another_input: input.anotherInput,
     })
+  })
+  it("properly passes filters", () => {
+    //TODO:
   })
 
   describe("standAlone call", () => {
@@ -330,7 +338,7 @@ describe("createCustomServiceCall", () => {
       })
       const testNumberInput = faker.datatype.number()
       //act
-      const result = await testStandAloneCall({ testInput: testNumberInput })
+      const result = await testStandAloneCall({ input: { testInput: testNumberInput } })
       //assert
       expect(postSpy).toHaveBeenLastCalledWith(`${callName}/`, { test_input: testNumberInput })
       expect(result).toEqual({ testData: mockResult.test_data })
@@ -360,7 +368,7 @@ describe("createCustomServiceCall", () => {
       })
       const testNumberInput = faker.datatype.number()
       //act
-      const result = await testStandAloneCall({ testInput: testNumberInput })
+      const result = await testStandAloneCall({ input: { testInput: testNumberInput } })
       //assert
       expect(postSpy).toHaveBeenLastCalledWith(`${callName}/`, { test_input: testNumberInput })
       expect(result).toEqual(mockResult)
@@ -390,7 +398,7 @@ describe("createCustomServiceCall", () => {
       })
       const testNumberInput = faker.datatype.number()
       //act
-      const result = await testStandAloneCall({ testInput: testNumberInput })
+      const result = await testStandAloneCall({ input: { testInput: testNumberInput } })
       //assert
       expect(postSpy).toHaveBeenCalledWith(`${callName}/`, { test_input: testNumberInput })
       expect(result).toBeUndefined()
@@ -507,7 +515,7 @@ describe("createCustomServiceCall", () => {
       })
       const testStrInput = faker.name.firstName()
       //act
-      const result = await testStandAloneCall(testStrInput)
+      const result = await testStandAloneCall({ input: testStrInput })
       //assert
       expect(postSpy).toHaveBeenLastCalledWith(`${callName}/${testStrInput}/`)
       expect(result).toEqual({ testData: mockResult.test_data })
@@ -535,7 +543,7 @@ describe("createCustomServiceCall", () => {
       })
       const testStrInput = faker.name.firstName()
       //act
-      const result = await testStandAloneCall(testStrInput)
+      const result = await testStandAloneCall({ input: testStrInput })
       //assert
       expect(postSpy).toHaveBeenLastCalledWith(`${callName}/${testStrInput}/`)
       expect(result).toBeUndefined()
@@ -569,7 +577,7 @@ describe("createCustomServiceCall", () => {
 
       const testStrInput = faker.name.firstName()
       //act
-      const result = await testStandAloneCall(testStrInput)
+      const result = await testStandAloneCall({ input: testStrInput })
       //assert
       expect(postSpy).toHaveBeenLastCalledWith(`${callName}/${testStrInput}/`)
       expect(result).toEqual(mockResult)

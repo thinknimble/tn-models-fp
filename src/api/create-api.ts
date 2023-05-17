@@ -4,7 +4,6 @@ import { z } from "zod"
 import {
   GetInferredFromRaw,
   IPagination,
-  InferShapeOrZod,
   createApiUtils,
   createCustomServiceCallHandler,
   filtersZod,
@@ -13,7 +12,7 @@ import {
   paginationFiltersZod,
   parseResponse,
 } from "../utils"
-import { AxiosLike } from "./types"
+import { AxiosLike, CustomServiceCallPlaceholder, CustomServiceCallsRecord } from "./types"
 
 const uuidZod = z.string().uuid()
 
@@ -25,32 +24,6 @@ type BaseModelsPlaceholder<
   ? (EntityModelObj<TE> & ExtraFiltersObj<TEx>) | (EntityModelObj<TE> & ExtraFiltersObj<TEx> & CreateModelObj<TC>)
   : unknown
 
-type FromApiPlaceholder = { fromApi: (obj: object) => any }
-type ToApiPlaceholder = { toApi: (obj: object) => any }
-/**
- * Base type for custom service calls which serves as a placeholder to later take advantage of inference
- */
-type CustomServiceCallPlaceholder = {
-  inputShape: object
-  outputShape: object
-  callback: (params: {
-    slashEndingBaseUri: `${string}/`
-    client: AxiosLike
-    input: any
-    utils: FromApiPlaceholder & ToApiPlaceholder
-  }) => Promise<unknown>
-}
-
-/**
- * Get resulting custom service call from `createApi`
- */
-type CustomServiceCallsRecord<TOpts extends object> = TOpts extends Record<string, CustomServiceCallPlaceholder>
-  ? {
-      [K in keyof TOpts]: (
-        inputs: InferShapeOrZod<TOpts[K]["inputShape"]>
-      ) => Promise<InferShapeOrZod<TOpts[K]["outputShape"]>>
-    }
-  : never
 type RetrieveCallObj<TEntity extends z.ZodRawShape> = { retrieve: (id: string) => Promise<GetInferredFromRaw<TEntity>> }
 type ListCallObj<TEntity extends z.ZodRawShape, TExtraFilters extends z.ZodRawShape = never> = {
   list: (params?: {
@@ -146,7 +119,7 @@ export function createApi<
   TCustomServiceCalls extends Record<string, CustomServiceCallPlaceholder>
 >(
   base: BaseApiParams & {
-    models: TModels
+    models?: TModels
   },
   /**
    * Create your own custom service calls to use with this API. Tools for case conversion are provided.
@@ -161,7 +134,7 @@ export function createApi<TCustomServiceCalls extends Record<string, CustomServi
   customServiceCalls: TCustomServiceCalls
 ): ApiService<unknown, TCustomServiceCalls>
 export function createApi<TModels extends BaseModelsPlaceholder>(
-  base: BaseApiParams & { models: TModels }
+  base: BaseApiParams & { models?: TModels }
 ): BareApiService<TModels>
 export function createApi(base: BaseApiParams): BareApiService<unknown>
 

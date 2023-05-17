@@ -3,7 +3,7 @@ import { faker } from "@faker-js/faker"
 import { SnakeCasedPropertiesDeep } from "@thinknimble/tn-utils"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { z } from "zod"
-import { GetInferredFromRaw, Pagination } from "../../utils"
+import { GetInferredFromRaw, InferShapeOrZod, Pagination } from "../../utils"
 import { createApi } from "../create-api"
 import { createCustomServiceCall } from "../create-custom-call"
 import {
@@ -15,6 +15,7 @@ import {
   mockEntity2,
   mockedAxios,
 } from "./mocks"
+import { CustomServiceCallsRecord } from "../types"
 
 describe("createApi", async () => {
   const testBaseUri = "users"
@@ -229,5 +230,62 @@ describe("createApi", async () => {
         client.get(`${slashEndingBaseUri}/ending/`)
       })
     })
+  })
+})
+
+describe("TS Tests", () => {
+  it("CustomServiceCallRecordTest ts tests", () => {
+    type tInputShape = { testInput: z.ZodString }
+    type tOutputShape = { testOutput: z.ZodNumber }
+    type tFiltersShape = { testFilter: z.ZodString }
+    type tFiltersShapeVoid = z.ZodVoid
+    type myCustomServiceCallRecord = {
+      customService: {
+        inputShape: tInputShape
+        outputShape: tOutputShape
+        filtersShape: tFiltersShape
+        callback: (params: any) => Promise<GetInferredFromRaw<tOutputShape>>
+      }
+      noFiltersService: {
+        inputShape: tInputShape
+        outputShape: tOutputShape
+        filtersShape: tFiltersShapeVoid
+        callback: (params: any) => Promise<GetInferredFromRaw<tOutputShape>>
+      }
+      noInputWithFilterService: {
+        inputShape: z.ZodVoid
+        outputShape: tOutputShape
+        filtersShape: tFiltersShape
+        callback: (params: any) => Promise<GetInferredFromRaw<tOutputShape>>
+      }
+    }
+    type result = CustomServiceCallsRecord<myCustomServiceCallRecord>
+
+    type tests = [
+      Expect<
+        Equals<
+          result["customService"],
+          (
+            params: {
+              input: InferShapeOrZod<tInputShape>
+            } & {
+              filters?: Partial<InferShapeOrZod<tFiltersShape>> | undefined
+            }
+          ) => Promise<InferShapeOrZod<tOutputShape>>
+        >
+      >,
+      Expect<
+        Equals<
+          result["noFiltersService"],
+          (input: { input: InferShapeOrZod<tInputShape> }) => Promise<InferShapeOrZod<tOutputShape>>
+        >
+      >,
+      Expect<
+        Equals<
+          result["noInputWithFilterService"],
+          (input: { filters?: Partial<GetInferredFromRaw<tFiltersShape>> }) => Promise<InferShapeOrZod<tOutputShape>>
+        >
+      >
+    ]
   })
 })

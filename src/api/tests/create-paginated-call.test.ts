@@ -10,17 +10,14 @@ describe("createPaginatedServiceCall", () => {
   it("allows not passing a uri and calls api with the right uri", async () => {
     //arrange
     const postSpy = vi.spyOn(mockedAxios, "post")
-    const paginatedServiceCall = createPaginatedServiceCall(
-      {
-        inputShape: {
-          myInput: z.string(),
-        },
-        outputShape: {
-          myOutput: z.string(),
-        },
-      },
-      { httpMethod: "post" }
-    )
+    const inputShape = {
+      myInput: z.string(),
+    }
+    const outputShape = {
+      myOutput: z.string(),
+    }
+    const paginatedServiceCall = createPaginatedServiceCall({ outputShape, inputShape }, { httpMethod: "post" })
+
     mockedAxios.post.mockResolvedValueOnce({
       data: { count: 1, next: null, previous: null, results: [{ my_output: "myOutput" }] },
     })
@@ -29,7 +26,7 @@ describe("createPaginatedServiceCall", () => {
     const pagination = new Pagination({ page: 1 })
     const input = { myInput: "myInput" }
     //act
-    await api.csc.paginatedServiceCall({ ...input, pagination })
+    await api.csc.paginatedServiceCall({ input: { ...input, pagination } })
     //assert
     expect(postSpy).toHaveBeenCalledWith(
       `${baseUri}/`,
@@ -64,7 +61,7 @@ describe("createPaginatedServiceCall", () => {
     const pagination = new Pagination({ page: 1 })
     const input = { myInput: "myInput" }
     //act
-    await api.csc.paginatedServiceCall({ ...input, pagination })
+    await api.csc.paginatedServiceCall({ input: { ...input, pagination } })
     //assert
     expect(postSpy).toHaveBeenCalledWith(
       `${baseUri}/`,
@@ -100,7 +97,7 @@ describe("createPaginatedServiceCall", () => {
         data: listResponse,
       })
       //act
-      await api.csc.testSimplePaginatedCall({ pagination: new Pagination({ page: 1 }) })
+      await api.csc.testSimplePaginatedCall({ input: { pagination: new Pagination({ page: 1 }) } })
       expect(getSpy).toHaveBeenCalledWith(`${baseUri}/testSimplePaginatedCall/`, {
         params: {
           page: "1",
@@ -115,7 +112,7 @@ describe("createPaginatedServiceCall", () => {
         data: listResponse,
       })
       //act
-      const response = await api.csc.testSimplePaginatedCall({ pagination: new Pagination({ page: 1 }) })
+      const response = await api.csc.testSimplePaginatedCall({ input: { pagination: new Pagination({ page: 1 }) } })
       type testType = Awaited<ReturnType<(typeof api)["csc"]["testSimplePaginatedCall"]>>["results"][0]["firstName"]
       //assert
       expect(response).toBeTruthy()
@@ -168,8 +165,10 @@ describe("createPaginatedServiceCall", () => {
     )
     //act
     await api.csc.testPostPaginatedServiceCall({
-      ...body,
-      pagination: new Pagination({ page: 1 }),
+      input: {
+        ...body,
+        pagination: new Pagination({ page: 1 }),
+      },
     })
     //assert
     expect(getSpy).not.toHaveBeenCalled()
@@ -201,7 +200,7 @@ describe("createPaginatedServiceCall", () => {
       }
     )
     //act
-    await api.csc.testPostPaginatedServiceCall({ ...body, pagination: new Pagination({ page: 1 }) })
+    await api.csc.testPostPaginatedServiceCall({ input: { ...body, pagination: new Pagination({ page: 1 }) } })
     //assert
     expect(postSpy).toHaveBeenCalledWith(
       `${baseUri}/testPostPaginatedServiceCall/`,
@@ -250,7 +249,7 @@ describe("createPaginatedServiceCall", () => {
       }
     )
     //act
-    await api.csc.testPagePaginatedServiceCall({ pagination: new Pagination({ page: 10, size: 100 }) })
+    await api.csc.testPagePaginatedServiceCall({ input: { pagination: new Pagination({ page: 10, size: 100 }) } })
     //assert
     expect(getSpy).toHaveBeenCalledWith(`${baseUri}/testPagePaginatedServiceCall/`, {
       params: {
@@ -295,9 +294,15 @@ describe("createPaginatedServiceCall", () => {
     const pagination = new Pagination({ page: 1, size: 20 })
     const myExtraFilter = "test"
     //act
+    type testing = Parameters<typeof api.csc.testPaginatedCallWithFilters>
+    //    ^?
     await api.csc.testPaginatedCallWithFilters({
-      pagination,
-      filters: { myExtraFilter },
+      input: {
+        pagination,
+      },
+      filters: {
+        myExtraFilter,
+      },
     })
     //assert
     expect(getSpy).toHaveBeenCalledWith(`${baseUri}/`, {
