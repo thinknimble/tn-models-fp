@@ -111,7 +111,7 @@ export const createCustomServiceCallHandler =
     })
     const utilsResult = utils ?? {}
     const parsedFilters = parseFilters(serviceCallOpts.filtersShape, args?.filters)
-    const filtersResult = parsedFilters ? { filters: parsedFilters } : {}
+    const filtersResult = parsedFilters ? { parsedFilters } : {}
     const inputResult = args?.input ? { input: args.input } : {}
 
     const resultArgs = {

@@ -74,7 +74,7 @@ export function createPaginatedServiceCall<
     typeof paginationObjShape & UnknownIfNever<TInput>,
     ReturnType<typeof getPaginatedShape<TOutput>>,
     TFilters
-  > = async ({ client, slashEndingBaseUri, utils, input, filters }) => {
+  > = async ({ client, slashEndingBaseUri, utils, input, parsedFilters: filters }) => {
     const paginationFilters = input.pagination
       ? { page: input.pagination.page, pageSize: input.pagination.size }
       : undefined

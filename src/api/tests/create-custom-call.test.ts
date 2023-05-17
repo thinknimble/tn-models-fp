@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { faker } from "@faker-js/faker"
-import { SnakeCasedPropertiesDeep } from "@thinknimble/tn-utils"
+import { SnakeCasedPropertiesDeep, objectToSnakeCase } from "@thinknimble/tn-utils"
 import { describe, expect, it, vi } from "vitest"
 import { z } from "zod"
 import { GetInferredFromRaw } from "../../utils"
@@ -305,7 +305,179 @@ describe("createCustomServiceCall", () => {
       another_input: input.anotherInput,
     })
   })
-  it("properly passes filters", () => {
+  it("passes the right filters to callback: input and output", async () => {
+    //arrange
+    const getSpy = vi.spyOn(mockedAxios, "get")
+    mockedAxios.get.mockResolvedValueOnce({
+      data: {
+        test_output: "test",
+      },
+    })
+    const callWithFilter = createCustomServiceCall(
+      {
+        inputShape: {
+          testInput: z.string(),
+        },
+        outputShape: {
+          testOutput: z.string(),
+        },
+        filtersShape: {
+          testFilter: z.string(),
+        },
+      },
+      async ({ client, slashEndingBaseUri, parsedFilters }) => {
+        const result = await client.get(slashEndingBaseUri, { params: parsedFilters })
+        return result.data
+      }
+    )
+    const baseUri = "filters"
+    const filters = {
+      testFilter: "myFilter",
+    }
+    const api = createApi(
+      {
+        client: mockedAxios,
+        baseUri,
+      },
+      {
+        callWithFilter,
+      }
+    )
+    //act
+    await api.csc.callWithFilter({
+      input: { testInput: "testInput" },
+      filters,
+    })
+    //assert
+    expect(getSpy).toHaveBeenCalledWith(`${baseUri}/`, {
+      params: objectToSnakeCase(filters),
+    })
+    //TODO:
+  })
+  it("passes the right filters to callback: only output", async () => {
+    //arrange
+    const getSpy = vi.spyOn(mockedAxios, "get")
+    mockedAxios.get.mockResolvedValueOnce({
+      data: {
+        test_output: "test",
+      },
+    })
+    const callWithFilter = createCustomServiceCall(
+      {
+        outputShape: {
+          testOutput: z.string(),
+        },
+        filtersShape: {
+          testFilter: z.string(),
+        },
+      },
+      async ({ client, slashEndingBaseUri, parsedFilters }) => {
+        const result = await client.get(slashEndingBaseUri, { params: parsedFilters })
+        return result.data
+      }
+    )
+    const baseUri = "filters"
+    const filters = {
+      testFilter: "myFilter",
+    }
+    const api = createApi(
+      {
+        client: mockedAxios,
+        baseUri,
+      },
+      {
+        callWithFilter,
+      }
+    )
+    //act
+    await api.csc.callWithFilter({
+      filters,
+    })
+    //assert
+    expect(getSpy).toHaveBeenCalledWith(`${baseUri}/`, {
+      params: objectToSnakeCase(filters),
+    })
+    //TODO:
+  })
+  it("should TS error if user passes filtersShape but no output", async () => {
+    //arrange
+    const getSpy = vi.spyOn(mockedAxios, "get")
+    mockedAxios.get.mockResolvedValueOnce({
+      data: {
+        test_output: "test",
+      },
+    })
+    const callWithFilter = createCustomServiceCall(
+      //@ts-expect-error cannot pass filter shape if there is no output shape
+      {
+        filtersShape: {
+          testFilter: z.string(),
+        },
+      },
+      async () => {
+        //no-op
+      }
+    )
+    const baseUri = "filters"
+    const filters = {
+      testFilter: "myFilter",
+    }
+    const api = createApi(
+      {
+        client: mockedAxios,
+        baseUri,
+      },
+      {
+        callWithFilter,
+      }
+    )
+  })
+  it("Should not allow filters if there is no output (just input)", async () => {
+    //arrange
+    const getSpy = vi.spyOn(mockedAxios, "get")
+    mockedAxios.get.mockResolvedValueOnce({
+      data: {
+        test_output: "test",
+      },
+    })
+    const callWithFilter = createCustomServiceCall(
+      {
+        inputShape: {
+          testInput: z.string(),
+        },
+        filtersShape: {
+          testFilter: z.string(),
+        },
+      },
+      async ({ client, slashEndingBaseUri, parsedFilters }) => {
+        const result = await client.get(slashEndingBaseUri, { params: parsedFilters })
+        return result.data
+      }
+    )
+    const baseUri = "filters"
+    const filters = {
+      testFilter: "myFilter",
+    }
+    const api = createApi(
+      {
+        client: mockedAxios,
+        baseUri,
+      },
+      {
+        callWithFilter,
+      }
+    )
+    //act
+    await api.csc.callWithFilter({
+      input: {
+        testInput: "hola",
+      },
+      filters,
+    })
+    //assert
+    expect(getSpy).toHaveBeenCalledWith(`${baseUri}/`, {
+      params: objectToSnakeCase(filters),
+    })
     //TODO:
   })
 

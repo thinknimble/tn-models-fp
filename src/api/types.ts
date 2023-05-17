@@ -1,6 +1,7 @@
 import { AxiosRequestConfig, AxiosResponse } from "axios"
 import { z } from "zod"
 import { And, CallbackUtils, GetInferredFromRaw, InferShapeOrZod, Is, UnknownIfNever, ZodPrimitives } from "../utils"
+import { SnakeCasedPropertiesDeep } from "@thinknimble/tn-utils"
 
 export type CustomServiceCallInputObj<
   TInput extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny> = z.ZodUndefined
@@ -34,8 +35,13 @@ type CallbackInput<TInput extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.Z
   : {
       input: InferCallbackInput<TInput>
     }
-type CallbackFilters<TFilters extends z.ZodRawShape | z.ZodVoid> = TFilters extends z.ZodRawShape
-  ? { filters?: GetInferredFromRaw<TFilters> }
+type CallbackFilters<
+  TFilters extends z.ZodRawShape | z.ZodVoid,
+  TOutput extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny> = z.ZodVoid
+> = TOutput extends z.ZodVoid
+  ? unknown
+  : TFilters extends z.ZodRawShape
+  ? { parsedFilters?: SnakeCasedPropertiesDeep<InferShapeOrZod<TFilters>> }
   : unknown
 
 type StringTrailingSlash = `${string}/`
@@ -99,7 +105,7 @@ export type CustomServiceCallback<
   } & BaseUriInput &
     CallbackUtils<TInput, TOutput> &
     CallbackInput<TInput> &
-    CallbackFilters<TFilters>
+    CallbackFilters<TFilters, TOutput>
 ) => Promise<InferShapeOrZod<TOutput>>
 
 export type CustomServiceCallOpts<
