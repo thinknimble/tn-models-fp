@@ -10,6 +10,7 @@ The package is based in zod to replace models and fields approach from previous 
 
 - [Getting started](#getting-started)
   - [Install this package with your favorite package manager!](#install-this-package-with-your-favorite-package-manager)
+  - [Quickstart](#quickstart)
   - [Create your api!](#create-your-api)
   - [Use its built-in methods in your app](#use-its-built-in-methods-in-your-app)
   - [Create your own calls](#create-your-own-calls)
@@ -19,6 +20,7 @@ The package is based in zod to replace models and fields approach from previous 
   - [Models (zod-based)](#models-zod-based)
     - [Why shapes and not zods?](#why-shapes-and-not-zods)
   - [`createCustomServiceCall` or `csc`](#createcustomservicecall-or-csc)
+    - [On the service callback parameters](#on-the-service-callback-parameters)
   - [`createPaginatedServiceCall`](#createpaginatedservicecall)
   - [`createApiUtils`](#createapiutils)
   - [`createCollectionManager`](#createcollectionmanager)
@@ -42,6 +44,163 @@ yarn add @thinknimble/tn-models-fp
 
 ```bash
 pnpm i @thinknimble/tn-models-fp
+```
+
+
+## Quickstart 
+
+```typescript
+
+/**
+ *  
+ *  // creating a simple user api with login, registration, update 
+ * 
+ */
+
+
+
+
+import axios from 'axios' // it is not required to use axios - pick any client
+import {z} from 'zod'
+import {GetInferredFromRaw, createCustomServiceCall } from '@thinknimble/tn-models-fp'
+
+/**
+ * The entity is the default type to be used in the absence of any other overriding type
+ */
+const userEntity = {
+  id: z.string().uuid(),
+  firstName: z.string(),
+  lastName: z.string(),
+  email: z.string(),
+  token: z.string()
+}
+
+/**
+ * Defining a create shape because the registration api expects a different object
+ */
+
+const createShape = {
+  email:z.string(),
+  password:z.string(),
+  firstName:z.string(),
+  lastName:z.string(),
+}
+/**
+ * Since I know my update method can be partial and wont include all the same fields as a create I create an update shape 
+ */
+
+const updateShape = {
+  firstName: z.string().optional(),
+  lastName: z.string().optional()
+}
+
+/**
+ * login only requires an email and password
+ */
+
+const loginShape = {
+  email: z.string(),
+  password: z.string(),
+}
+
+/**
+ * Create your api 
+ * Each api has a create, retrieve, list method by default
+ * These methods are accessible through the api directly eg:
+ * userApi.create({})
+ * userApi.retrieve({})
+ * userApi.list()
+ * 
+ */
+
+/**
+ * create additional methods using the createCustomServiceCall provider
+ * these methods are accesible with the shorthand name for csc 
+ * e.g userApi.csc.login({})
+ */
+
+const update = createCustomServiceCall(
+  {
+    inputShape: partialUpdateShape,
+    outputShape: accountShape,
+  },
+  async ({ client, slashEndingBaseUri, input, utils: { toApi, fromApi } }) => {
+    const { id, ...rest } = toApi(input)
+    const res = await client.patch(`${slashEndingBaseUri}${id}/`, rest)
+    return fromApi(res.data)
+  }
+)
+
+const login = createCustomServiceCall(
+  {
+    inputShape: loginShape,
+    outputShape: accountShape,
+  },
+  async ({ client, slashEndingBaseUri, input, utils: { toApi, fromApi } }) => {
+    const data = toApi(input)
+    const res = await client.login(`api/login/`, rest)
+    return fromApi(res.data)
+  }
+)
+/**
+ * There is no need for an output shape in this case
+ */
+const delete = createCustomServiceCall(
+  {
+    inputShape: {id:z.string().uuid()}
+  },
+  async ({ client, slashEndingBaseUri, input, }) => {
+    const res = await client.delete(`api/users/${id}/`)
+    return
+  }
+)
+
+const userApi = createApi({
+  client: axios.create(), // a client of your choice
+  baseUri: "api/users/", // a base URI to be used as a default 
+  models: {
+    /**
+     * since my create shape is different than the default AccountEntity 
+     * I can override it here
+     * 
+     * */ 
+    
+    create: createShape, 
+    /**
+     * if I do not declare any overrides for the three default methods this will be used
+     */
+    entity: accountShape,
+  },
+},
+{login, update,delete}) // Additional methods are delclared here 
+
+
+/** 
+ * 
+ * finally use your api with your favorite wrapper or directly
+ *  
+ */
+
+/**
+ * This is a utility from TN-Models-FP that is used to return a TS type from the zod shape
+ * The type can be used anywhere in the code and removes the need for creating one manually
+ */
+type User = GetInferredFromRaw<typeof scheduleRequestInputShape>
+
+let user: User | null = null
+
+try{
+  const user = userApi.create({email:"test@test.com",password:"password",firstName:"first",lastName:"last"})
+  const res = userApi.csc.login({email:"random@random.com",password:"iamapassword"})
+  const userAfterLogin = res.data
+}catch(e){
+  console.log(e)
+
+}
+
+
+
+
 ```
 
 ## Create your api!
@@ -85,6 +244,11 @@ import { Pagination } from '@thinknimble/tn-models-fp'
 
 const TodoManager = () => {
   const [selectedTodoId,setSelectedTodoId] = useState()
+
+/**
+ * 
+ * Please note the use of TanStack is not required!
+ */
 
   const {data: selectedTodo} = useQuery({
     queryKey: ['todo',selectedTodoId],
