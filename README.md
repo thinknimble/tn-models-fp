@@ -181,6 +181,12 @@ const userApi = createApi({
  *  
  */
 
+/**
+ * This is a utility from TN-Models-FP that is used to return a TS type from the zod shape
+ * The type can be used anywhere in the code and removes the need for creating one manually
+ */
+type User = GetInferredFromRaw<typeof scheduleRequestInputShape>
+
 let user: User | null = null
 
 try{
