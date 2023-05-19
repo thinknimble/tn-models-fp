@@ -87,18 +87,21 @@ export type ServiceCallFn<
   TFilters extends FiltersShape | z.ZodVoid = z.ZodVoid
 > = (...args: ResolveServiceCallArgs<TInput, TFilters>) => Promise<InferShapeOrZod<TOutput>>
 
-type BaseUriInput = {
-  slashEndingBaseUri: `${string}/`
-}
+type BaseUriInput<TCallType extends string = ""> = TCallType extends "StandAlone"
+  ? unknown
+  : {
+      slashEndingBaseUri: `${string}/`
+    }
 
 export type CustomServiceCallback<
   TInput extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny> = z.ZodVoid,
   TOutput extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny> = z.ZodVoid,
-  TFilters extends FiltersShape | z.ZodVoid = z.ZodVoid
+  TFilters extends FiltersShape | z.ZodVoid = z.ZodVoid,
+  TCallType extends string = ""
 > = (
   params: {
     client: AxiosLike
-  } & BaseUriInput &
+  } & BaseUriInput<TCallType> &
     CallbackUtils<TInput, TOutput> &
     CallbackInput<TInput> &
     CallbackFilters<TFilters, TOutput>
@@ -107,10 +110,11 @@ export type CustomServiceCallback<
 export type CustomServiceCallOpts<
   TInput extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny> = z.ZodVoid,
   TOutput extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny> = z.ZodVoid,
-  TFilters extends FiltersShape | z.ZodVoid = z.ZodVoid
+  TFilters extends FiltersShape | z.ZodVoid = z.ZodVoid,
+  TCallType extends string = ""
 > = CustomServiceCallInputObj<TInput> &
   CustomServiceCallOutputObj<TOutput> & {
-    callback: CustomServiceCallback<TInput, TOutput, TFilters>
+    callback: CustomServiceCallback<TInput, TOutput, TFilters, TCallType>
   } & CustomServiceCallFiltersObj<TFilters, TOutput>
 
 type FromApiPlaceholder = { fromApi: (obj: object) => any }

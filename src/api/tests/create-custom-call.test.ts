@@ -508,7 +508,13 @@ describe("createCustomServiceCall", () => {
           },
         },
         name: callName,
-        cb: async ({ client, utils, input }) => {
+        cb: async ({
+          client,
+          utils,
+          input,
+          //@ts-expect-error should not yield uri since none was declared
+          slashEndingBaseUri,
+        }) => {
           const res = await client.post(`${callName}/`, utils.toApi(input))
           return utils.fromApi(res.data)
         },
@@ -784,7 +790,7 @@ describe("createCustomServiceCall", () => {
           },
         },
         name: callName,
-        cb: async ({ client, utils, input, slashEndingBaseUri, parsedFilters }) => {
+        cb: async ({ client, utils, input, parsedFilters }) => {
           const res = await client.post(`${callName}/`, utils.toApi(input), {
             params: parsedFilters,
           })
