@@ -65,7 +65,7 @@ import {z} from 'zod'
 import {GetInferredFromRaw, createCustomServiceCall } from '@thinknimble/tn-models-fp'
 
 /**
- * The entity is the default type to be used in the absence of any other overriding type
+ * The entity is the default type that is used as an output shape to the prebuilt methods
  */
 const userEntity = {
   id: z.string().uuid(),
@@ -106,6 +106,8 @@ const loginShape = {
 /**
  * Create your api 
  * Each api has a create, retrieve, list method by default
+ * They must be enabled by declaring them in the api with a type
+ * 
  * These methods are accessible through the api directly eg:
  * userApi.create({})
  * userApi.retrieve({})
@@ -160,8 +162,11 @@ const userApi = createApi({
   baseUri: "api/users/", // a base URI to be used as a default 
   models: {
     /**
-     * since my create shape is different than the default AccountEntity 
-     * I can override it here
+     * 
+     * In order for my create shape to be enabled I must declare it here with its type
+     * The same would be true of the update and retrieve methods
+     * 
+     * In order to customize the output shape of the default methods you must override the default methods function 
      * 
      * */ 
     
