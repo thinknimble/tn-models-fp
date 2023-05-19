@@ -1,10 +1,12 @@
 import { CamelCasedPropertiesDeep, objectToCamelCase, objectToSnakeCase, toCamelCase } from "@thinknimble/tn-utils"
-import { z } from "zod"
-import { parseResponse } from "../response"
-import { isZod, isZodArray, resolveRecursiveZod, zodObjectRecursive, ZodPrimitives } from "../zod"
-import { CallbackUtils, FromApiCall, ToApiCall } from "./types"
 import { AxiosInstance } from "axios"
+import { z } from "zod"
 import { AxiosLike } from "../../api/types"
+import { parseFilters } from "../filters"
+import { parseResponse } from "../response"
+import { ZodPrimitives, isZod, isZodArray, resolveRecursiveZod, zodObjectRecursive } from "../zod"
+import { CallbackUtils, FromApiCall, ToApiCall } from "./types"
+import { Pagination } from "../pagination"
 
 //TODO: this should probably move to tn-utils but will keep it here for a quick release
 export const objectToCamelCaseArr = <T extends object>(obj: T): CamelCasedPropertiesDeep<T> => {
@@ -82,7 +84,7 @@ export function createApiUtils<
             ...(toApi ? { toApi } : {}),
           },
         }
-      : null
+      : {}
   ) as CallbackUtils<TInput, TOutput>
 }
 
@@ -102,17 +104,57 @@ export const createCustomServiceCallHandler =
     name?: string
     baseUri?: string
   }) =>
-  async (input: unknown) => {
-    const utilsResult = createApiUtils({
+  async (args: unknown) => {
+    const expectsInput = !(serviceCallOpts.inputShape instanceof z.ZodVoid)
+    const isPaginationWithoutInput = (argsCheck: unknown): argsCheck is { pagination: Pagination } => {
+      return Boolean(!expectsInput && typeof argsCheck === "object" && argsCheck && "pagination" in argsCheck)
+    }
+    const hasPagination = (
+      argCheck: unknown
+    ): argCheck is { pagination: Pagination } | { input: { pagination: Pagination } } =>
+      Boolean(
+        typeof argCheck === "object" &&
+          argCheck &&
+          ("pagination" in argCheck ||
+            ("input" in argCheck &&
+              typeof argCheck.input === "object" &&
+              argCheck.input &&
+              "pagination" in argCheck.input))
+      )
+    const expectsFilters = !(serviceCallOpts.filtersShape instanceof z.ZodVoid)
+    const utils = createApiUtils({
       name: name ?? "No-Name call",
       inputShape: serviceCallOpts.inputShape,
       outputShape: serviceCallOpts.outputShape,
-    })
-    const inputResult = input ? { input } : {}
-    return serviceCallOpts.callback({
+    }) as object
+    const baseArgs = {
       client,
       slashEndingBaseUri: baseUri,
-      ...inputResult,
-      ...(utilsResult ? utilsResult : {}),
+      ...utils,
+    }
+    if (expectsFilters) {
+      return serviceCallOpts.callback({
+        ...baseArgs,
+        ...(expectsInput || hasPagination(args)
+          ? {
+              input:
+                args && typeof args === "object" && "input" in args
+                  ? args.input
+                  : hasPagination(args) && !expectsInput && "pagination" in args
+                  ? { input: args.pagination }
+                  : hasPagination(args) && "input" in args
+                  ? { input: args.input }
+                  : undefined,
+            }
+          : {}),
+        parsedFilters:
+          args && typeof args === "object" && "filters" in args
+            ? parseFilters(serviceCallOpts.filtersShape, args.filters)
+            : undefined,
+      })
+    }
+    return serviceCallOpts.callback({
+      ...baseArgs,
+      ...(expectsInput || hasPagination(args) ? { input: args } : {}),
     })
   }
