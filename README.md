@@ -149,10 +149,10 @@ const login = createCustomServiceCall(
  */
 const delete = createCustomServiceCall(
   {
-    inputShape: {id:z.string().uuid()}
+    inputShape: z.string().uuid()
   },
   async ({ client, slashEndingBaseUri, input, }) => {
-    const res = await client.delete(`api/users/${id}/`)
+    const res = await client.delete(`api/users/${input}/`)
     return
   }
 )
