@@ -147,7 +147,7 @@ const login = createCustomServiceCall(
 /**
  * There is no need for an output shape in this case
  */
-const delete = createCustomServiceCall(
+const deleteEntity = createCustomServiceCall(
   {
     inputShape: z.string().uuid()
   },
@@ -177,7 +177,7 @@ const userApi = createApi({
     entity: accountShape,
   },
 },
-{login, update,delete}) // Additional methods are delclared here 
+{login, update, deleteEntity}) // Additional methods are delclared here 
 
 
 /** 
