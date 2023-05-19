@@ -2,14 +2,15 @@ import { objectToCamelCase, objectToSnakeCase } from "@thinknimble/tn-utils"
 import { Axios } from "axios"
 import { z } from "zod"
 import {
+  FiltersShape,
   GetInferredFromRaw,
   Pagination,
   UnknownIfNever,
-  filtersZod,
   getPaginatedShape,
   getPaginatedSnakeCasedZod,
   getPaginatedZod,
-  paginationFiltersZod,
+  paginationFiltersZodShape,
+  parseFilters,
   parseResponse,
 } from "../utils"
 import {
@@ -31,12 +32,12 @@ const paginationObjShape = {
 
 export function createPaginatedServiceCall<
   TOutput extends z.ZodRawShape,
-  TFilters extends z.ZodRawShape | z.ZodVoid = z.ZodVoid,
+  TFilters extends FiltersShape | z.ZodVoid = z.ZodVoid,
   TInput extends z.ZodRawShape | z.ZodVoid = z.ZodVoid
 >(
   models: CustomServiceCallInputObj<TInput> &
     CustomServiceCallOutputObj<TOutput> &
-    CustomServiceCallFiltersObj<TFilters>,
+    CustomServiceCallFiltersObj<TFilters, TOutput>,
   opts?: PaginatedServiceCallOptions
 ): CustomServiceCallOpts<
   UnknownIfNever<TInput> & typeof paginationObjShape,
@@ -46,15 +47,15 @@ export function createPaginatedServiceCall<
 
 export function createPaginatedServiceCall<
   TOutput extends z.ZodRawShape,
-  TFilters extends z.ZodRawShape | z.ZodVoid = z.ZodVoid
+  TFilters extends FiltersShape | z.ZodVoid = z.ZodVoid
 >(
-  models: CustomServiceCallOutputObj<TOutput> & CustomServiceCallFiltersObj<TFilters>,
+  models: CustomServiceCallOutputObj<TOutput> & CustomServiceCallFiltersObj<TFilters, TOutput>,
   opts?: PaginatedServiceCallOptions
 ): CustomServiceCallOpts<typeof paginationObjShape, ReturnType<typeof getPaginatedZod<TOutput>>["shape"], TFilters>
 
 export function createPaginatedServiceCall<
   TOutput extends z.ZodRawShape,
-  TFilters extends z.ZodRawShape = never,
+  TFilters extends FiltersShape = never,
   TInput extends z.ZodRawShape = never
 >(models: object, opts: PaginatedServiceCallOptions | undefined): CustomServiceCallOpts<any, any, any> {
   const uri = opts?.uri
@@ -74,22 +75,12 @@ export function createPaginatedServiceCall<
     typeof paginationObjShape & UnknownIfNever<TInput>,
     ReturnType<typeof getPaginatedShape<TOutput>>,
     TFilters
-  > = async ({ client, slashEndingBaseUri, utils, input, parsedFilters: filters }) => {
+  > = async ({ client, slashEndingBaseUri, utils, input, parsedFilters }) => {
     const paginationFilters = input.pagination
       ? { page: input.pagination.page, pageSize: input.pagination.size }
       : undefined
-    const parsedPaginationFilters = filtersZod.and(paginationFiltersZod).parse(paginationFilters)
-    const snakedFilters = parsedPaginationFilters ? objectToSnakeCase(parsedPaginationFilters) : undefined
-    const allSnakedFilters = { ...snakedFilters, ...filters }
-    const snakedCleanParsedFilters = allSnakedFilters
-      ? Object.fromEntries(
-          Object.entries(allSnakedFilters).flatMap(([k, v]) => {
-            if (typeof v === "number") return [[k, v.toString()]]
-            if (!v) return []
-            return [[k, v]]
-          })
-        )
-      : undefined
+    const parsedPaginationFilters = parseFilters(paginationFiltersZodShape, paginationFilters) ?? {}
+    const snakedCleanParsedFilters = { ...parsedPaginationFilters, ...(parsedFilters ?? {}) }
     let res
     const slashEndingUri = uri ? (uri[uri.length - 1] === "/" ? uri : uri + "/") : ""
     const fullUri = `${slashEndingBaseUri}${slashEndingUri}` as `${string}/`
@@ -98,7 +89,7 @@ export function createPaginatedServiceCall<
         params: snakedCleanParsedFilters,
       })
     } else {
-      const { pagination, ...body } = utils.toApi(input) ?? {}
+      const { pagination: _, ...body } = utils.toApi(input) ?? {}
       const validBody = Object.keys(body).length !== 0 ? body : undefined
       res = await client.post(fullUri, validBody, {
         params: snakedCleanParsedFilters,

@@ -1,38 +1,31 @@
-import { objectToSnakeCase } from "@thinknimble/tn-utils"
+import { SnakeCasedPropertiesDeep, objectToSnakeCase } from "@thinknimble/tn-utils"
 import { z } from "zod"
+import { GetInferredFromRaw } from "./zod"
 
-export const paginationFiltersZod = z
-  .object({
-    page: z.number(),
-    pageSize: z.number(),
-  })
-  .partial()
-  .optional()
+export const paginationFiltersZodShape = {
+  page: z.number(),
+  pageSize: z.number(),
+}
 
-export type PaginationFilters = z.infer<typeof paginationFiltersZod>
+export type PaginationFilters = GetInferredFromRaw<typeof paginationFiltersZodShape>
 
-//TODO: Remove
-/**
- * @deprecated we should remove this at some point since I have not seen those many filters used.
- */
-export const filtersZod = z
-  .object({
-    ordering: z.string(),
-  })
-  .partial()
-  .optional()
+type AsQueryParam<T extends object> = {
+  [K in keyof T as T[K] extends string | number ? K : never]: string
+}
 
-export const parseFilters = <TFilters extends z.ZodRawShape>(shape?: TFilters, filters?: unknown) => {
+export const parseFilters = <TFilters extends FiltersShape>(shape?: TFilters, filters?: unknown) => {
   if (!filters || !shape) return
   const filtersParsed = z.object(shape).partial().parse(filters)
   const snakedFilters = objectToSnakeCase(filtersParsed)
   return snakedFilters
-    ? Object.fromEntries(
+    ? (Object.fromEntries(
         Object.entries(snakedFilters).flatMap(([k, v]) => {
           if (typeof v === "number") return [[k, v.toString()]]
           if (!v) return []
           return [[k, v]]
         })
-      )
+      ) as SnakeCasedPropertiesDeep<AsQueryParam<GetInferredFromRaw<TFilters>>>)
     : undefined
 }
+
+export type FiltersShape = Record<string, z.ZodString | z.ZodNumber>

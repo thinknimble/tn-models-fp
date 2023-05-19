@@ -7,6 +7,7 @@ import { GetInferredFromRaw } from "../../utils"
 import { createApi } from "../create-api"
 import { createCustomServiceCall } from "../create-custom-call"
 import { mockedAxios } from "./mocks"
+import { CustomServiceCallPlaceholder } from "../types"
 
 describe("createCustomServiceCall", () => {
   const inputShape = {
@@ -46,7 +47,7 @@ describe("createCustomServiceCall", () => {
     })
     const input = { anotherInput: "testing" }
     //act
-    await testApi.customServiceCalls.testPost({ input })
+    await testApi.customServiceCalls.testPost(input)
     //assert
     expect(postSpy).toHaveBeenCalledWith(`${baseUri}/`, {
       another_input: input.anotherInput,
@@ -70,7 +71,7 @@ describe("createCustomServiceCall", () => {
       }
     )
     //act
-    await testApi.csc.testPost({ input })
+    await testApi.csc.testPost(input)
     //assert
     expect(postSpy).toHaveBeenCalledWith(`${baseUri}/`, {
       another_input: input.anotherInput,
@@ -125,9 +126,7 @@ describe("createCustomServiceCall", () => {
     }
     //act
     const res = await testApi.customServiceCalls.testInputOutputObjects({
-      input: {
-        myInput,
-      },
+      myInput,
     })
     //assert
     expect(res).toEqual(expected)
@@ -206,7 +205,7 @@ describe("createCustomServiceCall", () => {
         testNoOutputPlainZodInput,
       }
     )
-    const res = await testApi.customServiceCalls.testNoOutputPlainZodInput({ input: 10 })
+    const res = await testApi.customServiceCalls.testNoOutputPlainZodInput(10)
     expect(res).toBeUndefined()
   })
   it("checks no input no output overload", async () => {
@@ -220,6 +219,13 @@ describe("createCustomServiceCall", () => {
         return
       }
     )
+    type testNoInputNorOutput = typeof testNoInputNorOutput
+    type tste = CustomServiceCallPlaceholder<z.ZodVoid, z.ZodVoid, z.ZodVoid>
+    //^?
+    type result = testNoInputNorOutput extends CustomServiceCallPlaceholder<infer TInput, infer TOutput, infer TFilters>
+      ? [TInput, TOutput, TFilters]
+      : false
+    //    ^?
     const baseUri = "noInputNorOutputOverload"
     const testApi = createApi(
       {
@@ -277,7 +283,7 @@ describe("createCustomServiceCall", () => {
     testApi.customServiceCalls.nonExisting
 
     type tests = [
-      Expect<Equals<string, Parameters<(typeof testApi)["customServiceCalls"]["testInputOutputPlainZods"]>[0]["input"]>>
+      Expect<Equals<string, Parameters<(typeof testApi)["customServiceCalls"]["testInputOutputPlainZods"]>[0]>>
     ]
   })
   it("works well if no models are passed", async () => {
@@ -299,7 +305,7 @@ describe("createCustomServiceCall", () => {
     })
     const input = { anotherInput: "testing" }
     //act
-    await testApiWithoutModels.csc.testPost({ input })
+    await testApiWithoutModels.csc.testPost(input)
     //assert
     expect(postSpy).toHaveBeenCalledWith(`${baseUri}/`, {
       another_input: input.anotherInput,
@@ -352,7 +358,6 @@ describe("createCustomServiceCall", () => {
     expect(getSpy).toHaveBeenCalledWith(`${baseUri}/`, {
       params: objectToSnakeCase(filters),
     })
-    //TODO:
   })
   it("passes the right filters to callback: only output", async () => {
     //arrange
@@ -397,42 +402,8 @@ describe("createCustomServiceCall", () => {
     expect(getSpy).toHaveBeenCalledWith(`${baseUri}/`, {
       params: objectToSnakeCase(filters),
     })
-    //TODO:
   })
-  it("should TS error if user passes filtersShape but no output", async () => {
-    //arrange
-    const getSpy = vi.spyOn(mockedAxios, "get")
-    mockedAxios.get.mockResolvedValueOnce({
-      data: {
-        test_output: "test",
-      },
-    })
-    const callWithFilter = createCustomServiceCall(
-      //@ts-expect-error cannot pass filter shape if there is no output shape
-      {
-        filtersShape: {
-          testFilter: z.string(),
-        },
-      },
-      async () => {
-        //no-op
-      }
-    )
-    const baseUri = "filters"
-    const filters = {
-      testFilter: "myFilter",
-    }
-    const api = createApi(
-      {
-        client: mockedAxios,
-        baseUri,
-      },
-      {
-        callWithFilter,
-      }
-    )
-  })
-  it("Should not allow filters if there is no output (just input)", async () => {
+  it("does not error on not passing filters", async () => {
     //arrange
     const getSpy = vi.spyOn(mockedAxios, "get")
     mockedAxios.get.mockResolvedValueOnce({
@@ -442,8 +413,8 @@ describe("createCustomServiceCall", () => {
     })
     const callWithFilter = createCustomServiceCall(
       {
-        inputShape: {
-          testInput: z.string(),
+        outputShape: {
+          testOutput: z.string(),
         },
         filtersShape: {
           testFilter: z.string(),
@@ -455,9 +426,6 @@ describe("createCustomServiceCall", () => {
       }
     )
     const baseUri = "filters"
-    const filters = {
-      testFilter: "myFilter",
-    }
     const api = createApi(
       {
         client: mockedAxios,
@@ -468,21 +436,58 @@ describe("createCustomServiceCall", () => {
       }
     )
     //act
-    await api.csc.callWithFilter({
-      input: {
-        testInput: "hola",
-      },
-      filters,
-    })
+    await api.csc.callWithFilter()
     //assert
     expect(getSpy).toHaveBeenCalledWith(`${baseUri}/`, {
-      params: objectToSnakeCase(filters),
+      params: undefined,
     })
-    //TODO:
+  })
+  it("should TS error if user passes filtersShape but no output", async () => {
+    //arrange
+    const getSpy = vi.spyOn(mockedAxios, "get")
+    mockedAxios.get.mockResolvedValueOnce({
+      data: {
+        test_output: "test",
+      },
+    })
+    const callWithFilter = createCustomServiceCall(
+      {
+        //@ts-expect-error cannot pass filter shape if there is no output shape
+        filtersShape: {
+          testFilter: z.string(),
+        },
+      },
+      async () => {
+        //no-op
+      }
+    )
+  })
+  it("Should not allow filters if there is no output (just input)", async () => {
+    //arrange
+    const getSpy = vi.spyOn(mockedAxios, "get")
+    mockedAxios.get.mockResolvedValueOnce({
+      data: {
+        test_output: "test",
+      },
+    })
+    //@ts-expect-error should not allow to create with filter and no outputshape
+    const callWithFilter = createCustomServiceCall(
+      {
+        inputShape: {
+          testInput: z.string(),
+        },
+        filtersShape: {
+          testFilter: z.string(),
+        },
+      },
+      async ({ client, slashEndingBaseUri }) => {
+        //no-op
+      }
+    )
   })
 
   describe("standAlone call", () => {
-    it("can convert to stand alone call and calls with right parameters: input object output object", async () => {
+    it("calls with right parameters: input object output object", async () => {
       //arrange
       const postSpy = vi.spyOn(mockedAxios, "post")
       const mockResult = {
@@ -510,13 +515,13 @@ describe("createCustomServiceCall", () => {
       })
       const testNumberInput = faker.datatype.number()
       //act
-      const result = await testStandAloneCall({ input: { testInput: testNumberInput } })
+      const result = await testStandAloneCall({ testInput: testNumberInput })
       //assert
       expect(postSpy).toHaveBeenLastCalledWith(`${callName}/`, { test_input: testNumberInput })
       expect(result).toEqual({ testData: mockResult.test_data })
     })
 
-    it("can convert to stand alone call and calls with right parameters: input object output primitive", async () => {
+    it("calls with right parameters: input object output primitive", async () => {
       //arrange
       const postSpy = vi.spyOn(mockedAxios, "post")
       const mockResult = [faker.datatype.string(), faker.datatype.string()]
@@ -540,13 +545,13 @@ describe("createCustomServiceCall", () => {
       })
       const testNumberInput = faker.datatype.number()
       //act
-      const result = await testStandAloneCall({ input: { testInput: testNumberInput } })
+      const result = await testStandAloneCall({ testInput: testNumberInput })
       //assert
       expect(postSpy).toHaveBeenLastCalledWith(`${callName}/`, { test_input: testNumberInput })
       expect(result).toEqual(mockResult)
     })
 
-    it("can convert to stand alone call and calls with right parameters: input object output void", async () => {
+    it("calls with right parameters: input object output void", async () => {
       //arrange
       const postSpy = vi.spyOn(mockedAxios, "post")
       const mockResult = {
@@ -570,13 +575,13 @@ describe("createCustomServiceCall", () => {
       })
       const testNumberInput = faker.datatype.number()
       //act
-      const result = await testStandAloneCall({ input: { testInput: testNumberInput } })
+      const result = await testStandAloneCall({ testInput: testNumberInput })
       //assert
       expect(postSpy).toHaveBeenCalledWith(`${callName}/`, { test_input: testNumberInput })
       expect(result).toBeUndefined()
     })
 
-    it("can convert to stand alone call and calls with right parameters: input void output object", async () => {
+    it("calls with right parameters: input void output object", async () => {
       //arrange
       const postSpy = vi.spyOn(mockedAxios, "post")
       const mockResult = {
@@ -606,7 +611,7 @@ describe("createCustomServiceCall", () => {
       expect(result).toEqual({ testData: mockResult.test_data })
     })
 
-    it("can convert to stand alone call and calls with right parameters: input void output void", async () => {
+    it("calls with right parameters: input void output void", async () => {
       //arrange
       const postSpy = vi.spyOn(mockedAxios, "post")
       const mockResult = {
@@ -630,7 +635,7 @@ describe("createCustomServiceCall", () => {
       expect(result).toBeUndefined()
     })
 
-    it("can convert to stand alone call and calls with right parameters: input void output primitive", async () => {
+    it("calls with right parameters: input void output primitive", async () => {
       //arrange
       const postSpy = vi.spyOn(mockedAxios, "post")
       const mockResult = Array.from({ length: 5 })
@@ -661,7 +666,7 @@ describe("createCustomServiceCall", () => {
       expect(result).toEqual(mockResult)
     })
 
-    it("can convert to stand alone call and calls with right parameters: input primitive output object", async () => {
+    it("calls with right parameters: input primitive output object", async () => {
       //arrange
       const postSpy = vi.spyOn(mockedAxios, "post")
       const mockResult = {
@@ -687,13 +692,13 @@ describe("createCustomServiceCall", () => {
       })
       const testStrInput = faker.name.firstName()
       //act
-      const result = await testStandAloneCall({ input: testStrInput })
+      const result = await testStandAloneCall(testStrInput)
       //assert
       expect(postSpy).toHaveBeenLastCalledWith(`${callName}/${testStrInput}/`)
       expect(result).toEqual({ testData: mockResult.test_data })
     })
 
-    it("can convert to stand alone call and calls with right parameters: input primitive output void", async () => {
+    it("calls with right parameters: input primitive output void", async () => {
       //arrange
       const postSpy = vi.spyOn(mockedAxios, "post")
       const mockResult = {
@@ -715,13 +720,13 @@ describe("createCustomServiceCall", () => {
       })
       const testStrInput = faker.name.firstName()
       //act
-      const result = await testStandAloneCall({ input: testStrInput })
+      const result = await testStandAloneCall(testStrInput)
       //assert
       expect(postSpy).toHaveBeenLastCalledWith(`${callName}/${testStrInput}/`)
       expect(result).toBeUndefined()
     })
 
-    it("can convert to stand alone call and calls with right parameters: input primitive output primitive", async () => {
+    it("calls with right parameters: input primitive output primitive", async () => {
       //arrange
       const postSpy = vi.spyOn(mockedAxios, "post")
       const mockResult = Array.from({ length: 5 })
@@ -746,12 +751,251 @@ describe("createCustomServiceCall", () => {
           return utils.fromApi(res.data)
         },
       })
-
       const testStrInput = faker.name.firstName()
       //act
-      const result = await testStandAloneCall({ input: testStrInput })
+      const result = await testStandAloneCall(testStrInput)
       //assert
       expect(postSpy).toHaveBeenLastCalledWith(`${callName}/${testStrInput}/`)
+      expect(result).toEqual(mockResult)
+    })
+
+    // //-----
+    it("calls with right parameters and filters: input object output object", async () => {
+      //arrange
+      const postSpy = vi.spyOn(mockedAxios, "post")
+      const mockResult = {
+        test_data: "testData",
+      }
+      mockedAxios.post.mockResolvedValueOnce({
+        data: mockResult,
+      })
+      const callName = "testStandAloneCall"
+      const testStandAloneCall = createCustomServiceCall.standAlone({
+        client: mockedAxios,
+        models: {
+          outputShape: {
+            testData: z.string(),
+          },
+          inputShape: {
+            testInput: z.number(),
+          },
+          filtersShape: {
+            testFilter: z.string(),
+          },
+        },
+        name: callName,
+        cb: async ({ client, utils, input, slashEndingBaseUri, parsedFilters }) => {
+          const res = await client.post(`${callName}/`, utils.toApi(input), {
+            params: parsedFilters,
+          })
+          return utils.fromApi(res.data)
+        },
+      })
+      const testNumberInput = faker.datatype.number()
+      const testFilter = faker.datatype.string(5)
+      //act
+      const result = await testStandAloneCall({
+        input: { testInput: testNumberInput },
+        filters: { testFilter: testFilter },
+      })
+      //assert
+      expect(postSpy).toHaveBeenLastCalledWith(
+        `${callName}/`,
+        { test_input: testNumberInput },
+        {
+          params: {
+            test_filter: testFilter,
+          },
+        }
+      )
+      expect(result).toEqual({ testData: mockResult.test_data })
+    })
+
+    it("calls with right parameters and filters: input object output primitive", async () => {
+      //arrange
+      const postSpy = vi.spyOn(mockedAxios, "post")
+      const mockResult = [faker.datatype.string(), faker.datatype.string()]
+      mockedAxios.post.mockResolvedValueOnce({
+        data: mockResult,
+      })
+      const callName = "testStandAloneCall"
+      const testStandAloneCall = createCustomServiceCall.standAlone({
+        client: mockedAxios,
+        models: {
+          outputShape: z.string().array(),
+          inputShape: {
+            testInput: z.number(),
+          },
+          filtersShape: {
+            testFilter: z.string(),
+          },
+        },
+        name: callName,
+        cb: async ({ client, utils, input, parsedFilters }) => {
+          const res = await client.post(`${callName}/`, utils.toApi(input), { params: parsedFilters })
+          return utils.fromApi(res.data)
+        },
+      })
+      const testNumberInput = faker.datatype.number()
+      const testFilter = faker.datatype.string()
+      //act
+      const result = await testStandAloneCall({ input: { testInput: testNumberInput }, filters: { testFilter } })
+      //assert
+      expect(postSpy).toHaveBeenLastCalledWith(
+        `${callName}/`,
+        { test_input: testNumberInput },
+        { params: { test_filter: testFilter } }
+      )
+      expect(result).toEqual(mockResult)
+    })
+
+    it("calls with right parameters and filters: input void output object", async () => {
+      //arrange
+      const postSpy = vi.spyOn(mockedAxios, "post")
+      const mockResult = {
+        test_data: "testData",
+      }
+      mockedAxios.post.mockResolvedValue({
+        data: mockResult,
+      })
+      const callName = "testStandAloneCall"
+      const testStandAloneCall = createCustomServiceCall.standAlone({
+        client: mockedAxios,
+        models: {
+          outputShape: {
+            testData: z.string(),
+          },
+          filtersShape: {
+            testFilter: z.string(),
+          },
+        },
+        name: callName,
+        cb: async ({ client, utils, parsedFilters }) => {
+          const res = await client.post(`${callName}/`, undefined, { params: parsedFilters })
+          return utils.fromApi(res.data)
+        },
+      })
+      const testFilter = faker.datatype.string(5)
+      //act
+      const result = await testStandAloneCall({ filters: { testFilter: testFilter } })
+      //assert
+      expect(postSpy).toHaveBeenLastCalledWith(`${callName}/`, undefined, {
+        params: {
+          test_filter: testFilter,
+        },
+      })
+      expect(result).toEqual({ testData: mockResult.test_data })
+      mockedAxios.post.mockClear()
+    })
+
+    it("calls with right parameters and filters: input void output primitive", async () => {
+      //arrange
+      const postSpy = vi.spyOn(mockedAxios, "post")
+      const mockResult = Array.from({ length: 5 })
+        .fill(undefined)
+        .map(() => {
+          return faker.datatype.number()
+        })
+      mockedAxios.post.mockResolvedValueOnce({
+        data: mockResult,
+      })
+      const callName = "testStandAloneCall"
+      const testStandAloneCall = createCustomServiceCall.standAlone({
+        client: mockedAxios,
+        models: {
+          outputShape: z.string().array(),
+          filtersShape: {
+            testFilter: z.string(),
+          },
+        },
+        name: callName,
+        cb: async ({ client, parsedFilters }) => {
+          const res = await client.post(`${callName}/`, undefined, { params: parsedFilters })
+          return res.data
+        },
+      })
+      const testFilter = faker.datatype.string()
+      //act
+      const result = await testStandAloneCall({ filters: { testFilter: testFilter } })
+      //assert
+      expect(postSpy).toHaveBeenLastCalledWith(`${callName}/`, undefined, { params: { test_filter: testFilter } })
+      expect(result).toEqual(mockResult)
+    })
+
+    it("calls with right parameters and filters: input primitive output object", async () => {
+      //arrange
+      const postSpy = vi.spyOn(mockedAxios, "post")
+      const mockResult = {
+        test_data: "testData",
+      }
+      mockedAxios.post.mockResolvedValueOnce({
+        data: mockResult,
+      })
+      const callName = "testStandAloneCall"
+      const testStandAloneCall = createCustomServiceCall.standAlone({
+        client: mockedAxios,
+        models: {
+          outputShape: {
+            testData: z.string(),
+          },
+          inputShape: z.string(),
+          filtersShape: {
+            testFilter: z.string(),
+          },
+        },
+        name: callName,
+        cb: async ({ client, utils, input, parsedFilters }) => {
+          const res = await client.post(`${callName}/${input}/`, undefined, { params: parsedFilters })
+          return utils.fromApi(res.data)
+        },
+      })
+      const testStrInput = faker.name.firstName()
+      const testFilter = faker.datatype.string(5)
+      //act
+      const result = await testStandAloneCall({ input: testStrInput, filters: { testFilter } })
+      //assert
+      expect(postSpy).toHaveBeenLastCalledWith(`${callName}/${testStrInput}/`, undefined, {
+        params: {
+          test_filter: testFilter,
+        },
+      })
+      expect(result).toEqual({ testData: mockResult.test_data })
+    })
+
+    it("calls with right parameters and filters: input primitive output primitive", async () => {
+      //arrange
+      const postSpy = vi.spyOn(mockedAxios, "post")
+      const mockResult = Array.from({ length: 5 })
+        .fill(undefined)
+        .map(() => {
+          return faker.datatype.string()
+        })
+      mockedAxios.post.mockResolvedValueOnce({
+        data: mockResult,
+      })
+      const callName = "testStandAloneCall"
+      const testStandAloneCall = createCustomServiceCall.standAlone({
+        client: mockedAxios,
+        models: {
+          inputShape: z.string(),
+          outputShape: z.string().array(),
+          filtersShape: { testFilter: z.string() },
+        },
+        name: callName,
+        cb: async ({ client, input, utils, parsedFilters }) => {
+          const res = await client.post(`${callName}/${input}/`, undefined, { params: parsedFilters })
+          //
+          return utils.fromApi(res.data)
+        },
+      })
+      const testStrInput = faker.name.firstName()
+      const testFilter = faker.datatype.string()
+      //act
+      const result = await testStandAloneCall({ input: testStrInput, filters: { testFilter } })
+      //assert
+      expect(postSpy).toHaveBeenLastCalledWith(`${callName}/${testStrInput}/`, undefined, {
+        params: { test_filter: testFilter },
+      })
       expect(result).toEqual(mockResult)
     })
   })

@@ -15,7 +15,7 @@ import {
   mockEntity2,
   mockedAxios,
 } from "./mocks"
-import { CustomServiceCallsRecord } from "../types"
+import { CustomServiceCallPlaceholder, CustomServiceCallsRecord, ServiceCallFn } from "../types"
 
 describe("createApi", async () => {
   const testBaseUri = "users"
@@ -258,8 +258,15 @@ describe("TS Tests", () => {
         filtersShape: tFiltersShape
         callback: (params: any) => Promise<GetInferredFromRaw<tOutputShape>>
       }
+      justCallback: {
+        inputShape: z.ZodVoid
+        outputShape: z.ZodVoid
+        filtersShape: z.ZodVoid
+        callback: (params: any) => Promise<void>
+      }
     }
     type result = CustomServiceCallsRecord<myCustomServiceCallRecord>
+    type whatIsThis = result["noInputWithFilterService"]
 
     type tests = [
       Expect<
@@ -277,13 +284,44 @@ describe("TS Tests", () => {
       Expect<
         Equals<
           result["noFiltersService"],
-          (input: { input: InferShapeOrZod<tInputShape> }) => Promise<InferShapeOrZod<tOutputShape>>
+          (input: InferShapeOrZod<tInputShape>) => Promise<InferShapeOrZod<tOutputShape>>
         >
       >,
       Expect<
         Equals<
           result["noInputWithFilterService"],
-          (input: { filters?: Partial<GetInferredFromRaw<tFiltersShape>> }) => Promise<InferShapeOrZod<tOutputShape>>
+          (
+            ...args: [{ filters?: Partial<GetInferredFromRaw<tFiltersShape>> }] | []
+          ) => Promise<InferShapeOrZod<tOutputShape>>
+        >
+      >,
+      Expect<Equals<result["justCallback"], () => Promise<void>>>
+    ]
+  })
+
+  it("ServiceCallFn ts tests", () => {
+    // Test suite for ServiceCallFn
+    type inputShapeMock = { testInput: z.ZodString }
+    type outputShapeMock = { testOutput: z.ZodNumber }
+    type filtersShapeMock = { testFilter: z.ZodString }
+    type tests = [
+      Expect<
+        Equals<
+          ServiceCallFn<inputShapeMock, outputShapeMock>,
+          (args: InferShapeOrZod<inputShapeMock>) => Promise<InferShapeOrZod<outputShapeMock>>
+        >
+      >,
+      Expect<Equals<ServiceCallFn<inputShapeMock>, (args: InferShapeOrZod<inputShapeMock>) => Promise<void>>>,
+      Expect<Equals<ServiceCallFn<z.ZodVoid, outputShapeMock>, () => Promise<InferShapeOrZod<outputShapeMock>>>>,
+      Expect<Equals<ServiceCallFn, () => Promise<void>>>,
+      Expect<
+        Equals<
+          ServiceCallFn<inputShapeMock, outputShapeMock, filtersShapeMock>,
+          (
+            args: {
+              input: InferShapeOrZod<inputShapeMock>
+            } & { filters?: Partial<InferShapeOrZod<filtersShapeMock>> }
+          ) => Promise<InferShapeOrZod<outputShapeMock>>
         >
       >
     ]

@@ -1,5 +1,5 @@
 import { z } from "zod"
-import { ZodPrimitives, createCustomServiceCallHandler } from "../utils"
+import { FiltersShape, ZodPrimitives, createCustomServiceCallHandler } from "../utils"
 import {
   AxiosLike,
   CustomServiceCallFiltersObj,
@@ -7,7 +7,6 @@ import {
   CustomServiceCallOpts,
   CustomServiceCallOutputObj,
   CustomServiceCallback,
-  // CustomServiceStandAloneCallback,
   ServiceCallFn,
 } from "./types"
 
@@ -18,31 +17,28 @@ import {
 export function createCustomServiceCall<
   TInput extends z.ZodRawShape | ZodPrimitives,
   TOutput extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny>,
-  TFilters extends z.ZodRawShape | z.ZodVoid = z.ZodVoid
+  TFilters extends FiltersShape | z.ZodVoid = z.ZodVoid
 >(
   models: CustomServiceCallInputObj<TInput> &
     CustomServiceCallOutputObj<TOutput> &
-    CustomServiceCallFiltersObj<TFilters>,
+    CustomServiceCallFiltersObj<TFilters, TOutput>,
   cb: CustomServiceCallback<TInput, TOutput, TFilters>
 ): CustomServiceCallOpts<TInput, TOutput, TFilters>
 /**
  * Create a custom type-inferred service call with input only
  */
-export function createCustomServiceCall<
-  TInput extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny>,
-  TFilters extends z.ZodRawShape | z.ZodVoid = z.ZodVoid
->(
-  models: CustomServiceCallInputObj<TInput> & CustomServiceCallFiltersObj<TFilters>,
-  cb: CustomServiceCallback<TInput, z.ZodVoid, TFilters>
-): CustomServiceCallOpts<TInput, z.ZodVoid, TFilters>
+export function createCustomServiceCall<TInput extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny>>(
+  models: CustomServiceCallInputObj<TInput>,
+  cb: CustomServiceCallback<TInput, z.ZodVoid, z.ZodVoid>
+): CustomServiceCallOpts<TInput, z.ZodVoid, z.ZodVoid>
 /**
  * Create a custom type-inferred service call with output only
  */
 export function createCustomServiceCall<
   TOutput extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny>,
-  TFilters extends z.ZodRawShape | z.ZodVoid = z.ZodVoid
+  TFilters extends FiltersShape | z.ZodVoid = z.ZodVoid
 >(
-  models: CustomServiceCallOutputObj<TOutput> & CustomServiceCallFiltersObj<TFilters>,
+  models: CustomServiceCallOutputObj<TOutput> & CustomServiceCallFiltersObj<TFilters, TOutput>,
   cb: CustomServiceCallback<z.ZodVoid, TOutput, TFilters>
 ): CustomServiceCallOpts<z.ZodVoid, TOutput, TFilters>
 /**
@@ -51,7 +47,6 @@ export function createCustomServiceCall<
 export function createCustomServiceCall(
   cb: CustomServiceCallback<z.ZodVoid, z.ZodVoid, z.ZodVoid>
 ): CustomServiceCallOpts<z.ZodVoid, z.ZodVoid, z.ZodVoid>
-
 export function createCustomServiceCall(...args: any[]): CustomServiceCallOpts<any, any, any> {
   const [first, second] = args
   const inputShape = typeof first === "function" || !("inputShape" in first) ? z.void() : first.inputShape
@@ -75,13 +70,13 @@ type StandAloneBaseArgs = {
 function standAlone<
   TInput extends z.ZodRawShape | ZodPrimitives,
   TOutput extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny>,
-  TFilters extends z.ZodRawShape | z.ZodVoid = z.ZodVoid
+  TFilters extends FiltersShape | z.ZodVoid = z.ZodVoid
 >(
   args: StandAloneBaseArgs & {
     models: CustomServiceCallInputObj<TInput> &
       CustomServiceCallOutputObj<TOutput> &
-      CustomServiceCallFiltersObj<TFilters>
-    cb: CustomServiceCallback<TInput, TOutput>
+      CustomServiceCallFiltersObj<TFilters, TOutput>
+    cb: CustomServiceCallback<TInput, TOutput, TFilters>
   }
 ): ServiceCallFn<TInput, TOutput, TFilters>
 /**
@@ -90,19 +85,19 @@ function standAlone<
 function standAlone<TInput extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny>>(
   args: StandAloneBaseArgs & {
     models: CustomServiceCallInputObj<TInput>
-    cb: CustomServiceCallback<TInput, z.ZodVoid>
+    cb: CustomServiceCallback<TInput, z.ZodVoid, z.ZodVoid>
   }
-): ServiceCallFn<TInput, z.ZodVoid>
+): ServiceCallFn<TInput, z.ZodVoid, z.ZodVoid>
 /**
  * Create a custom type-inferred service call with output only
  */
 function standAlone<
   TOutput extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny>,
-  TFilters extends z.ZodRawShape | z.ZodVoid = z.ZodVoid
+  TFilters extends FiltersShape | z.ZodVoid = z.ZodVoid
 >(
   args: StandAloneBaseArgs & {
-    models: CustomServiceCallOutputObj<TOutput> & CustomServiceCallFiltersObj<TFilters>
-    cb: CustomServiceCallback<z.ZodVoid, TOutput>
+    models: CustomServiceCallOutputObj<TOutput> & CustomServiceCallFiltersObj<TFilters, TOutput>
+    cb: CustomServiceCallback<z.ZodVoid, TOutput, TFilters>
   }
 ): ServiceCallFn<z.ZodVoid, TOutput, TFilters>
 /**
@@ -110,7 +105,7 @@ function standAlone<
  */
 function standAlone(
   args: StandAloneBaseArgs & {
-    cb: CustomServiceCallback<z.ZodVoid, z.ZodVoid>
+    cb: CustomServiceCallback<z.ZodVoid, z.ZodVoid, z.ZodVoid>
   }
 ): ServiceCallFn
 
@@ -118,8 +113,8 @@ function standAlone(
   args: StandAloneBaseArgs & {
     models?:
       | CustomServiceCallInputObj<any>
-      | (CustomServiceCallOutputObj<any> & CustomServiceCallFiltersObj<any>)
-      | (CustomServiceCallOutputObj<any> & CustomServiceCallInputObj<any> & CustomServiceCallFiltersObj<any>)
+      | (CustomServiceCallOutputObj<any> & CustomServiceCallFiltersObj<any, any>)
+      | (CustomServiceCallOutputObj<any> & CustomServiceCallInputObj<any> & CustomServiceCallFiltersObj<any, any>)
     cb: CustomServiceCallback<any, any, any>
   }
 ): ServiceCallFn<any, any, any> {

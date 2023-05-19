@@ -48,3 +48,5 @@ export type Is<TSubject, TReference> = And<[IsNever<TSubject>, IsNever<TReferenc
   ]
 }
 export type UnknownIfNever<T, TRes = T> = IsNever<T> extends true ? unknown : TRes
+
+export type IsAny<T> = boolean extends (T extends never ? true : false) ? true : false
