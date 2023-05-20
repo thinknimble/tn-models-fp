@@ -76,7 +76,7 @@ function standAlone<
     models: CustomServiceCallInputObj<TInput> &
       CustomServiceCallOutputObj<TOutput> &
       CustomServiceCallFiltersObj<TFilters, TOutput>
-    cb: CustomServiceCallback<TInput, TOutput, TFilters>
+    cb: CustomServiceCallback<TInput, TOutput, TFilters, "StandAlone">
   }
 ): ServiceCallFn<TInput, TOutput, TFilters>
 /**
@@ -85,7 +85,7 @@ function standAlone<
 function standAlone<TInput extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny>>(
   args: StandAloneBaseArgs & {
     models: CustomServiceCallInputObj<TInput>
-    cb: CustomServiceCallback<TInput, z.ZodVoid, z.ZodVoid>
+    cb: CustomServiceCallback<TInput, z.ZodVoid, z.ZodVoid, "StandAlone">
   }
 ): ServiceCallFn<TInput, z.ZodVoid, z.ZodVoid>
 /**
@@ -97,7 +97,7 @@ function standAlone<
 >(
   args: StandAloneBaseArgs & {
     models: CustomServiceCallOutputObj<TOutput> & CustomServiceCallFiltersObj<TFilters, TOutput>
-    cb: CustomServiceCallback<z.ZodVoid, TOutput, TFilters>
+    cb: CustomServiceCallback<z.ZodVoid, TOutput, TFilters, "StandAlone">
   }
 ): ServiceCallFn<z.ZodVoid, TOutput, TFilters>
 /**
@@ -105,7 +105,7 @@ function standAlone<
  */
 function standAlone(
   args: StandAloneBaseArgs & {
-    cb: CustomServiceCallback<z.ZodVoid, z.ZodVoid, z.ZodVoid>
+    cb: CustomServiceCallback<z.ZodVoid, z.ZodVoid, z.ZodVoid, "StandAlone">
   }
 ): ServiceCallFn
 
@@ -115,7 +115,7 @@ function standAlone(
       | CustomServiceCallInputObj<any>
       | (CustomServiceCallOutputObj<any> & CustomServiceCallFiltersObj<any, any>)
       | (CustomServiceCallOutputObj<any> & CustomServiceCallInputObj<any> & CustomServiceCallFiltersObj<any, any>)
-    cb: CustomServiceCallback<any, any, any>
+    cb: CustomServiceCallback<any, any, any, "StandAlone">
   }
 ): ServiceCallFn<any, any, any> {
   //? Should I use zod to improve the types in here rather than any[] it?. We could probably do the same for the createCustomServiceCall

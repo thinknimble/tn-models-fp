@@ -25,8 +25,18 @@ type BaseModelsPlaceholder<
   ? (EntityModelObj<TE> & ExtraFiltersObj<TEx>) | (EntityModelObj<TE> & ExtraFiltersObj<TEx> & CreateModelObj<TC>)
   : unknown
 
-type RetrieveCallObj<TEntity extends z.ZodRawShape> = { retrieve: (id: string) => Promise<GetInferredFromRaw<TEntity>> }
+type RetrieveCallObj<TEntity extends z.ZodRawShape> = {
+  /**
+   * Get resource by id
+   * @param id resource id
+   * @returns
+   */
+  retrieve: (id: string) => Promise<GetInferredFromRaw<TEntity>>
+}
 type ListCallObj<TEntity extends z.ZodRawShape, TExtraFilters extends FiltersShape = never> = {
+  /**
+   * This calls the `{baseUri}/list` endpoint. Note that this has to be available in the api you're consuming for this method to actually work
+   */
   list: (params?: {
     filters?: GetInferredFromRaw<TExtraFilters>
     pagination?: IPagination
