@@ -1,5 +1,11 @@
 # @thinknimble/tn-models-fp
 
+## 2.8.1
+
+### Patch Changes
+
+- b1392c9: Fix standAlone calls including base uri when it would always be undefined
+
 ## 2.8.0
 
 ### Minor Changes
