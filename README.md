@@ -382,6 +382,16 @@ const myZodShape = {
 } // asking for the shape allow us to do what we please with its keys and later simply call `z.object` internally when we need the zod schema
 ```
 
+### Make fields readonly
+You can mark fields as readonly with the `readonly` function from the library. This will create a brand for your field which will allow the library to identify it as a readonly field, thus preventing those fields to be included in models for creation and update.
+```ts
+const entityShape = {
+  firstName:z.string(),
+  lastName:z.string(),
+  fullName:readonly(z.string())
+}
+```
+
 ## `createCustomServiceCall` or `csc`
 
 This function is used as a complement to `createApi` and allows us to create custom service calls attached to the api.

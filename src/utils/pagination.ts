@@ -1,5 +1,5 @@
 import { z } from "zod"
-import { zodObjectRecursive } from "./zod"
+import { zodObjectToSnakeRecursive } from "./zod"
 
 //TODO: this needs cleanup. I am not happy with the usage of these across the library. Seems like we could have at least one of these less
 
@@ -8,7 +8,7 @@ export const getPaginatedShape = <T extends z.ZodRawShape>(zodRawShape: T) => {
     count: z.number(),
     next: z.string().nullable(),
     previous: z.string().nullable(),
-    results: z.array(zodObjectRecursive(z.object(zodRawShape))),
+    results: z.array(zodObjectToSnakeRecursive(z.object(zodRawShape))),
   }
 }
 
