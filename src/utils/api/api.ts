@@ -2,9 +2,17 @@ import { CamelCasedPropertiesDeep, objectToCamelCase, objectToSnakeCase, toCamel
 import { AxiosInstance } from "axios"
 import { z } from "zod"
 import { AxiosLike } from "../../api/types"
-import { parseFilters } from "../filters"
+import { FiltersShape, parseFilters } from "../filters"
 import { parseResponse } from "../response"
-import { ZodPrimitives, isZod, isZodArray, resolveRecursiveZod, zodObjectToSnakeRecursive } from "../zod"
+import {
+  READONLY_TAG,
+  StripReadonlyBrand,
+  ZodPrimitives,
+  isZod,
+  isZodArray,
+  resolveRecursiveZod,
+  zodObjectToSnakeRecursive,
+} from "../zod"
 import { CallbackUtils, FromApiCall, ToApiCall } from "./types"
 import { Pagination } from "../pagination"
 
@@ -156,3 +164,25 @@ export const createCustomServiceCallHandler =
       ...(expectsInput || hasPagination(args) ? { input: args } : {}),
     })
   }
+
+export const removeReadonlyFields = <T extends z.ZodRawShape>(shape: T) => {
+  return Object.fromEntries(
+    Object.entries(shape).flatMap(([k, v]) => {
+      if (v instanceof z.ZodBranded && v.description === READONLY_TAG) {
+        return []
+      }
+      return [[k, v]]
+    })
+  ) as StripReadonlyBrand<T>
+}
+
+// export const createCustomServiceCallOpts = <  TInput extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny> = z.ZodVoid,
+// TOutput extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny> = z.ZodVoid,
+// TFilters extends FiltersShape | z.ZodVoid = z.ZodVoid,
+// TCallType extends string = "">(param:{
+//   inputShape?:TInput,
+//   outputShape?:TOutput,
+//   filtersShape?:TFilters,
+// })=>{
+
+// }

@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { faker } from "@faker-js/faker"
-import { SnakeCasedPropertiesDeep } from "@thinknimble/tn-utils"
+import { SnakeCasedPropertiesDeep, objectToCamelCase, objectToSnakeCase } from "@thinknimble/tn-utils"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { z } from "zod"
 import { GetInferredFromRaw, InferShapeOrZod, Pagination, StripBrand } from "../../utils"
@@ -234,6 +234,86 @@ describe("createApi", async () => {
         client.get(`${slashEndingBaseUri}`)
         client.get(`${slashEndingBaseUri}/ending/`)
       })
+    })
+  })
+
+  describe("delete", () => {
+    it("calls delete with the right id", async () => {
+      // arrange
+      const deleteSpy = vi.spyOn(mockedAxios, "delete")
+      const baseUri = "delete"
+      const api = createApi({
+        baseUri,
+        client: mockedAxios,
+        models: {
+          entity: entityZodShape,
+        },
+      })
+      const testId = faker.datatype.uuid()
+      //act
+      await api.remove(testId)
+      //assert
+      expect(deleteSpy).toHaveBeenCalledWith(`${baseUri}/${testId}/`)
+    })
+  })
+
+  describe.only("update", () => {
+    const baseUri = "update"
+    const api = createApi({
+      baseUri,
+      client: mockedAxios,
+      models: {
+        entity: entityZodShape,
+      },
+    })
+    it("calls update with partial and patch: default", async () => {
+      //arrange
+      mockedAxios.patch.mockResolvedValueOnce({
+        data: mockEntity1Snaked,
+      })
+      const patchSpy = vi.spyOn(mockedAxios, "patch")
+      const { id, ...body } = {
+        id: mockEntity1.id,
+        age: mockEntity1.age,
+      }
+      //act
+      await api.update({
+        newValue: {
+          id,
+          ...body,
+        },
+      })
+      expect(patchSpy).toHaveBeenCalledWith(`${baseUri}/${id}/`, objectToSnakeCase(body))
+    })
+    it("calls update with partial and put", async () => {
+      //arrange
+      const putSpy = vi.spyOn(mockedAxios, "put")
+      const { id, ...body } = {
+        id: mockEntity1.id,
+        age: mockEntity1.age,
+      }
+      //act
+      await api.update({
+        httpMethod: "put",
+        newValue: {
+          id,
+          ...body,
+        },
+      })
+      expect(putSpy).toHaveBeenCalledWith(`${baseUri}/${id}/`, objectToSnakeCase(body))
+    })
+    it("calls update with total and put", async () => {
+      //arrange
+      const putSpy = vi.spyOn(mockedAxios, "put")
+      // fullName is readonly so won't be sent as parameter!
+      const { id, fullName, ...body } = mockEntity1
+      //act
+      await api.update({
+        type: "total",
+        httpMethod: "put",
+        newValue: mockEntity1,
+      })
+      expect(putSpy).toHaveBeenCalledWith(`${baseUri}/${id}/`, objectToSnakeCase(body))
     })
   })
 })
