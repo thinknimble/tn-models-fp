@@ -4,7 +4,7 @@ import { z } from "zod"
 import { AxiosLike } from "../../api/types"
 import { parseFilters } from "../filters"
 import { parseResponse } from "../response"
-import { ZodPrimitives, isZod, isZodArray, resolveRecursiveZod, zodObjectRecursive } from "../zod"
+import { ZodPrimitives, isZod, isZodArray, resolveRecursiveZod, zodObjectToSnakeRecursive } from "../zod"
 import { CallbackUtils, FromApiCall, ToApiCall } from "./types"
 import { Pagination } from "../pagination"
 
@@ -33,7 +33,7 @@ const createToApiHandler = <T extends z.ZodRawShape | ZodPrimitives | z.ZodArray
   if (isInputZodPrimitive) return
   return isInputZodPrimitive
     ? undefined
-    : (((obj: object) => zodObjectRecursive(z.object(inputShape)).parse(objectToSnakeCase(obj))) as ToApiCall<T>)
+    : (((obj: object) => zodObjectToSnakeRecursive(z.object(inputShape)).parse(objectToSnakeCase(obj))) as ToApiCall<T>)
 }
 
 const createFromApiHandler = <T extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny>>(
@@ -106,9 +106,6 @@ export const createCustomServiceCallHandler =
   }) =>
   async (args: unknown) => {
     const expectsInput = !(serviceCallOpts.inputShape instanceof z.ZodVoid)
-    const isPaginationWithoutInput = (argsCheck: unknown): argsCheck is { pagination: Pagination } => {
-      return Boolean(!expectsInput && typeof argsCheck === "object" && argsCheck && "pagination" in argsCheck)
-    }
     const hasPagination = (
       argCheck: unknown
     ): argCheck is { pagination: Pagination } | { input: { pagination: Pagination } } =>
@@ -140,7 +137,8 @@ export const createCustomServiceCallHandler =
               input:
                 args && typeof args === "object" && "input" in args
                   ? args.input
-                  : hasPagination(args) && !expectsInput && "pagination" in args
+                  : // TODO: probably can improve these below with two different type guards
+                  hasPagination(args) && !expectsInput && "pagination" in args
                   ? { input: args.pagination }
                   : hasPagination(args) && "input" in args
                   ? { input: args.input }

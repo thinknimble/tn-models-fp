@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest"
 import { z } from "zod"
-import { ZodRawShapeToSnakedRecursive, zodObjectRecursive } from "../zod"
+import { ZodRawShapeToSnakedRecursive, zodObjectToSnakeRecursive } from "../zod"
 import { CamelCasedPropertiesDeep, SnakeCasedPropertiesDeep } from "@thinknimble/tn-utils"
 
 const setupTest = <T extends z.ZodRawShape>(zodShape: T) => {
-  return zodObjectRecursive(z.object(zodShape))
+  return zodObjectToSnakeRecursive(z.object(zodShape))
 }
 
 describe("zodToSnakeCaseShapeRecursive", () => {

@@ -3,9 +3,10 @@ import { faker } from "@faker-js/faker"
 import { SnakeCasedPropertiesDeep } from "@thinknimble/tn-utils"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { z } from "zod"
-import { GetInferredFromRaw, InferShapeOrZod, Pagination } from "../../utils"
+import { GetInferredFromRaw, InferShapeOrZod, Pagination, StripBrand } from "../../utils"
 import { createApi } from "../create-api"
 import { createCustomServiceCall } from "../create-custom-call"
+import { CustomServiceCallsRecord, ServiceCallFn } from "../types"
 import {
   createZodShape,
   entityZodShape,
@@ -15,7 +16,6 @@ import {
   mockEntity2,
   mockedAxios,
 } from "./mocks"
-import { CustomServiceCallPlaceholder, CustomServiceCallsRecord, ServiceCallFn } from "../types"
 
 describe("createApi", async () => {
   const testBaseUri = "users"
@@ -104,10 +104,14 @@ describe("createApi", async () => {
       firstName: "Jane",
     }
     const randomId: string = faker.datatype.uuid()
-    const createResponse: SnakeCasedPropertiesDeep<GetInferredFromRaw<typeof entityZodShape>> = {
+    type test0 = GetInferredFromRaw<typeof entityZodShape>
+    type test = SnakeCasedPropertiesDeep<GetInferredFromRaw<typeof entityZodShape>>
+
+    const createResponse: SnakeCasedPropertiesDeep<GetInferredFromRaw<StripBrand<typeof entityZodShape>>> = {
       age: createInput.age,
       last_name: createInput.lastName,
       first_name: createInput.firstName,
+      full_name: `${createInput.lastName} ${createInput.lastName}`,
       id: randomId,
     }
     it("calls api with snake_case", async () => {
@@ -129,7 +133,7 @@ describe("createApi", async () => {
       //act
       const response = await testApi.create(createInput)
       //assert
-      expect(response).toEqual({ ...createInput, id: randomId })
+      expect(response).toEqual({ ...createInput, fullName: createResponse.full_name, id: randomId })
     })
   })
 
@@ -150,6 +154,7 @@ describe("createApi", async () => {
         age: mockEntity1Snaked.age,
         firstName: mockEntity1Snaked.first_name,
         lastName: mockEntity1Snaked.last_name,
+        fullName: mockEntity1Snaked.full_name,
         id: mockEntity1Snaked.id,
       })
     })

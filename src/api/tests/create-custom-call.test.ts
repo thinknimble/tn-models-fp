@@ -220,12 +220,6 @@ describe("createCustomServiceCall", () => {
       }
     )
     type testNoInputNorOutput = typeof testNoInputNorOutput
-    type tste = CustomServiceCallPlaceholder<z.ZodVoid, z.ZodVoid, z.ZodVoid>
-    //^?
-    type result = testNoInputNorOutput extends CustomServiceCallPlaceholder<infer TInput, infer TOutput, infer TFilters>
-      ? [TInput, TOutput, TFilters]
-      : false
-    //    ^?
     const baseUri = "noInputNorOutputOverload"
     const testApi = createApi(
       {
