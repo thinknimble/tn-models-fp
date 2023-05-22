@@ -120,7 +120,7 @@ function zodBrandToSnakeRecursive<T extends z.ZodBranded<any, any>>(zodBrand: T)
   return resolveRecursiveZod(zodBrand.unwrap()).brand()
 }
 
-const READONLY_TAG = "ReadonlyField"
+export const READONLY_TAG = "ReadonlyField"
 type ReadonlyTag = typeof READONLY_TAG
 export type ReadonlyField<T> = T & z.BRAND<ReadonlyTag>
 
@@ -164,4 +164,8 @@ export type IsBrand<T extends z.ZodTypeAny, TBrand extends string> = T extends z
 // I want that any type that has a brand attached to remove it.. so that's sort of a hard task... My initial attempt was with object. but seems that object is not enough.
 export type StripBrand<T extends z.ZodRawShape> = {
   [K in keyof T]: T[K] extends z.ZodBranded<infer TZod, any> ? TZod : T[K]
+}
+
+export type StripReadonlyBrand<T extends z.ZodRawShape> = {
+  [K in keyof T as IsBrand<T[K], ReadonlyTag> extends true ? never : K]: T[K]
 }

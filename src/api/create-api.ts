@@ -1,3 +1,4 @@
+//TODO: refactor built-in methods to all be custom service call specific cases
 import { objectToCamelCase } from "@thinknimble/tn-utils"
 import { AxiosInstance } from "axios"
 import { z } from "zod"
@@ -5,6 +6,7 @@ import {
   FiltersShape,
   GetInferredFromRaw,
   IPagination,
+  StripReadonlyBrand,
   createApiUtils,
   createCustomServiceCallHandler,
   getPaginatedSnakeCasedZod,
@@ -12,8 +14,10 @@ import {
   paginationFiltersZodShape,
   parseFilters,
   parseResponse,
+  removeReadonlyFields,
 } from "../utils"
-import { AxiosLike, CustomServiceCallPlaceholder, CustomServiceCallsRecord } from "./types"
+import { AxiosLike, CustomServiceCallOpts, CustomServiceCallPlaceholder, CustomServiceCallsRecord } from "./types"
+import { createCustomServiceCall } from "./create-custom-call"
 
 const uuidZod = z.string().uuid()
 
@@ -45,6 +49,28 @@ type ListCallObj<TEntity extends z.ZodRawShape, TExtraFilters extends FiltersSha
 type CreateCallObj<TEntity extends z.ZodRawShape, TCreate extends z.ZodRawShape> = {
   create: (inputs: GetInferredFromRaw<TCreate>) => Promise<GetInferredFromRaw<TEntity>>
 }
+type UpdateCallObj<TEntity extends z.ZodRawShape> = {
+  update: {
+    /**
+     * Perform a patch request with a partial body
+     */
+    (inputs: Partial<GetInferredFromRaw<StripReadonlyBrand<TEntity>>> & { id: string }): Promise<
+      GetInferredFromRaw<TEntity>
+    >
+    /**
+     * Perform a put request with a full body
+     */
+    replace: {
+      (inputs: GetInferredFromRaw<StripReadonlyBrand<TEntity>> & { id: string }): Promise<GetInferredFromRaw<TEntity>>
+      /**
+       * Perform a put request with a full body
+       */
+      asPartial: (
+        inputs: Partial<GetInferredFromRaw<StripReadonlyBrand<TEntity>>> & { id: string }
+      ) => Promise<GetInferredFromRaw<TEntity>>
+    }
+  }
+}
 
 type WithCreateModelCall<TModels extends BaseModelsPlaceholder> = TModels extends EntityModelObj<infer TE>
   ? TModels extends CreateModelObj<infer TC>
@@ -59,10 +85,18 @@ type WithExtraFiltersModelCall<TModels extends BaseModelsPlaceholder> = TModels 
     ? ListCallObj<TE, TEx>
     : ListCallObj<TE>
   : unknown
+type WithRemoveModelCall<TModels extends BaseModelsPlaceholder> = TModels extends EntityModelObj<any>
+  ? { remove: (id: string) => void }
+  : unknown
+type WithUpdateModelCall<TModels extends BaseModelsPlaceholder> = TModels extends EntityModelObj<infer TE>
+  ? UpdateCallObj<TE>
+  : unknown
 
 type BaseApiCalls<TModels extends BaseModelsPlaceholder> = WithCreateModelCall<TModels> &
   WithEntityModelCall<TModels> &
-  WithExtraFiltersModelCall<TModels>
+  WithExtraFiltersModelCall<TModels> &
+  WithRemoveModelCall<TModels> &
+  WithUpdateModelCall<TModels>
 
 type BareApiService<TModels extends BaseModelsPlaceholder | unknown> = TModels extends BaseModelsPlaceholder
   ? {
@@ -101,7 +135,7 @@ type EntityModelObj<TApiEntity extends z.ZodRawShape> = {
   /**
    * Zod raw shape of the equivalent camel-cased version of the entity in backend
    *
-   * Example
+   * @example
    * ```ts
    * type BackendModel = {
    *  my_model:string
@@ -188,11 +222,13 @@ export function createApi<
   if (!models || !models.entity) {
     return { client: axiosLikeClient }
   }
+  const entityShapeWithoutReadonlyFields = removeReadonlyFields(models.entity)
   type TApiEntityShape = TModels extends EntityModelObj<infer TE> ? TE : z.ZodRawShape
 
   /**
    * Placeholder to include or not the create method in the return based on models
    */
+  //TODO: I will likely stop requiring really the create method at all, since we probably just want the same entity shape without id and readonly fields...
   let createObj: object = {}
   if ("create" in models) {
     type TApiCreateShape = TModels extends CreateCallObj<TApiEntityShape, infer TC> ? TC : z.ZodRawShape
@@ -209,7 +245,6 @@ export function createApi<
     createObj = { create }
   }
   const retrieve = async (id: string) => {
-    //TODO: should we allow the user to set their own id zod schema?
     if (!uuidZod.safeParse(id).success) {
       console.warn("The passed id is not a valid UUID, check your input")
     }
@@ -248,7 +283,65 @@ export function createApi<
     return { ...rawResponse, results: rawResponse.results.map((r) => objectToCamelCase(r)) }
   }
 
-  const baseReturn = { client: axiosLikeClient, retrieve, list, ...createObj }
+  const remove = (id: string) => {
+    return client.delete(`${slashEndingBaseUri}${id}/`)
+  }
+
+  const updateBase = async <TType extends "partial" | "total" = "partial">({
+    httpMethod = "patch",
+    type = "partial",
+    newValue,
+  }: {
+    type?: "partial" | "total"
+    httpMethod?: "put" | "patch"
+    newValue: (TType extends "partial"
+      ? Partial<GetInferredFromRaw<typeof entityShapeWithoutReadonlyFields>>
+      : GetInferredFromRaw<typeof entityShapeWithoutReadonlyFields>) & { id: string }
+  }) => {
+    if (!("id" in newValue)) {
+      console.error("The update body needs an id to use this method")
+      return
+    }
+    const entityWithoutReadonlyFieldsZod = z.object(entityShapeWithoutReadonlyFields)
+    const finalEntityShape =
+      type === "partial" ? entityWithoutReadonlyFieldsZod.partial() : entityWithoutReadonlyFieldsZod
+
+    const parsedInput = finalEntityShape.parse(newValue)
+    const updateCall = createCustomServiceCall.standAlone({
+      client,
+      models: {
+        inputShape: finalEntityShape.shape,
+        outputShape: models.entity,
+      },
+      cb: ({ client, input, utils }) => {
+        const { id, ...body } = utils.toApi(input)
+        return client[httpMethod](`${slashEndingBaseUri}${id}/`, body)
+      },
+    })
+    return updateCall(parsedInput)
+  }
+
+  //! this is a bit painful to look at but I feel it is a good UX so that we don't make Users go through updateBase params
+  const update = (() => {
+    const baseFn = async (
+      args: Partial<GetInferredFromRaw<typeof entityShapeWithoutReadonlyFields>> & { id: string }
+    ) => {
+      return updateBase({ newValue: args, httpMethod: "patch", type: "partial" })
+    }
+    const replace = (() => {
+      const replaceBaseFn = async (
+        args: GetInferredFromRaw<typeof entityShapeWithoutReadonlyFields> & { id: string }
+      ) => updateBase({ newValue: args, httpMethod: "put", type: "total" })
+      replaceBaseFn.asPartial = (
+        inputs: Partial<GetInferredFromRaw<StripReadonlyBrand<TApiEntityShape>>> & { id: string }
+      ) => updateBase({ newValue: inputs, httpMethod: "put", type: "partial" })
+      return replaceBaseFn
+    })()
+    baseFn.replace = replace
+    return baseFn as unknown as UpdateCallObj<TApiEntityShape>["update"]
+  })()
+
+  const baseReturn = { client: axiosLikeClient, retrieve, list, remove, update, ...createObj }
 
   if (!modifiedCustomServiceCalls) return baseReturn
 

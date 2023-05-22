@@ -16,18 +16,25 @@ The package is based in zod to replace models and fields approach from previous 
   - [Create your own calls](#create-your-own-calls)
 - [API reference](#api-reference)
   - [`createApi`](#createapi)
-    - [Example use](#example-use)
+    - [Built-in methods](#built-in-methods)
+      - [`create` - Post request to create a resource](#create---post-request-to-create-a-resource)
+      - [`retrieve` - Get request to retrieve a single resource by Id](#retrieve---get-request-to-retrieve-a-single-resource-by-id)
+      - [`list` - Get request to obtain a paginated list of the resource](#list---get-request-to-obtain-a-paginated-list-of-the-resource)
+      - [`update` - Put/Patch request to update a resource by id](#update---putpatch-request-to-update-a-resource-by-id)
   - [Models (zod-based)](#models-zod-based)
     - [Why shapes and not zods?](#why-shapes-and-not-zods)
-  - [`createCustomServiceCall` or `csc`](#createcustomservicecall-or-csc)
+    - [Make fields readonly ( only applicable for `entity`)](#make-fields-readonly--only-applicable-for-entity)
+  - [`createCustomServiceCall`](#createcustomservicecall)
+    - [`standAlone` calls](#standalone-calls)
     - [On the service callback parameters](#on-the-service-callback-parameters)
   - [`createPaginatedServiceCall`](#createpaginatedservicecall)
   - [`createApiUtils`](#createapiutils)
   - [`createCollectionManager`](#createcollectionmanager)
-    - [Example use](#example-use-1)
+    - [Example use](#example-use)
 - [Roadmap](#roadmap)
-  - [Custom api calls](#custom-api-calls)
 - [Contribution guide](#contribution-guide)
+  - [pnpm](#pnpm)
+  - [Tests](#tests)
   - [Publishing new version of the package.](#publishing-new-version-of-the-package)
 
 # Getting started
@@ -46,15 +53,14 @@ yarn add @thinknimble/tn-models-fp
 pnpm i @thinknimble/tn-models-fp
 ```
 
-
-## Quickstart 
+## Quickstart
 
 ```typescript
 
 /**
- *  
- *  // creating a simple user api with login, registration, update 
- * 
+ *
+ *  // creating a simple user api with login, registration, update
+ *
  */
 
 
@@ -86,7 +92,7 @@ const createShape = {
   lastName:z.string(),
 }
 /**
- * Since I know my update method can be partial and wont include all the same fields as a create I create an update shape 
+ * Since I know my update method can be partial and wont include all the same fields as a create I create an update shape
  */
 
 const updateShape = {
@@ -104,18 +110,18 @@ const loginShape = {
 }
 
 /**
- * Create your api 
+ * Create your api
  * Each api has a create, retrieve, list method by default
  * These methods are accessible through the api directly eg:
  * userApi.create({})
  * userApi.retrieve({})
  * userApi.list()
- * 
+ *
  */
 
 /**
  * create additional methods using the createCustomServiceCall provider
- * these methods are accesible with the shorthand name for csc 
+ * these methods are accesible with the shorthand name for csc
  * e.g userApi.csc.login({})
  */
 
@@ -157,28 +163,28 @@ const delete = createCustomServiceCall(
 
 const userApi = createApi({
   client: axios.create(), // a client of your choice
-  baseUri: "api/users/", // a base URI to be used as a default 
+  baseUri: "api/users/", // a base URI to be used as a default
   models: {
     /**
-     * since my create shape is different than the default AccountEntity 
+     * since my create shape is different than the default AccountEntity
      * I can override it here
-     * 
-     * */ 
-    
-    create: createShape, 
+     *
+     * */
+
+    create: createShape,
     /**
      * if I do not declare any overrides for the three default methods this will be used
      */
     entity: accountShape,
   },
 },
-{login, update,delete}) // Additional methods are delclared here 
+{login, update,delete}) // Additional methods are delclared here
 
 
-/** 
- * 
+/**
+ *
  * finally use your api with your favorite wrapper or directly
- *  
+ *
  */
 
 /**
@@ -246,7 +252,7 @@ const TodoManager = () => {
   const [selectedTodoId,setSelectedTodoId] = useState()
 
 /**
- * 
+ *
  * Please note the use of TanStack is not required!
  */
 
@@ -305,22 +311,32 @@ An api handler can be created with or without custom service calls. Any custom c
 
 The result of the function call is an object that allows to do type-safe calls to the given api. It follows as closely as possible the same api as the class-based version of the library.
 
-### Example use
+### Built-in methods
 
-Sample react app: https://github.com/lakardion/ts-models-client
+When passing an `entity` model to `createApi` parameter you get a couple of built-in methods as a result.
 
-Snippet:
+#### `create` - Post request to create a resource
 
-```typescript
-export const todoApi = createApi({
-  client, // AxiosInstance
-  baseUri, //string base uri
-  models: {
-    create: createZodRaw, // ZodRawShape
-    entity: entityZodRaw, // ZodRawShape
-  },
-})
-```
+Only available if you pass a `create` model
+
+#### `retrieve` - Get request to retrieve a single resource by Id
+
+Returns the resolved type of `entity` from given models.
+
+#### `list` - Get request to obtain a paginated list of the resource
+
+Note: Please check that your backend implements a `${baseUri}/list/` endpoint, otherwise this method will not be useful for you (you can still [ create a paginated call ](#createpaginatedservicecall) )
+Returns a paginated version of the resolved type of `entity` from given models.
+
+#### `update` - Put/Patch request to update a resource by id
+
+This method takes as parameter the resolved type of the `entity` from given models minus the [declared readonly fields](#make-fields-readonly) which are stripped to keep you from sending them in the request.
+
+There are a couple of flavors of this method to your convenience:
+
+- `update(partialResource)` does a patch request with a partial body
+- `update.replace(fullResource)` does a put request with a full body
+- `update.replace.asPartial(partialResource)` does a put request with a partial body
 
 ## Models (zod-based)
 
@@ -382,23 +398,27 @@ const myZodShape = {
 } // asking for the shape allow us to do what we please with its keys and later simply call `z.object` internally when we need the zod schema
 ```
 
-### Make fields readonly
+### Make fields readonly ( only applicable for `entity`)
+
 You can mark fields as readonly with the `readonly` function from the library. This will create a brand for your field which will allow the library to identify it as a readonly field, thus preventing those fields to be included in models for creation and update.
+
 ```ts
 const entityShape = {
-  firstName:z.string(),
-  lastName:z.string(),
-  fullName:readonly(z.string())
+  firstName: z.string(),
+  lastName: z.string(),
+  fullName: readonly(z.string()),
 }
 ```
 
-## `createCustomServiceCall` or `csc`
+## `createCustomServiceCall`
 
 This function is used as a complement to `createApi` and allows us to create custom service calls attached to the api.
 
 We provided multiple overloads for it to be fully type-safe and properly infer the parameters for you.
 
-Without this function, you cannot add custom service calls. This was designed as to enforce the type safety of the custom calls.
+Without this function, you cannot add custom service calls. This was designed as to enforce the type safety of the custom calls. If you're looking for a way to self-host one of these calls please check [`standAlone` calls](#standalone-calls)
+
+Example:
 
 ```ts
 // from tn-models-client sample repo
@@ -450,11 +470,45 @@ export const todoApi = createApi(
 
 We also added a `csc` alias in case you feel `customServiceCall` is too long.
 
+### `standAlone` calls
+
+There could be situations where you don't want to attach a call to an api. Probably a one-off request or an rpc-like request which is not attached to a specific resource.
+
+For this case we can use `createCustomServiceCall.standAlone` which is a function that gets fed a `client` and is a self-contained version of regular custom service calls.
+
+The parameter to create these calls is slightly different than for dependant custom calls. Here's an example
+
+```typescript
+const standAloneCall = createCustomServiceCall.standAlone({
+  client: axios,
+  models: {
+    outputShape: {
+      testData: z.string(),
+    },
+    inputShape: {
+      testInput: z.number(),
+    },
+  },
+  name: "standAlone",
+  // here is where the difference is, this is not a second parameter but instead it is a `cb` field!
+  cb: async ({
+    client,
+    utils,
+    input,
+    //!! You don't have the uri available here since this is self hosted there's no other context than this, you'll have to provide the full uri in your api request
+    // slashEndingBaseUri,
+  }) => {
+    const res = await client.post("/api/my-endpoint/", utils.toApi(input))
+    return utils.fromApi(res.data)
+  },
+})
+```
+
 ### On the service callback parameters
 
 We provide a set of parameters in the custom service callback:
 
-- client: a type-wrapped axios instance that makes sure you call the apis with slash ending uris.
+- `client`: a type-wrapped axios instance that makes sure you call the apis with slash ending uris.
 
 For this client to consume your uri strings you should either cast them `as const` or define them as template strings directly in the call
 
@@ -466,20 +520,19 @@ For this client to consume your uri strings you should either cast them `as cons
   client.get(uriSample)// ❌ this does not check, you'll get error, template string is already evaluated outside so it is considered `string`
 
   const uriSampleOutsideOfCallAsConst = `${slashEndingBaseUri}my-uri/not-const/` as const
-  client get(uriSampleOutsideOfCallAsConst)//s checks, since it was cast as const outside of the call
+  client get(uriSampleOutsideOfCallAsConst)//✅ was cast as const outside of the call
 ```
 
-- slashEndingBaseUri: gives you a reference to the endpoint you passed when you created the api so you can use it within the callback
-- input:the parsed input based on the `inputShape` you passed
-- utils: set of utilities to convert from and to api models (handles object casing)
-  - fromApi: convert a response object from the api (coming in snake casing) to its camelCase version
-  - toApi: convert an input into an snake_cased object so that you can feed it to the api.
+- `slashEndingBaseUri`: gives you a reference to the base uri you passed when you created the api so you can use it within the callback
+- `input`:the parsed input based on the `inputShape` you passed
+- `utils`: set of utilities to convert from and to api models (handles object casing)
+  - `fromApi`: convert a response object from the api (coming in snake casing) to its camelCase version
+  - `toApi`: convert an input into an snake_cased object so that you can feed it to the api.
+- `parsedFilters`: only available if you provided a `filtersShape` when constructing the custom call. This yields the filters ready-to-go(parsed to string and snake cased!) into the `params` field of the opts parameter of axios
 
 ## `createPaginatedServiceCall`
 
 Allows users to create paginated calls that are not directly related with the `list` endpoint of their resource. Such as when an endpoint retrieves a paginated list of things that are not exactly the resource ig: a search. You can also use this if you did not define a resource service the same way as this library expects (to have a `/list` endpoint).
-
-This returns the paginated response. As of now (~2.0.0) we don't have support for filter params but will soon! [#15](https://github.com/thinknimble/tn-models-fp/issues/15) [#32](https://github.com/thinknimble/tn-models-fp/issues/32)
 
 IG
 
@@ -507,6 +560,8 @@ const api = createApi(
 
 ## `createApiUtils`
 
+Before using this please see [`createCustomServiceCall.standAlone`](#createcustomservicecall)
+
 This util allows to create the utils independently without the need of creating the api.
 
 This is useful especially for creating remote procedure calls where no resource is strictly attached and an action is being triggered ig: call to send an email
@@ -532,38 +587,53 @@ const collectionManager = createCollectionManager({
 
 # Roadmap
 
-## Custom api calls
+Check out the [ Issues tab ](https://github.com/thinknimble/tn-models-fp/issues) for incoming features and feature/request.
 
-- [ ] Detach api inputs from call input.
-
-<details>
-<summary>
-More info
-</summary>
-We could be interested in passing certain input to our call and constructing the input to the api within our method rather than passing it whole in as the custom service call parameter. Probably we could split custom service call inputs vs api call inputs. IG of custom service call input diff with api call input
-
-```typescript
-//...
-{
-  myCustomServiceCall: createCustomServiceCall({
-    inputShape:z.string()
-    outputShape:z.number()
-    callback: async( { client, input, utils, slashEndingBaseUri } ) =>{
-      const res = await client.post( slashEndingBaseUri, utils.toApi( { myCustomInput: input } )
-      return utils.fromApi( res.data )
-}
-```
-
-for `toApi` to work properly we need to define the shape of the api call input, which in this case differs from the one that we are declaring in the inputShape.
-Internally `toApi` parses into snake case with `inputShape` in mind. So we would probably want to separate these two shapes in case we don't want them to be the same
-
-</details>
+Submit your own if you feel there's something we're missing!
 
 # Contribution guide
 
+## pnpm
+
+We're using pnpm while developing this library. You can easily get setup with it by doing
+
+```shell
+npm i -g pnpm
+```
+
+## Tests
+
+We always make sure that our PRs pass all current tests and it is highly recommended to at least add a set of tests that are related with the work of the given PR so that we get a minimum level of confidence that things are working fine.
+
+To run tests we have a dev command which will scan the whole repo and run the tests it finds.
+
+```shell
+pnpm test:dev
+```
+
+We can also isolate tests so that we tackle one at a time by adding `.only` calls to the test suite (`describe`) and/or the test itself (`it`). There's also the chance to run a single file as test
+
+Run a single test file
+
+```shell
+pnpm test:dev ./src/api/tests/create-api.test.ts
+```
+
+Isolate a test suite/test with `only`:
+
+```typescript
+//some.test.ts
+describe.only("some test suite", () => {
+  it.only("tests some functionality", () => {
+    //...
+  })
+  //...
+})
+```
+
 ## Publishing new version of the package.
 
-To make our life easier with versioning and releasing new versions of the packages we're using [changeset](https://github.com/changesets/changesets/tree/main).
+To make our life easier with package versioning and releases we're using [changeset](https://github.com/changesets/changesets/tree/main).
 
 If a PR for a feature conveys a release with it OR you want to release a version after some PRs have been merged.
 
