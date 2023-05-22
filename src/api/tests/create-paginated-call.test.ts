@@ -10,17 +10,14 @@ describe("createPaginatedServiceCall", () => {
   it("allows not passing a uri and calls api with the right uri", async () => {
     //arrange
     const postSpy = vi.spyOn(mockedAxios, "post")
-    const paginatedServiceCall = createPaginatedServiceCall(
-      {
-        inputShape: {
-          myInput: z.string(),
-        },
-        outputShape: {
-          myOutput: z.string(),
-        },
-      },
-      { httpMethod: "post" }
-    )
+    const inputShape = {
+      myInput: z.string(),
+    }
+    const outputShape = {
+      myOutput: z.string(),
+    }
+    const paginatedServiceCall = createPaginatedServiceCall({ outputShape, inputShape }, { httpMethod: "post" })
+
     mockedAxios.post.mockResolvedValueOnce({
       data: { count: 1, next: null, previous: null, results: [{ my_output: "myOutput" }] },
     })
@@ -295,9 +292,14 @@ describe("createPaginatedServiceCall", () => {
     const pagination = new Pagination({ page: 1, size: 20 })
     const myExtraFilter = "test"
     //act
+    type testing = Parameters<typeof api.csc.testPaginatedCallWithFilters>
     await api.csc.testPaginatedCallWithFilters({
-      pagination,
-      filters: { myExtraFilter },
+      input: {
+        pagination,
+      },
+      filters: {
+        myExtraFilter,
+      },
     })
     //assert
     expect(getSpy).toHaveBeenCalledWith(`${baseUri}/`, {

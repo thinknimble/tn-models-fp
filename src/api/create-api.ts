@@ -1,65 +1,75 @@
-import { objectToCamelCase, objectToSnakeCase } from "@thinknimble/tn-utils"
+//TODO: refactor built-in methods to all be custom service call specific cases
+import { objectToCamelCase } from "@thinknimble/tn-utils"
 import { AxiosInstance } from "axios"
 import { z } from "zod"
 import {
+  FiltersShape,
   GetInferredFromRaw,
   IPagination,
-  InferShapeOrZod,
+  StripReadonlyBrand,
   createApiUtils,
   createCustomServiceCallHandler,
-  filtersZod,
   getPaginatedSnakeCasedZod,
   getPaginatedZod,
-  paginationFiltersZod,
+  paginationFiltersZodShape,
+  parseFilters,
   parseResponse,
+  removeReadonlyFields,
 } from "../utils"
-import { AxiosLike } from "./types"
+import { AxiosLike, CustomServiceCallOpts, CustomServiceCallPlaceholder, CustomServiceCallsRecord } from "./types"
+import { createCustomServiceCall } from "./create-custom-call"
 
 const uuidZod = z.string().uuid()
 
 type BaseModelsPlaceholder<
   TE extends z.ZodRawShape = z.ZodRawShape,
   TC extends z.ZodRawShape = z.ZodRawShape,
-  TEx extends z.ZodRawShape = z.ZodRawShape
+  TEx extends FiltersShape = FiltersShape
 > = TE extends z.ZodRawShape
   ? (EntityModelObj<TE> & ExtraFiltersObj<TEx>) | (EntityModelObj<TE> & ExtraFiltersObj<TEx> & CreateModelObj<TC>)
   : unknown
 
-type FromApiPlaceholder = { fromApi: (obj: object) => any }
-type ToApiPlaceholder = { toApi: (obj: object) => any }
-/**
- * Base type for custom service calls which serves as a placeholder to later take advantage of inference
- */
-type CustomServiceCallPlaceholder = {
-  inputShape: object
-  outputShape: object
-  callback: (params: {
-    slashEndingBaseUri: `${string}/`
-    client: AxiosLike
-    input: any
-    utils: FromApiPlaceholder & ToApiPlaceholder
-  }) => Promise<unknown>
+type RetrieveCallObj<TEntity extends z.ZodRawShape> = {
+  /**
+   * Get resource by id
+   * @param id resource id
+   * @returns
+   */
+  retrieve: (id: string) => Promise<GetInferredFromRaw<TEntity>>
 }
-
-/**
- * Get resulting custom service call from `createApi`
- */
-type CustomServiceCallsRecord<TOpts extends object> = TOpts extends Record<string, CustomServiceCallPlaceholder>
-  ? {
-      [K in keyof TOpts]: (
-        inputs: InferShapeOrZod<TOpts[K]["inputShape"]>
-      ) => Promise<InferShapeOrZod<TOpts[K]["outputShape"]>>
-    }
-  : never
-type RetrieveCallObj<TEntity extends z.ZodRawShape> = { retrieve: (id: string) => Promise<GetInferredFromRaw<TEntity>> }
-type ListCallObj<TEntity extends z.ZodRawShape, TExtraFilters extends z.ZodRawShape = never> = {
+type ListCallObj<TEntity extends z.ZodRawShape, TExtraFilters extends FiltersShape = never> = {
+  /**
+   * This calls the `{baseUri}/list` endpoint. Note that this has to be available in the api you're consuming for this method to actually work
+   */
   list: (params?: {
-    filters?: GetInferredFromRaw<TExtraFilters> & z.infer<typeof filtersZod>
+    filters?: GetInferredFromRaw<TExtraFilters>
     pagination?: IPagination
   }) => Promise<z.infer<ReturnType<typeof getPaginatedZod<TEntity>>>>
 }
 type CreateCallObj<TEntity extends z.ZodRawShape, TCreate extends z.ZodRawShape> = {
   create: (inputs: GetInferredFromRaw<TCreate>) => Promise<GetInferredFromRaw<TEntity>>
+}
+type UpdateCallObj<TEntity extends z.ZodRawShape> = {
+  update: {
+    /**
+     * Perform a patch request with a partial body
+     */
+    (inputs: Partial<GetInferredFromRaw<StripReadonlyBrand<TEntity>>> & { id: string }): Promise<
+      GetInferredFromRaw<TEntity>
+    >
+    /**
+     * Perform a put request with a full body
+     */
+    replace: {
+      (inputs: GetInferredFromRaw<StripReadonlyBrand<TEntity>> & { id: string }): Promise<GetInferredFromRaw<TEntity>>
+      /**
+       * Perform a put request with a full body
+       */
+      asPartial: (
+        inputs: Partial<GetInferredFromRaw<StripReadonlyBrand<TEntity>>> & { id: string }
+      ) => Promise<GetInferredFromRaw<TEntity>>
+    }
+  }
 }
 
 type WithCreateModelCall<TModels extends BaseModelsPlaceholder> = TModels extends EntityModelObj<infer TE>
@@ -75,10 +85,18 @@ type WithExtraFiltersModelCall<TModels extends BaseModelsPlaceholder> = TModels 
     ? ListCallObj<TE, TEx>
     : ListCallObj<TE>
   : unknown
+type WithRemoveModelCall<TModels extends BaseModelsPlaceholder> = TModels extends EntityModelObj<any>
+  ? { remove: (id: string) => void }
+  : unknown
+type WithUpdateModelCall<TModels extends BaseModelsPlaceholder> = TModels extends EntityModelObj<infer TE>
+  ? UpdateCallObj<TE>
+  : unknown
 
 type BaseApiCalls<TModels extends BaseModelsPlaceholder> = WithCreateModelCall<TModels> &
   WithEntityModelCall<TModels> &
-  WithExtraFiltersModelCall<TModels>
+  WithExtraFiltersModelCall<TModels> &
+  WithRemoveModelCall<TModels> &
+  WithUpdateModelCall<TModels>
 
 type BareApiService<TModels extends BaseModelsPlaceholder | unknown> = TModels extends BaseModelsPlaceholder
   ? {
@@ -106,7 +124,7 @@ type CreateModelObj<TApiCreate extends z.ZodRawShape> = {
    */
   create: TApiCreate
 }
-type ExtraFiltersObj<TExtraFilters extends z.ZodRawShape> = {
+type ExtraFiltersObj<TExtraFilters extends FiltersShape> = {
   /**
    * Zod raw shape of extra filters if any
    */
@@ -117,7 +135,7 @@ type EntityModelObj<TApiEntity extends z.ZodRawShape> = {
   /**
    * Zod raw shape of the equivalent camel-cased version of the entity in backend
    *
-   * Example
+   * @example
    * ```ts
    * type BackendModel = {
    *  my_model:string
@@ -146,7 +164,7 @@ export function createApi<
   TCustomServiceCalls extends Record<string, CustomServiceCallPlaceholder>
 >(
   base: BaseApiParams & {
-    models: TModels
+    models?: TModels
   },
   /**
    * Create your own custom service calls to use with this API. Tools for case conversion are provided.
@@ -161,7 +179,7 @@ export function createApi<TCustomServiceCalls extends Record<string, CustomServi
   customServiceCalls: TCustomServiceCalls
 ): ApiService<unknown, TCustomServiceCalls>
 export function createApi<TModels extends BaseModelsPlaceholder>(
-  base: BaseApiParams & { models: TModels }
+  base: BaseApiParams & { models?: TModels }
 ): BareApiService<TModels>
 export function createApi(base: BaseApiParams): BareApiService<unknown>
 
@@ -204,11 +222,13 @@ export function createApi<
   if (!models || !models.entity) {
     return { client: axiosLikeClient }
   }
+  const entityShapeWithoutReadonlyFields = removeReadonlyFields(models.entity)
   type TApiEntityShape = TModels extends EntityModelObj<infer TE> ? TE : z.ZodRawShape
 
   /**
    * Placeholder to include or not the create method in the return based on models
    */
+  //TODO: I will likely stop requiring really the create method at all, since we probably just want the same entity shape without id and readonly fields...
   let createObj: object = {}
   if ("create" in models) {
     type TApiCreateShape = TModels extends CreateCallObj<TApiEntityShape, infer TC> ? TC : z.ZodRawShape
@@ -225,7 +245,6 @@ export function createApi<
     createObj = { create }
   }
   const retrieve = async (id: string) => {
-    //TODO: should we allow the user to set their own id zod schema?
     if (!uuidZod.safeParse(id).success) {
       console.warn("The passed id is not a valid UUID, check your input")
     }
@@ -241,28 +260,19 @@ export function createApi<
     const filters = params ? params.filters : undefined
     const pagination = params ? params.pagination : undefined
     // Filters parsing, throws if the fields do not comply with the zod schema
-    const allFilters = {
-      ...(filters ?? {}),
-      ...(pagination ? { page: pagination.page, pageSize: pagination.size } : {}),
-    }
-    const filtersParsed = models.extraFilters
-      ? z.object(models.extraFilters).partial().and(filtersZod).and(paginationFiltersZod).parse(allFilters)
-      : filtersZod.and(paginationFiltersZod).parse(allFilters)
-    const snakedFilters = filtersParsed ? objectToSnakeCase(filtersParsed) : undefined
-    const snakedCleanParsedFilters = snakedFilters
-      ? Object.fromEntries(
-          Object.entries(snakedFilters).flatMap(([k, v]) => {
-            if (typeof v === "number") return [[k, v.toString()]]
-            if (!v) return []
-            return [[k, v]]
-          })
-        )
-      : undefined
+
+    const filtersParsed = parseFilters(models.extraFilters, filters)
+    const paginationFilters = parseFilters(
+      paginationFiltersZodShape,
+      pagination ? { page: pagination.page, pageSize: pagination.size } : undefined
+    )
+    const allFilters =
+      filtersParsed || paginationFilters ? { ...(filtersParsed ?? {}), ...(paginationFilters ?? {}) } : undefined
 
     const paginatedZod = getPaginatedSnakeCasedZod(models.entity)
 
     const res = await axiosLikeClient.get(slashEndingBaseUri, {
-      params: snakedCleanParsedFilters,
+      params: allFilters,
     })
     const rawResponse = parseResponse({
       identifier: list.name,
@@ -273,7 +283,65 @@ export function createApi<
     return { ...rawResponse, results: rawResponse.results.map((r) => objectToCamelCase(r)) }
   }
 
-  const baseReturn = { client: axiosLikeClient, retrieve, list, ...createObj }
+  const remove = (id: string) => {
+    return client.delete(`${slashEndingBaseUri}${id}/`)
+  }
+
+  const updateBase = async <TType extends "partial" | "total" = "partial">({
+    httpMethod = "patch",
+    type = "partial",
+    newValue,
+  }: {
+    type?: "partial" | "total"
+    httpMethod?: "put" | "patch"
+    newValue: (TType extends "partial"
+      ? Partial<GetInferredFromRaw<typeof entityShapeWithoutReadonlyFields>>
+      : GetInferredFromRaw<typeof entityShapeWithoutReadonlyFields>) & { id: string }
+  }) => {
+    if (!("id" in newValue)) {
+      console.error("The update body needs an id to use this method")
+      return
+    }
+    const entityWithoutReadonlyFieldsZod = z.object(entityShapeWithoutReadonlyFields)
+    const finalEntityShape =
+      type === "partial" ? entityWithoutReadonlyFieldsZod.partial() : entityWithoutReadonlyFieldsZod
+
+    const parsedInput = finalEntityShape.parse(newValue)
+    const updateCall = createCustomServiceCall.standAlone({
+      client,
+      models: {
+        inputShape: finalEntityShape.shape,
+        outputShape: models.entity,
+      },
+      cb: ({ client, input, utils }) => {
+        const { id, ...body } = utils.toApi(input)
+        return client[httpMethod](`${slashEndingBaseUri}${id}/`, body)
+      },
+    })
+    return updateCall(parsedInput)
+  }
+
+  //! this is a bit painful to look at but I feel it is a good UX so that we don't make Users go through updateBase params
+  const update = (() => {
+    const baseFn = async (
+      args: Partial<GetInferredFromRaw<typeof entityShapeWithoutReadonlyFields>> & { id: string }
+    ) => {
+      return updateBase({ newValue: args, httpMethod: "patch", type: "partial" })
+    }
+    const replace = (() => {
+      const replaceBaseFn = async (
+        args: GetInferredFromRaw<typeof entityShapeWithoutReadonlyFields> & { id: string }
+      ) => updateBase({ newValue: args, httpMethod: "put", type: "total" })
+      replaceBaseFn.asPartial = (
+        inputs: Partial<GetInferredFromRaw<StripReadonlyBrand<TApiEntityShape>>> & { id: string }
+      ) => updateBase({ newValue: inputs, httpMethod: "put", type: "partial" })
+      return replaceBaseFn
+    })()
+    baseFn.replace = replace
+    return baseFn as unknown as UpdateCallObj<TApiEntityShape>["update"]
+  })()
+
+  const baseReturn = { client: axiosLikeClient, retrieve, list, remove, update, ...createObj }
 
   if (!modifiedCustomServiceCalls) return baseReturn
 

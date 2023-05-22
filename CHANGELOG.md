@@ -1,5 +1,23 @@
 # @thinknimble/tn-models-fp
 
+## 2.9.0
+
+### Minor Changes
+
+- f976657: Add chance to declare readonly fields at root level of entity shapes. Introduce `update` and `delete` built-in methods for the api. `update` has a couple of variants which allow users to pick the right behaviour for their update calls
+
+## 2.8.1
+
+### Patch Changes
+
+- b1392c9: Fix standAlone calls including base uri when it would always be undefined
+
+## 2.8.0
+
+### Minor Changes
+
+- 33a6eb5: Add filters to the main methods of the library. `createCustomServiceCall` `createCustomServiceCall.standAlone` and `createPaginatedServiceCall` allow `filterShape` which yields a `parsedFilters` parameter in the callback for you to get snake cased parsed filters and pass them as parameters to your axios calls. Adding filters modify current input arguament so beware that you'll need an object with `input` and `filters?`
+
 ## 2.7.0
 
 ### Minor Changes

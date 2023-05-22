@@ -1,11 +1,12 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { faker } from "@faker-js/faker"
-import { SnakeCasedPropertiesDeep } from "@thinknimble/tn-utils"
+import { SnakeCasedPropertiesDeep, objectToCamelCase, objectToSnakeCase } from "@thinknimble/tn-utils"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { z } from "zod"
-import { GetInferredFromRaw, Pagination } from "../../utils"
+import { GetInferredFromRaw, InferShapeOrZod, Pagination, StripBrand } from "../../utils"
 import { createApi } from "../create-api"
 import { createCustomServiceCall } from "../create-custom-call"
+import { CustomServiceCallsRecord, ServiceCallFn } from "../types"
 import {
   createZodShape,
   entityZodShape,
@@ -103,10 +104,14 @@ describe("createApi", async () => {
       firstName: "Jane",
     }
     const randomId: string = faker.datatype.uuid()
-    const createResponse: SnakeCasedPropertiesDeep<GetInferredFromRaw<typeof entityZodShape>> = {
+    type test0 = GetInferredFromRaw<typeof entityZodShape>
+    type test = SnakeCasedPropertiesDeep<GetInferredFromRaw<typeof entityZodShape>>
+
+    const createResponse: SnakeCasedPropertiesDeep<GetInferredFromRaw<StripBrand<typeof entityZodShape>>> = {
       age: createInput.age,
       last_name: createInput.lastName,
       first_name: createInput.firstName,
+      full_name: `${createInput.lastName} ${createInput.lastName}`,
       id: randomId,
     }
     it("calls api with snake_case", async () => {
@@ -128,7 +133,7 @@ describe("createApi", async () => {
       //act
       const response = await testApi.create(createInput)
       //assert
-      expect(response).toEqual({ ...createInput, id: randomId })
+      expect(response).toEqual({ ...createInput, fullName: createResponse.full_name, id: randomId })
     })
   })
 
@@ -149,6 +154,7 @@ describe("createApi", async () => {
         age: mockEntity1Snaked.age,
         firstName: mockEntity1Snaked.first_name,
         lastName: mockEntity1Snaked.last_name,
+        fullName: mockEntity1Snaked.full_name,
         id: mockEntity1Snaked.id,
       })
     })
@@ -229,5 +235,171 @@ describe("createApi", async () => {
         client.get(`${slashEndingBaseUri}/ending/`)
       })
     })
+  })
+
+  describe("delete", () => {
+    it("calls delete with the right id", async () => {
+      // arrange
+      const deleteSpy = vi.spyOn(mockedAxios, "delete")
+      const baseUri = "delete"
+      const api = createApi({
+        baseUri,
+        client: mockedAxios,
+        models: {
+          entity: entityZodShape,
+        },
+      })
+      const testId = faker.datatype.uuid()
+      //act
+      await api.remove(testId)
+      //assert
+      expect(deleteSpy).toHaveBeenCalledWith(`${baseUri}/${testId}/`)
+    })
+  })
+
+  describe("update", () => {
+    const baseUri = "update"
+    const api = createApi({
+      baseUri,
+      client: mockedAxios,
+      models: {
+        entity: entityZodShape,
+      },
+    })
+    it("calls update with partial and patch: default", async () => {
+      //arrange
+      mockedAxios.patch.mockResolvedValueOnce({
+        data: mockEntity1Snaked,
+      })
+      const patchSpy = vi.spyOn(mockedAxios, "patch")
+      const { id, ...body } = {
+        id: mockEntity1.id,
+        age: mockEntity1.age,
+      }
+      //act
+      await api.update({
+        id,
+        ...body,
+      })
+      expect(patchSpy).toHaveBeenCalledWith(`${baseUri}/${id}/`, objectToSnakeCase(body))
+    })
+    it("calls update with partial and put", async () => {
+      //arrange
+      const putSpy = vi.spyOn(mockedAxios, "put")
+      const { id, ...body } = {
+        id: mockEntity1.id,
+        age: mockEntity1.age,
+      }
+      //act
+      await api.update.replace.asPartial({
+        id,
+        ...body,
+      })
+      expect(putSpy).toHaveBeenCalledWith(`${baseUri}/${id}/`, objectToSnakeCase(body))
+    })
+    it("calls update with total and put", async () => {
+      //arrange
+      const putSpy = vi.spyOn(mockedAxios, "put")
+      // fullName is readonly so won't be sent as parameter!
+      const { id, fullName, ...body } = mockEntity1
+      //act
+      await api.update.replace(mockEntity1)
+      expect(putSpy).toHaveBeenCalledWith(`${baseUri}/${id}/`, objectToSnakeCase(body))
+    })
+  })
+})
+
+describe("TS Tests", () => {
+  it("CustomServiceCallRecordTest ts tests", () => {
+    type tInputShape = { testInput: z.ZodString }
+    type tOutputShape = { testOutput: z.ZodNumber }
+    type tFiltersShape = { testFilter: z.ZodString }
+    type tFiltersShapeVoid = z.ZodVoid
+    type myCustomServiceCallRecord = {
+      customService: {
+        inputShape: tInputShape
+        outputShape: tOutputShape
+        filtersShape: tFiltersShape
+        callback: (params: any) => Promise<GetInferredFromRaw<tOutputShape>>
+      }
+      noFiltersService: {
+        inputShape: tInputShape
+        outputShape: tOutputShape
+        filtersShape: tFiltersShapeVoid
+        callback: (params: any) => Promise<GetInferredFromRaw<tOutputShape>>
+      }
+      noInputWithFilterService: {
+        inputShape: z.ZodVoid
+        outputShape: tOutputShape
+        filtersShape: tFiltersShape
+        callback: (params: any) => Promise<GetInferredFromRaw<tOutputShape>>
+      }
+      justCallback: {
+        inputShape: z.ZodVoid
+        outputShape: z.ZodVoid
+        filtersShape: z.ZodVoid
+        callback: (params: any) => Promise<void>
+      }
+    }
+    type result = CustomServiceCallsRecord<myCustomServiceCallRecord>
+    type whatIsThis = result["noInputWithFilterService"]
+
+    type tests = [
+      Expect<
+        Equals<
+          result["customService"],
+          (
+            params: {
+              input: InferShapeOrZod<tInputShape>
+            } & {
+              filters?: Partial<InferShapeOrZod<tFiltersShape>> | undefined
+            }
+          ) => Promise<InferShapeOrZod<tOutputShape>>
+        >
+      >,
+      Expect<
+        Equals<
+          result["noFiltersService"],
+          (input: InferShapeOrZod<tInputShape>) => Promise<InferShapeOrZod<tOutputShape>>
+        >
+      >,
+      Expect<
+        Equals<
+          result["noInputWithFilterService"],
+          (
+            ...args: [{ filters?: Partial<GetInferredFromRaw<tFiltersShape>> }] | []
+          ) => Promise<InferShapeOrZod<tOutputShape>>
+        >
+      >,
+      Expect<Equals<result["justCallback"], () => Promise<void>>>
+    ]
+  })
+
+  it("ServiceCallFn ts tests", () => {
+    // Test suite for ServiceCallFn
+    type inputShapeMock = { testInput: z.ZodString }
+    type outputShapeMock = { testOutput: z.ZodNumber }
+    type filtersShapeMock = { testFilter: z.ZodString }
+    type tests = [
+      Expect<
+        Equals<
+          ServiceCallFn<inputShapeMock, outputShapeMock>,
+          (args: InferShapeOrZod<inputShapeMock>) => Promise<InferShapeOrZod<outputShapeMock>>
+        >
+      >,
+      Expect<Equals<ServiceCallFn<inputShapeMock>, (args: InferShapeOrZod<inputShapeMock>) => Promise<void>>>,
+      Expect<Equals<ServiceCallFn<z.ZodVoid, outputShapeMock>, () => Promise<InferShapeOrZod<outputShapeMock>>>>,
+      Expect<Equals<ServiceCallFn, () => Promise<void>>>,
+      Expect<
+        Equals<
+          ServiceCallFn<inputShapeMock, outputShapeMock, filtersShapeMock>,
+          (
+            args: {
+              input: InferShapeOrZod<inputShapeMock>
+            } & { filters?: Partial<InferShapeOrZod<filtersShapeMock>> }
+          ) => Promise<InferShapeOrZod<outputShapeMock>>
+        >
+      >
+    ]
   })
 })

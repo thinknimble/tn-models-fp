@@ -14,5 +14,7 @@ module.exports = {
   plugins: ["@typescript-eslint"],
   rules: {
     "prettier/prettier": "off",
+    // Trusting people won't use reckless any on stuff
+    "@typescript-eslint/no-explicit-any": "off",
   },
 }

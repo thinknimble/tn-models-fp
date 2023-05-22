@@ -12,7 +12,7 @@ describe("createApiUtils", () => {
       outputShape: z.number(),
     })
     type tests = [Expect<Equals<typeof utils, unknown>>]
-    expect(utils).toBeNull()
+    expect(utils).toEqual({})
   })
   it("only returns toApi when only inputShape is provided", () => {
     const { utils } = createApiUtils({
