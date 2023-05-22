@@ -330,7 +330,7 @@ Returns a paginated version of the resolved type of `entity` from given models.
 
 #### `update` - Put/Patch request to update a resource by id
 
-This method takes as parameter the resolved type of the `entity` from given models minus the [declared readonly fields](#make-fields-readonly) which are stripped to keep you from sending them in the request.
+This method takes as parameter the resolved type of the `entity` from given models minus the [declared readonly fields](#make-fields-readonly--only-applicable-for-entity) which are stripped to keep you from sending them in the request.
 
 There are a couple of flavors of this method to your convenience:
 
