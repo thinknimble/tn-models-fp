@@ -15,9 +15,10 @@ import {
   parseFilters,
   parseResponse,
   removeReadonlyFields,
+  defineProperty,
 } from "../utils"
-import { AxiosLike, CustomServiceCallOpts, CustomServiceCallPlaceholder, CustomServiceCallsRecord } from "./types"
 import { createCustomServiceCall } from "./create-custom-call"
+import { AxiosLike, CustomServiceCallPlaceholder, CustomServiceCallsRecord } from "./types"
 
 const uuidZod = z.string().uuid()
 
@@ -322,24 +323,23 @@ export function createApi<
   }
 
   //! this is a bit painful to look at but I feel it is a good UX so that we don't make Users go through updateBase params
-  const update = (() => {
-    const baseFn = async (
-      args: Partial<GetInferredFromRaw<typeof entityShapeWithoutReadonlyFields>> & { id: string }
-    ) => {
-      return updateBase({ newValue: args, httpMethod: "patch", type: "partial" })
-    }
-    const replace = (() => {
-      const replaceBaseFn = async (
-        args: GetInferredFromRaw<typeof entityShapeWithoutReadonlyFields> & { id: string }
-      ) => updateBase({ newValue: args, httpMethod: "put", type: "total" })
-      replaceBaseFn.asPartial = (
-        inputs: Partial<GetInferredFromRaw<StripReadonlyBrand<TApiEntityShape>>> & { id: string }
-      ) => updateBase({ newValue: inputs, httpMethod: "put", type: "partial" })
-      return replaceBaseFn
-    })()
-    baseFn.replace = replace
-    return baseFn as unknown as UpdateCallObj<TApiEntityShape>["update"]
-  })()
+  const update = async (
+    args: Partial<GetInferredFromRaw<typeof entityShapeWithoutReadonlyFields>> & { id: string }
+  ) => {
+    return updateBase({ newValue: args, httpMethod: "patch", type: "partial" })
+  }
+  defineProperty(
+    update,
+    "replace",
+    async (args: GetInferredFromRaw<typeof entityShapeWithoutReadonlyFields> & { id: string }) =>
+      updateBase({ newValue: args, httpMethod: "put", type: "total" })
+  )
+  defineProperty(
+    update.replace,
+    "asPartial",
+    (inputs: Partial<GetInferredFromRaw<StripReadonlyBrand<TApiEntityShape>>> & { id: string }) =>
+      updateBase({ newValue: inputs, httpMethod: "put", type: "partial" })
+  )
 
   const baseReturn = { client: axiosLikeClient, retrieve, list, remove, update, ...createObj }
 
