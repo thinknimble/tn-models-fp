@@ -1,5 +1,11 @@
 # @thinknimble/tn-models-fp
 
+## 2.9.0
+
+### Minor Changes
+
+- f976657: Add chance to declare readonly fields at root level of entity shapes. Introduce `update` and `delete` built-in methods for the api. `update` has a couple of variants which allow users to pick the right behaviour for their update calls
+
 ## 2.8.1
 
 ### Patch Changes
