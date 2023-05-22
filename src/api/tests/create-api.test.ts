@@ -257,7 +257,7 @@ describe("createApi", async () => {
     })
   })
 
-  describe.only("update", () => {
+  describe("update", () => {
     const baseUri = "update"
     const api = createApi({
       baseUri,
@@ -278,10 +278,8 @@ describe("createApi", async () => {
       }
       //act
       await api.update({
-        newValue: {
-          id,
-          ...body,
-        },
+        id,
+        ...body,
       })
       expect(patchSpy).toHaveBeenCalledWith(`${baseUri}/${id}/`, objectToSnakeCase(body))
     })
@@ -293,12 +291,9 @@ describe("createApi", async () => {
         age: mockEntity1.age,
       }
       //act
-      await api.update({
-        httpMethod: "put",
-        newValue: {
-          id,
-          ...body,
-        },
+      await api.update.replace.asPartial({
+        id,
+        ...body,
       })
       expect(putSpy).toHaveBeenCalledWith(`${baseUri}/${id}/`, objectToSnakeCase(body))
     })
@@ -308,11 +303,7 @@ describe("createApi", async () => {
       // fullName is readonly so won't be sent as parameter!
       const { id, fullName, ...body } = mockEntity1
       //act
-      await api.update({
-        type: "total",
-        httpMethod: "put",
-        newValue: mockEntity1,
-      })
+      await api.update.replace(mockEntity1)
       expect(putSpy).toHaveBeenCalledWith(`${baseUri}/${id}/`, objectToSnakeCase(body))
     })
   })

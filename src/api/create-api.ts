@@ -50,13 +50,26 @@ type CreateCallObj<TEntity extends z.ZodRawShape, TCreate extends z.ZodRawShape>
   create: (inputs: GetInferredFromRaw<TCreate>) => Promise<GetInferredFromRaw<TEntity>>
 }
 type UpdateCallObj<TEntity extends z.ZodRawShape> = {
-  update: <TType extends "partial" | "total" = "partial">(inputs: {
-    type?: TType
-    httpMethod?: "put" | "patch"
-    newValue: TType extends "partial"
-      ? Partial<GetInferredFromRaw<StripReadonlyBrand<TEntity>>> & { id: string }
-      : GetInferredFromRaw<StripReadonlyBrand<TEntity>> & { id: string }
-  }) => TEntity
+  update: {
+    /**
+     * Perform a patch request with a partial body
+     */
+    (inputs: Partial<GetInferredFromRaw<StripReadonlyBrand<TEntity>>> & { id: string }): Promise<
+      GetInferredFromRaw<TEntity>
+    >
+    /**
+     * Perform a put request with a full body
+     */
+    replace: {
+      (inputs: GetInferredFromRaw<StripReadonlyBrand<TEntity>> & { id: string }): Promise<GetInferredFromRaw<TEntity>>
+      /**
+       * Perform a put request with a full body
+       */
+      asPartial: (
+        inputs: Partial<GetInferredFromRaw<StripReadonlyBrand<TEntity>>> & { id: string }
+      ) => Promise<GetInferredFromRaw<TEntity>>
+    }
+  }
 }
 
 type WithCreateModelCall<TModels extends BaseModelsPlaceholder> = TModels extends EntityModelObj<infer TE>
@@ -273,7 +286,8 @@ export function createApi<
   const remove = (id: string) => {
     return client.delete(`${slashEndingBaseUri}${id}/`)
   }
-  const update = async <TType extends "partial" | "total" = "partial">({
+
+  const updateBase = async <TType extends "partial" | "total" = "partial">({
     httpMethod = "patch",
     type = "partial",
     newValue,
@@ -306,6 +320,26 @@ export function createApi<
     })
     return updateCall(parsedInput)
   }
+
+  //! this is a bit painful to look at but I feel it is a good UX so that we don't make Users go through updateBase params
+  const update = (() => {
+    const baseFn = async (
+      args: Partial<GetInferredFromRaw<typeof entityShapeWithoutReadonlyFields>> & { id: string }
+    ) => {
+      return updateBase({ newValue: args, httpMethod: "patch", type: "partial" })
+    }
+    const replace = (() => {
+      const replaceBaseFn = async (
+        args: GetInferredFromRaw<typeof entityShapeWithoutReadonlyFields> & { id: string }
+      ) => updateBase({ newValue: args, httpMethod: "put", type: "total" })
+      replaceBaseFn.asPartial = (
+        inputs: Partial<GetInferredFromRaw<StripReadonlyBrand<TApiEntityShape>>> & { id: string }
+      ) => updateBase({ newValue: inputs, httpMethod: "put", type: "partial" })
+      return replaceBaseFn
+    })()
+    baseFn.replace = replace
+    return baseFn as unknown as UpdateCallObj<TApiEntityShape>["update"]
+  })()
 
   const baseReturn = { client: axiosLikeClient, retrieve, list, remove, update, ...createObj }
 
