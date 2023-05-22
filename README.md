@@ -62,7 +62,7 @@ pnpm i @thinknimble/tn-models-fp
  *
  */
 
-import axios from "axios" // it is not required to use axios - pick any client
+import axios from "axios"
 import { z } from "zod"
 import { GetInferredFromRaw, createCustomServiceCall } from "@thinknimble/tn-models-fp"
 
@@ -142,7 +142,7 @@ const login = createCustomServiceCall(
   },
   async ({ client, slashEndingBaseUri, input, utils: { toApi, fromApi } }) => {
     const data = toApi(input)
-    const res = await client.login(`api/login/`, rest)
+    const res = await client.post(`api/login/`, rest)
     return fromApi(res.data)
   }
 )
