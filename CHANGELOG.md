@@ -1,5 +1,11 @@
 # @thinknimble/tn-models-fp
 
+## 2.10.1
+
+### Patch Changes
+
+- 5dacdf6: Fix issue with return type of remove
+
 ## 2.10.0
 
 ### Minor Changes
