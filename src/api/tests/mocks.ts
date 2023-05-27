@@ -18,6 +18,10 @@ export const entityZodShape = {
   id: z.string().uuid(),
   fullName: readonly(z.string()),
 }
+export const entityZodShapeWithIdNumber = {
+  ...entityZodShape,
+  id: z.number(),
+}
 
 type Entity = GetInferredFromRaw<typeof entityZodShape>
 

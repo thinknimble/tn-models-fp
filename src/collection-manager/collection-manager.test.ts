@@ -1,12 +1,11 @@
 import { faker } from "@faker-js/faker"
 import { objectToCamelCase, objectToSnakeCase } from "@thinknimble/tn-utils"
 import axios from "axios"
-import { beforeEach, describe, expect, it, Mocked, vi } from "vitest"
+import { Mocked, beforeEach, describe, expect, it, vi } from "vitest"
 import { z } from "zod"
-import { Pagination } from "../utils/pagination"
-import { createApi } from "../api"
 import { createCollectionManager } from "."
-import { getPaginatedSnakeCasedZod } from "../utils/pagination"
+import { createApi } from "../api"
+import { Pagination, getPaginatedSnakeCasedZod } from "../utils/pagination"
 
 vi.mock("axios")
 

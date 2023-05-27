@@ -1,4 +1,3 @@
-//TODO: refactor built-in methods to all be custom service call specific cases
 import { objectToCamelCase } from "@thinknimble/tn-utils"
 import { AxiosInstance } from "axios"
 import { z } from "zod"
@@ -6,69 +5,86 @@ import {
   FiltersShape,
   GetInferredFromRaw,
   IPagination,
+  ReadonlyTag,
   StripReadonlyBrand,
+  UnwrapBranded,
   createApiUtils,
   createCustomServiceCallHandler,
+  defineProperty,
   getPaginatedSnakeCasedZod,
   getPaginatedZod,
   paginationFiltersZodShape,
   parseFilters,
   parseResponse,
   removeReadonlyFields,
-  defineProperty,
 } from "../utils"
 import { createCustomServiceCall } from "./create-custom-call"
 import { AxiosLike, CustomServiceCallPlaceholder, CustomServiceCallsRecord } from "./types"
 
 const uuidZod = z.string().uuid()
 
+type EntityShape = z.ZodRawShape & {
+  id: z.ZodString | z.ZodNumber | z.ZodBranded<z.ZodString, ReadonlyTag> | z.ZodBranded<z.ZodNumber, ReadonlyTag>
+}
+
 type BaseModelsPlaceholder<
-  TE extends z.ZodRawShape = z.ZodRawShape,
-  TC extends z.ZodRawShape = z.ZodRawShape,
-  TEx extends FiltersShape = FiltersShape
-> = TE extends z.ZodRawShape
-  ? (EntityModelObj<TE> & ExtraFiltersObj<TEx>) | (EntityModelObj<TE> & ExtraFiltersObj<TEx> & CreateModelObj<TC>)
+  TEntity extends EntityShape = EntityShape,
+  TCreate extends z.ZodRawShape = z.ZodRawShape,
+  TBuiltInFilters extends FiltersShape = FiltersShape
+> = TEntity extends EntityShape
+  ?
+      | (EntityModelObj<TEntity> & ExtraFiltersObj<TBuiltInFilters>)
+      | (EntityModelObj<TEntity> & ExtraFiltersObj<TBuiltInFilters> & CreateModelObj<TCreate>)
   : unknown
 
-type RetrieveCallObj<TEntity extends z.ZodRawShape> = {
+type RetrieveCallObj<TEntity extends EntityShape> = {
   /**
    * Get resource by id
    * @param id resource id
    * @returns
    */
-  retrieve: (id: string) => Promise<GetInferredFromRaw<TEntity>>
+  retrieve: (
+    id: GetInferredFromRaw<UnwrapBranded<TEntity, ReadonlyTag>>["id"]
+  ) => Promise<GetInferredFromRaw<UnwrapBranded<TEntity>>>
 }
-type ListCallObj<TEntity extends z.ZodRawShape, TExtraFilters extends FiltersShape = never> = {
+type ListCallObj<TEntity extends EntityShape, TExtraFilters extends FiltersShape = never> = {
   /**
    * This calls the `{baseUri}/list` endpoint. Note that this has to be available in the api you're consuming for this method to actually work
    */
   list: (params?: {
     filters?: GetInferredFromRaw<TExtraFilters>
     pagination?: IPagination
-  }) => Promise<z.infer<ReturnType<typeof getPaginatedZod<TEntity>>>>
+  }) => Promise<z.infer<ReturnType<typeof getPaginatedZod<UnwrapBranded<TEntity, ReadonlyTag>>>>>
 }
-type CreateCallObj<TEntity extends z.ZodRawShape, TCreate extends z.ZodRawShape> = {
-  create: (inputs: GetInferredFromRaw<TCreate>) => Promise<GetInferredFromRaw<TEntity>>
+type CreateCallObj<TEntity extends EntityShape, TCreate extends z.ZodRawShape> = {
+  create: (inputs: GetInferredFromRaw<TCreate>) => Promise<GetInferredFromRaw<UnwrapBranded<TEntity, ReadonlyTag>>>
 }
-type UpdateCallObj<TEntity extends z.ZodRawShape> = {
+type ErrorEntityShapeMustHaveAnIdField = '[TypeError] Your entity should have an "id" field'
+type UpdateCallObj<
+  TEntity extends EntityShape,
+  TInferredEntityWithoutReadonlyFields = GetInferredFromRaw<StripReadonlyBrand<TEntity>>,
+  TInferredIdObj = TInferredEntityWithoutReadonlyFields extends { id: infer TId }
+    ? { id: TId }
+    : ErrorEntityShapeMustHaveAnIdField
+> = {
   update: {
     /**
      * Perform a patch request with a partial body
      */
-    (inputs: Partial<GetInferredFromRaw<StripReadonlyBrand<TEntity>>> & { id: string }): Promise<
-      GetInferredFromRaw<TEntity>
+    (inputs: Omit<Partial<TInferredEntityWithoutReadonlyFields>, "id"> & TInferredIdObj): Promise<
+      GetInferredFromRaw<UnwrapBranded<TEntity, ReadonlyTag>>
     >
     /**
      * Perform a put request with a full body
      */
     replace: {
-      (inputs: GetInferredFromRaw<StripReadonlyBrand<TEntity>> & { id: string }): Promise<GetInferredFromRaw<TEntity>>
+      (inputs: TInferredEntityWithoutReadonlyFields): Promise<GetInferredFromRaw<UnwrapBranded<TEntity, ReadonlyTag>>>
       /**
        * Perform a put request with a full body
        */
       asPartial: (
-        inputs: Partial<GetInferredFromRaw<StripReadonlyBrand<TEntity>>> & { id: string }
-      ) => Promise<GetInferredFromRaw<TEntity>>
+        inputs: Omit<Partial<TInferredEntityWithoutReadonlyFields>, "id"> & TInferredIdObj
+      ) => Promise<GetInferredFromRaw<UnwrapBranded<TEntity, ReadonlyTag>>>
     }
   }
 }
@@ -86,8 +102,8 @@ type WithExtraFiltersModelCall<TModels extends BaseModelsPlaceholder> = TModels 
     ? ListCallObj<TE, TEx>
     : ListCallObj<TE>
   : unknown
-type WithRemoveModelCall<TModels extends BaseModelsPlaceholder> = TModels extends EntityModelObj<any>
-  ? { remove: (id: string) => void }
+type WithRemoveModelCall<TModels extends BaseModelsPlaceholder> = TModels extends EntityModelObj<infer TEntityShape>
+  ? { remove: (id: GetInferredFromRaw<UnwrapBranded<TEntityShape, ReadonlyTag>>["id"]) => void }
   : unknown
 type WithUpdateModelCall<TModels extends BaseModelsPlaceholder> = TModels extends EntityModelObj<infer TE>
   ? UpdateCallObj<TE>
@@ -132,7 +148,7 @@ type ExtraFiltersObj<TExtraFilters extends FiltersShape> = {
   extraFilters?: TExtraFilters
 }
 
-type EntityModelObj<TApiEntity extends z.ZodRawShape> = {
+type EntityModelObj<TApiEntity extends EntityShape> = {
   /**
    * Zod raw shape of the equivalent camel-cased version of the entity in backend
    *
@@ -151,7 +167,9 @@ type EntityModelObj<TApiEntity extends z.ZodRawShape> = {
 
 type BaseApiParams = {
   /**
-   * The base uri for te api to hit. We append this to request's uris for listing, retrieving and creating
+   * The base uri for te api to hit. We append this to request's uris for built-in methods as provide a slash-ended version for custom calls
+   * @example
+   * baseUri='/api/todos'
    */
   readonly baseUri: string
   /**
@@ -223,7 +241,7 @@ export function createApi<
   if (!models || !models.entity) {
     return { client: axiosLikeClient }
   }
-  const entityShapeWithoutReadonlyFields = removeReadonlyFields(models.entity)
+  const entityShapeWithoutReadonlyFields = removeReadonlyFields(models.entity, ["id"])
   type TApiEntityShape = TModels extends EntityModelObj<infer TE> ? TE : z.ZodRawShape
 
   /**
@@ -245,7 +263,7 @@ export function createApi<
     }
     createObj = { create }
   }
-  const retrieve = async (id: string) => {
+  const retrieve = async (id: GetInferredFromRaw<UnwrapBranded<TApiEntityShape, ReadonlyTag>>["id"]) => {
     if (!uuidZod.safeParse(id).success) {
       console.warn("The passed id is not a valid UUID, check your input")
     }
@@ -284,7 +302,7 @@ export function createApi<
     return { ...rawResponse, results: rawResponse.results.map((r) => objectToCamelCase(r)) }
   }
 
-  const remove = (id: string) => {
+  const remove = (id: GetInferredFromRaw<UnwrapBranded<TApiEntityShape, ReadonlyTag>>["id"]) => {
     return client.delete(`${slashEndingBaseUri}${id}/`)
   }
 
@@ -296,8 +314,8 @@ export function createApi<
     type?: "partial" | "total"
     httpMethod?: "put" | "patch"
     newValue: (TType extends "partial"
-      ? Partial<GetInferredFromRaw<typeof entityShapeWithoutReadonlyFields>>
-      : GetInferredFromRaw<typeof entityShapeWithoutReadonlyFields>) & { id: string }
+      ? Omit<Partial<GetInferredFromRaw<typeof entityShapeWithoutReadonlyFields>>, "id">
+      : GetInferredFromRaw<typeof entityShapeWithoutReadonlyFields>) & { id: GetInferredFromRaw<TApiEntityShape>["id"] }
   }) => {
     if (!("id" in newValue)) {
       console.error("The update body needs an id to use this method")

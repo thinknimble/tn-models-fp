@@ -2,7 +2,8 @@ import { CamelCasedPropertiesDeep, objectToCamelCase, objectToSnakeCase, toCamel
 import { AxiosInstance } from "axios"
 import { z } from "zod"
 import { AxiosLike } from "../../api/types"
-import { FiltersShape, parseFilters } from "../filters"
+import { parseFilters } from "../filters"
+import { Pagination } from "../pagination"
 import { parseResponse } from "../response"
 import {
   READONLY_TAG,
@@ -14,7 +15,6 @@ import {
   zodObjectToSnakeRecursive,
 } from "../zod"
 import { CallbackUtils, FromApiCall, ToApiCall } from "./types"
-import { Pagination } from "../pagination"
 
 //TODO: this should probably move to tn-utils but will keep it here for a quick release
 export const objectToCamelCaseArr = <T extends object>(obj: T): CamelCasedPropertiesDeep<T> => {
@@ -96,7 +96,10 @@ export function createApiUtils<
   ) as CallbackUtils<TInput, TOutput>
 }
 
-//TODO: improve types
+//TODO: improve types #95
+/**
+ * Core method of custom calls.
+ */
 export const createCustomServiceCallHandler =
   ({
     client,
@@ -105,10 +108,10 @@ export const createCustomServiceCallHandler =
     name,
   }: {
     serviceCallOpts: any
+    client: AxiosInstance | AxiosLike
     /**
      * This name allow us to keep record of which method it is, so that we can identify in case of output mismatch
      */
-    client: AxiosInstance | AxiosLike
     name?: string
     baseUri?: string
   }) =>
@@ -165,24 +168,18 @@ export const createCustomServiceCallHandler =
     })
   }
 
-export const removeReadonlyFields = <T extends z.ZodRawShape>(shape: T) => {
-  return Object.fromEntries(
-    Object.entries(shape).flatMap(([k, v]) => {
-      if (v instanceof z.ZodBranded && v.description === READONLY_TAG) {
-        return []
+export const removeReadonlyFields = <T extends z.ZodRawShape, TUnwrap extends (keyof T)[] = []>(
+  shape: T,
+  unwrap?: TUnwrap
+) => {
+  const entries = Object.entries(shape).flatMap(([k, v]) => {
+    if (v instanceof z.ZodBranded && v.description === READONLY_TAG) {
+      if (unwrap && unwrap.includes(k)) {
+        return [[k, v.unwrap()]]
       }
-      return [[k, v]]
-    })
-  ) as StripReadonlyBrand<T>
+      return []
+    }
+    return [[k, v]]
+  })
+  return Object.fromEntries(entries) as StripReadonlyBrand<T, TUnwrap>
 }
-
-// export const createCustomServiceCallOpts = <  TInput extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny> = z.ZodVoid,
-// TOutput extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny> = z.ZodVoid,
-// TFilters extends FiltersShape | z.ZodVoid = z.ZodVoid,
-// TCallType extends string = "">(param:{
-//   inputShape?:TInput,
-//   outputShape?:TOutput,
-//   filtersShape?:TFilters,
-// })=>{
-
-// }
