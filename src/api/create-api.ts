@@ -103,7 +103,7 @@ type WithExtraFiltersModelCall<TModels extends BaseModelsPlaceholder> = TModels 
     : ListCallObj<TE>
   : unknown
 type WithRemoveModelCall<TModels extends BaseModelsPlaceholder> = TModels extends EntityModelObj<infer TEntityShape>
-  ? { remove: (id: GetInferredFromRaw<UnwrapBranded<TEntityShape, ReadonlyTag>>["id"]) => void }
+  ? { remove: (id: GetInferredFromRaw<UnwrapBranded<TEntityShape, ReadonlyTag>>["id"]) => Promise<void> }
   : unknown
 type WithUpdateModelCall<TModels extends BaseModelsPlaceholder> = TModels extends EntityModelObj<infer TE>
   ? UpdateCallObj<TE>
