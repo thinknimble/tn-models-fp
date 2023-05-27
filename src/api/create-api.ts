@@ -5,6 +5,7 @@ import {
   FiltersShape,
   GetInferredFromRaw,
   IPagination,
+  IsNever,
   ReadonlyTag,
   StripReadonlyBrand,
   UnwrapBranded,
@@ -20,8 +21,6 @@ import {
 } from "../utils"
 import { createCustomServiceCall } from "./create-custom-call"
 import { AxiosLike, CustomServiceCallPlaceholder, CustomServiceCallsRecord } from "./types"
-
-const uuidZod = z.string().uuid()
 
 type EntityShape = z.ZodRawShape & {
   id: z.ZodString | z.ZodNumber | z.ZodBranded<z.ZodString, ReadonlyTag> | z.ZodBranded<z.ZodNumber, ReadonlyTag>
@@ -56,8 +55,12 @@ type ListCallObj<TEntity extends EntityShape, TExtraFilters extends FiltersShape
     pagination?: IPagination
   }) => Promise<z.infer<ReturnType<typeof getPaginatedZod<UnwrapBranded<TEntity, ReadonlyTag>>>>>
 }
-type CreateCallObj<TEntity extends EntityShape, TCreate extends z.ZodRawShape> = {
-  create: (inputs: GetInferredFromRaw<TCreate>) => Promise<GetInferredFromRaw<UnwrapBranded<TEntity, ReadonlyTag>>>
+type CreateCallObj<TEntity extends EntityShape, TCreate extends z.ZodRawShape = never> = {
+  create: (
+    inputs: IsNever<TCreate> extends true
+      ? Omit<StripReadonlyBrand<GetInferredFromRaw<TEntity>>, "id">
+      : GetInferredFromRaw<TCreate>
+  ) => Promise<GetInferredFromRaw<UnwrapBranded<TEntity, ReadonlyTag>>>
 }
 type ErrorEntityShapeMustHaveAnIdField = '[TypeError] Your entity should have an "id" field'
 type UpdateCallObj<
@@ -92,7 +95,7 @@ type UpdateCallObj<
 type WithCreateModelCall<TModels extends BaseModelsPlaceholder> = TModels extends EntityModelObj<infer TE>
   ? TModels extends CreateModelObj<infer TC>
     ? CreateCallObj<TE, TC>
-    : unknown
+    : CreateCallObj<TE>
   : unknown
 type WithEntityModelCall<TModels extends BaseModelsPlaceholder> = TModels extends EntityModelObj<infer TE>
   ? RetrieveCallObj<TE>
@@ -247,26 +250,20 @@ export function createApi<
   /**
    * Placeholder to include or not the create method in the return based on models
    */
-  //TODO: I will likely stop requiring really the create method at all, since we probably just want the same entity shape without id and readonly fields...
-  let createObj: object = {}
-  if ("create" in models) {
-    type TApiCreateShape = TModels extends CreateCallObj<TApiEntityShape, infer TC> ? TC : z.ZodRawShape
-    type TApiCreate = GetInferredFromRaw<TApiCreateShape>
-    const create = async (inputs: TApiCreate) => {
-      const { utils } = createApiUtils({
-        inputShape: models.create,
-        name: create.name,
-        outputShape: models.entity,
-      })
-      const res = await axiosLikeClient.post(slashEndingBaseUri, utils.toApi(inputs))
-      return utils.fromApi(res.data)
-    }
-    createObj = { create }
+  type TApiCreateShape = TModels extends CreateCallObj<TApiEntityShape, infer TC> ? TC : z.ZodRawShape
+  type TApiCreate = GetInferredFromRaw<TApiCreateShape>
+  const create = async (inputs: TApiCreate) => {
+    const { id: _, ...entityShapeWithoutReadonlyFieldsNorId } = entityShapeWithoutReadonlyFields
+    const { utils } = createApiUtils({
+      inputShape: "create" in models ? models.create : entityShapeWithoutReadonlyFieldsNorId,
+      name: create.name,
+      outputShape: models.entity,
+    })
+    const res = await axiosLikeClient.post(slashEndingBaseUri, utils.toApi(inputs))
+    return utils.fromApi(res.data)
   }
+
   const retrieve = async (id: GetInferredFromRaw<UnwrapBranded<TApiEntityShape, ReadonlyTag>>["id"]) => {
-    if (!uuidZod.safeParse(id).success) {
-      console.warn("The passed id is not a valid UUID, check your input")
-    }
     const { utils } = createApiUtils({
       name: retrieve.name,
       outputShape: models.entity,
@@ -359,7 +356,7 @@ export function createApi<
       updateBase({ newValue: inputs, httpMethod: "put", type: "partial" })
   )
 
-  const baseReturn = { client: axiosLikeClient, retrieve, list, remove, update, ...createObj }
+  const baseReturn = { client: axiosLikeClient, retrieve, list, remove, update, create }
 
   if (!modifiedCustomServiceCalls) return baseReturn
 
