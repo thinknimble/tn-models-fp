@@ -51,12 +51,14 @@ describe("createApi", async () => {
       expect(testApiNoModels).not.toHaveProperty("retrieve")
       expect(testApiNoModels).not.toHaveProperty("create")
     })
-    it("only exposes retrieve and list if only `entity` is passed", () => {
+    it("only exposes retrieve, list, update if `entity` is passed, no custom calls", () => {
       //@ts-expect-error don't mind this it is hard for TS to determine which overload it should check, on the tests below it is picking up the correct one!
       type ExpectedReturn = ReturnType<typeof createApi<{ entity: typeof entityZodShape }>>
       type tests = [
         ExpectedReturn["list"],
         ExpectedReturn["retrieve"],
+        ExpectedReturn["update"],
+        ExpectedReturn["create"],
         //@ts-expect-error should not include customServiceCalls
         ExpectedReturn["customServiceCalls"],
         //@ts-expect-error should not include  csc
@@ -70,9 +72,10 @@ describe("createApi", async () => {
           entity: entityZodShape,
         },
       })
-      expect(testApiOnlyEntity).not.toHaveProperty("create")
+      expect(testApiOnlyEntity).toHaveProperty("create")
       expect(testApiOnlyEntity).toHaveProperty("list")
       expect(testApiOnlyEntity).toHaveProperty("retrieve")
+      expect(testApiOnlyEntity).toHaveProperty("update")
       expect(testApiOnlyEntity).not.toHaveProperty("csc")
       expect(testApiOnlyEntity).not.toHaveProperty("customServiceCalls")
     })
