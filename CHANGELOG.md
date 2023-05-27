@@ -1,5 +1,11 @@
 # @thinknimble/tn-models-fp
 
+## 2.11.1
+
+### Patch Changes
+
+- a13361d: Fix `create` built-in method requiring readonly fields as input.
+
 ## 2.11.0
 
 ### Minor Changes
