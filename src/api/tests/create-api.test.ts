@@ -3,13 +3,22 @@ import { faker } from "@faker-js/faker"
 import { SnakeCasedPropertiesDeep, objectToCamelCase, objectToSnakeCase } from "@thinknimble/tn-utils"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { z } from "zod"
-import { GetInferredFromRaw, InferShapeOrZod, Pagination, StripBrand } from "../../utils"
+import {
+  GetInferredFromRaw,
+  InferShapeOrZod,
+  Pagination,
+  ReadonlyTag,
+  StripBrand,
+  UnwrapBranded,
+  readonly,
+} from "../../utils"
 import { createApi } from "../create-api"
 import { createCustomServiceCall } from "../create-custom-call"
 import { CustomServiceCallsRecord, ServiceCallFn } from "../types"
 import {
   createZodShape,
   entityZodShape,
+  entityZodShapeWithIdNumber,
   listResponse,
   mockEntity1,
   mockEntity1Snaked,
@@ -255,6 +264,23 @@ describe("createApi", async () => {
       //assert
       expect(deleteSpy).toHaveBeenCalledWith(`${baseUri}/${testId}/`)
     })
+    it("calls delete with number id instead of string", async () => {
+      // arrange
+      const deleteSpy = vi.spyOn(mockedAxios, "delete")
+      const baseUri = "delete"
+      const api = createApi({
+        baseUri,
+        client: mockedAxios,
+        models: {
+          entity: entityZodShapeWithIdNumber,
+        },
+      })
+      const testId = faker.datatype.number()
+      //act
+      await api.remove(testId)
+      //assert
+      expect(deleteSpy).toHaveBeenCalledWith(`${baseUri}/${testId}/`)
+    })
   })
 
   describe("update", () => {
@@ -400,6 +426,66 @@ describe("TS Tests", () => {
           ) => Promise<InferShapeOrZod<outputShapeMock>>
         >
       >
+    ]
+  })
+
+  it("infers the id with the type declared in the entity shape", () => {
+    const entityShapeStrId = {
+      id: readonly(z.string()),
+      name: z.string(),
+    }
+    const entityShapeNumId = {
+      id: readonly(z.number()),
+      name: z.string(),
+    }
+    const apiStrId = createApi({
+      baseUri: "inferId",
+      client: mockedAxios,
+      models: {
+        entity: entityShapeStrId,
+      },
+    })
+    const apiNumId = createApi({
+      baseUri: "inferId",
+      client: mockedAxios,
+      models: {
+        entity: entityShapeNumId,
+      },
+    })
+    type apiStrId = typeof apiStrId
+    type apiNumId = typeof apiNumId
+    type tests = [
+      Expect<Equals<Parameters<apiStrId["remove"]>[0], string>>,
+      Expect<Equals<Parameters<apiNumId["remove"]>[0], number>>,
+      Expect<Equals<Parameters<apiStrId["retrieve"]>[0], string>>,
+      Expect<Equals<Parameters<apiNumId["retrieve"]>[0], number>>
+    ]
+  })
+
+  it("yields right types when using readonly fields", () => {
+    const entityShape = {
+      id: readonly(z.string()),
+      name: z.string(),
+      lastName: z.string(),
+      fullName: readonly(z.string()),
+    }
+    const api = createApi({
+      baseUri: "readonly",
+      client: mockedAxios,
+      models: {
+        entity: entityShape,
+        //TODO: will soon not be required #91
+        create: { name: entityShape.name, lastName: entityShape.lastName },
+      },
+    })
+    type api = typeof api
+    type unwrappedReadonlyBrands = GetInferredFromRaw<UnwrapBranded<typeof entityShape, ReadonlyTag>>
+    type tests = [
+      Expect<Equals<Awaited<ReturnType<api["retrieve"]>>, unwrappedReadonlyBrands>>,
+      Expect<Equals<Awaited<ReturnType<api["create"]>>, unwrappedReadonlyBrands>>,
+      Expect<Equals<Awaited<ReturnType<api["update"]>>, unwrappedReadonlyBrands>>,
+      Expect<Equals<Awaited<ReturnType<api["update"]["replace"]>>, unwrappedReadonlyBrands>>,
+      Expect<Equals<Awaited<ReturnType<api["update"]["replace"]["asPartial"]>>, unwrappedReadonlyBrands>>
     ]
   })
 })
