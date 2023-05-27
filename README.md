@@ -56,29 +56,25 @@ pnpm i @thinknimble/tn-models-fp
 ## Quickstart
 
 ```typescript
-
 /**
  *
  *  // creating a simple user api with login, registration, update
  *
  */
 
-
-
-
-import axios from 'axios' // it is not required to use axios - pick any client
-import {z} from 'zod'
-import {GetInferredFromRaw, createCustomServiceCall } from '@thinknimble/tn-models-fp'
+import axios from "axios"
+import { z } from "zod"
+import { GetInferredFromRaw, createCustomServiceCall } from "@thinknimble/tn-models-fp"
 
 /**
- * The entity is the default type to be used in the absence of any other overriding type
+ * The entity is the default type that is used as an output shape to the prebuilt methods
  */
 const userEntity = {
   id: z.string().uuid(),
   firstName: z.string(),
   lastName: z.string(),
   email: z.string(),
-  token: z.string()
+  token: z.string(),
 }
 
 /**
@@ -86,10 +82,10 @@ const userEntity = {
  */
 
 const createShape = {
-  email:z.string(),
-  password:z.string(),
-  firstName:z.string(),
-  lastName:z.string(),
+  email: z.string(),
+  password: z.string(),
+  firstName: z.string(),
+  lastName: z.string(),
 }
 /**
  * Since I know my update method can be partial and wont include all the same fields as a create I create an update shape
@@ -97,7 +93,7 @@ const createShape = {
 
 const updateShape = {
   firstName: z.string().optional(),
-  lastName: z.string().optional()
+  lastName: z.string().optional(),
 }
 
 /**
@@ -112,6 +108,8 @@ const loginShape = {
 /**
  * Create your api
  * Each api has a create, retrieve, list method by default
+ * They must be enabled by declaring them in the api with a type
+ *
  * These methods are accessible through the api directly eg:
  * userApi.create({})
  * userApi.retrieve({})
@@ -144,19 +142,19 @@ const login = createCustomServiceCall(
   },
   async ({ client, slashEndingBaseUri, input, utils: { toApi, fromApi } }) => {
     const data = toApi(input)
-    const res = await client.login(`api/login/`, rest)
+    const res = await client.post(`api/login/`, rest)
     return fromApi(res.data)
   }
 )
 /**
  * There is no need for an output shape in this case
  */
-const delete = createCustomServiceCall(
+const deleteEntity = createCustomServiceCall(
   {
-    inputShape: {id:z.string().uuid()}
+    inputShape: z.string().uuid(),
   },
-  async ({ client, slashEndingBaseUri, input, }) => {
-    const res = await client.delete(`api/users/${id}/`)
+  async ({ client, slashEndingBaseUri, input }) => {
+    const res = await client.delete(`api/users/${input}/`)
     return
   }
 )
@@ -166,8 +164,9 @@ const userApi = createApi({
   baseUri: "api/users/", // a base URI to be used as a default
   models: {
     /**
-     * since my create shape is different than the default AccountEntity
-     * I can override it here
+     *
+     * In order for my create function to be enabled I must declare it here with its shape
+     * In order to customize the output shape of the default methods you must create a custom call (createCustomServiceCall). That would only be necessary if your declared entity shape type is not what the creation request responds with
      *
      * */
 
@@ -177,14 +176,14 @@ const userApi = createApi({
      */
     entity: accountShape,
   },
-},
-{login, update,delete}) // Additional methods are delclared here
-
+  // Additional (aka custom calls) methods are declared here
+  {
+    login, update, deleteEntity
+  }
+})
 
 /**
- *
  * finally use your api with your favorite wrapper or directly
- *
  */
 
 /**
@@ -195,18 +194,13 @@ type User = GetInferredFromRaw<typeof scheduleRequestInputShape>
 
 let user: User | null = null
 
-try{
-  const user = userApi.create({email:"test@test.com",password:"password",firstName:"first",lastName:"last"})
-  const res = userApi.csc.login({email:"random@random.com",password:"iamapassword"})
+try {
+  const user = userApi.create({ email: "test@test.com", password: "password", firstName: "first", lastName: "last" })
+  const res = userApi.csc.login({ email: "random@random.com", password: "iamapassword" })
   const userAfterLogin = res.data
-}catch(e){
+} catch (e) {
   console.log(e)
-
 }
-
-
-
-
 ```
 
 ## Create your api!
@@ -215,8 +209,9 @@ You need a couple of things:
 
 - An `AxiosInstance`. Either create it on the fly or provide an existing one
 - A base uri for your api ( don't worry about trailing slashes we take care of that)
-- Model for resource creation
-- Model for resource entity (what you know the api will return)
+- Models (all optional):
+  - Model for resource entity: shape of the resource that will be returned by the api. Declaring this model will grant you access to [ built-in methods ](#built-in-methods)
+  - Model for the input of resource creation (optional, grants you access to `create` built-in method)
 
 IG:
 
