@@ -4,10 +4,10 @@ import { z } from "zod"
 import {
   FiltersShape,
   GetInferredFromRaw,
+  GetInferredWithoutReadonlyBrands,
   IPagination,
   IsNever,
   ReadonlyTag,
-  StripReadonlyBrand,
   UnwrapBranded,
   createApiUtils,
   createCustomServiceCallHandler,
@@ -58,14 +58,14 @@ type ListCallObj<TEntity extends EntityShape, TExtraFilters extends FiltersShape
 type CreateCallObj<TEntity extends EntityShape, TCreate extends z.ZodRawShape = never> = {
   create: (
     inputs: IsNever<TCreate> extends true
-      ? Omit<StripReadonlyBrand<GetInferredFromRaw<TEntity>>, "id">
+      ? Omit<GetInferredWithoutReadonlyBrands<TEntity>, "id">
       : GetInferredFromRaw<TCreate>
   ) => Promise<GetInferredFromRaw<UnwrapBranded<TEntity, ReadonlyTag>>>
 }
 type ErrorEntityShapeMustHaveAnIdField = '[TypeError] Your entity should have an "id" field'
 type UpdateCallObj<
   TEntity extends EntityShape,
-  TInferredEntityWithoutReadonlyFields = GetInferredFromRaw<StripReadonlyBrand<TEntity>>,
+  TInferredEntityWithoutReadonlyFields = GetInferredWithoutReadonlyBrands<TEntity>,
   TInferredIdObj = TInferredEntityWithoutReadonlyFields extends { id: infer TId }
     ? { id: TId }
     : ErrorEntityShapeMustHaveAnIdField
@@ -352,7 +352,7 @@ export function createApi<
   defineProperty(
     update.replace,
     "asPartial",
-    (inputs: Partial<GetInferredFromRaw<StripReadonlyBrand<TApiEntityShape>>> & { id: string }) =>
+    (inputs: Partial<GetInferredWithoutReadonlyBrands<TApiEntityShape>> & { id: string }) =>
       updateBase({ newValue: inputs, httpMethod: "put", type: "partial" })
   )
 

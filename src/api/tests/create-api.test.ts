@@ -163,7 +163,7 @@ describe("createApi", async () => {
       })
       //arrange
       mockedAxios.post.mockResolvedValueOnce({ data: mockEntity1Snaked })
-      const { id, ...input } = mockEntity1
+      const { id, fullName, ...input } = mockEntity1
       //act
       const response = await testApi.create(input)
       //assert
