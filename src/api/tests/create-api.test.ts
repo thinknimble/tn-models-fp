@@ -3,15 +3,7 @@ import { faker } from "@faker-js/faker"
 import { SnakeCasedPropertiesDeep, objectToCamelCase, objectToSnakeCase } from "@thinknimble/tn-utils"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { z } from "zod"
-import {
-  GetInferredFromRaw,
-  InferShapeOrZod,
-  Pagination,
-  ReadonlyTag,
-  StripBrand,
-  UnwrapBranded,
-  readonly,
-} from "../../utils"
+import { GetInferredFromRaw, InferShapeOrZod, Pagination, ReadonlyTag, UnwrapBranded, readonly } from "../../utils"
 import { createApi } from "../create-api"
 import { createCustomServiceCall } from "../create-custom-call"
 import { CustomServiceCallsRecord, ServiceCallFn } from "../types"
@@ -65,8 +57,6 @@ describe("createApi", async () => {
       type tests = [
         ExpectedReturn["list"],
         ExpectedReturn["retrieve"],
-        //@ts-expect-error should not include create method
-        ExpectedReturn["create"],
         //@ts-expect-error should not include customServiceCalls
         ExpectedReturn["customServiceCalls"],
         //@ts-expect-error should not include  csc
@@ -113,10 +103,9 @@ describe("createApi", async () => {
       firstName: "Jane",
     }
     const randomId: string = faker.datatype.uuid()
-    type test0 = GetInferredFromRaw<typeof entityZodShape>
-    type test = SnakeCasedPropertiesDeep<GetInferredFromRaw<typeof entityZodShape>>
-
-    const createResponse: SnakeCasedPropertiesDeep<GetInferredFromRaw<StripBrand<typeof entityZodShape>>> = {
+    const createResponse: SnakeCasedPropertiesDeep<
+      GetInferredFromRaw<UnwrapBranded<typeof entityZodShape, ReadonlyTag>>
+    > = {
       age: createInput.age,
       last_name: createInput.lastName,
       first_name: createInput.firstName,
@@ -139,10 +128,43 @@ describe("createApi", async () => {
     it("returns camelCased response", async () => {
       //arrange
       mockedAxios.post.mockResolvedValueOnce({ data: createResponse })
+      const testApi = createApi({
+        client: mockedAxios,
+        baseUri: "create-camel-case",
+        models: {
+          create: {
+            //non-sensical but just want to test that the input could be anything and that's what is going to be used to call the api
+            testInput: z.string(),
+          },
+          entity: entityZodShape,
+          extraFilters: {
+            anExtraFilter: z.string(),
+          },
+        },
+      })
       //act
-      const response = await testApi.create(createInput)
+      const response = await testApi.create({
+        testInput: "test",
+      })
       //assert
-      expect(response).toEqual({ ...createInput, fullName: createResponse.full_name, id: randomId })
+      expect(response).toEqual(objectToCamelCase(createResponse))
+    })
+    it("uses entity response if no create shape was passed", async () => {
+      const baseUri = "create"
+      const testApi = createApi({
+        client: mockedAxios,
+        baseUri,
+        models: {
+          entity: entityZodShape,
+        },
+      })
+      //arrange
+      mockedAxios.post.mockResolvedValueOnce({ data: mockEntity1Snaked })
+      const { id, ...input } = mockEntity1
+      //act
+      const response = await testApi.create(input)
+      //assert
+      expect(response).toEqual(mockEntity1)
     })
   })
 

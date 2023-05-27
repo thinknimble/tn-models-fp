@@ -161,11 +161,6 @@ export type IsBrand<T extends z.ZodTypeAny, TBrand extends string> = T extends z
   ]
 }
 
-// I want that any type that has a brand attached to remove it.. so that's sort of a hard task... My initial attempt was with object. but seems that object is not enough.
-export type StripBrand<T extends z.ZodRawShape> = {
-  [K in keyof T]: T[K] extends z.ZodBranded<infer TZod, any> ? TZod : T[K]
-}
-
 //!Good attempt but cannot use this with generic in createApi
 export type BrandedKeys<T extends z.ZodRawShape> = keyof {
   [K in keyof T as T[K] extends z.ZodBranded<any, any> ? K : never]: K

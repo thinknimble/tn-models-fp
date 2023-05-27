@@ -317,7 +317,35 @@ When passing an `entity` model to `createApi` parameter you get a couple of buil
 
 #### `create` - Post request to create a resource
 
-Only available if you pass a `create` model
+If you passed a `create` model you would get the input type resolved from that shape. Otherwise `entity` will be used as a default
+
+Note that if `entity` shape is used to resolve the type of the input, any [readonly fields](#make-fields-readonly--only-applicable-for-entity) and `id` itself will be stripped from that type. So
+
+```typescript
+const entityShape = {
+  id: z.string().uuid(),
+  firstName: z.string(),
+  lastName: z.string(),
+  fullName: readonly(z.string()),
+}
+const api = createApi({
+  //...
+  models: {
+    entity: entityShape,
+  },
+})
+```
+
+Will result in the following call signature for the create method:
+
+```typescript
+api.create({
+  //id: stripped because it is considered readonly regardless of whether you declared it readonly or not
+  firstName: "sample first name",
+  lastName: "sample last name",
+  //fullName: stripped because it is a readonly-declared field
+})
+```
 
 #### `retrieve` - Get request to retrieve a single resource by Id
 
