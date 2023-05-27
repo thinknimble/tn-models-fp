@@ -1,5 +1,6 @@
 import { SnakeCase } from "@thinknimble/tn-utils"
 import { z } from "zod"
+import { ReadonlyTag } from "./zod"
 
 type InferZodArray<T extends z.ZodArray<z.ZodTypeAny>> = T extends z.ZodArray<infer TEl>
   ? z.ZodArray<ZodRecursiveResult<TEl>>
@@ -103,6 +104,22 @@ type GetZodObjectType<T extends z.ZodRawShape> = ReturnType<typeof z.object<T>>
  */
 export type GetInferredFromRaw<T extends z.ZodRawShape> = z.infer<GetZodObjectType<T>>
 
+/**
+ * Strip read only brand from a type, optionally unwrap some types from brands
+ */
+export type StripReadonlyBrand<T extends z.ZodRawShape, TUnwrap extends (keyof T)[] = []> = {
+  [K in keyof T as K extends TUnwrap[number]
+    ? K
+    : IsBrand<T[K], ReadonlyTag> extends true
+    ? never
+    : K]: T[K] extends z.ZodBranded<infer TZod, any> ? TZod : T[K]
+}
+
+/**
+ * Infer the shape type, removing all the readonly fields in it.
+ */
+export type GetInferredWithoutReadonlyBrands<T extends z.ZodRawShape> = GetInferredFromRaw<StripReadonlyBrand<T>>
+
 export type PartializeShape<T extends z.ZodRawShape> = {
   [K in keyof T]: z.ZodOptional<T[K]>
 }
@@ -111,3 +128,21 @@ export type InferShapeOrZod<T extends object> = T extends z.ZodRawShape
   : T extends z.ZodTypeAny
   ? z.infer<T>
   : never
+
+/**
+ * Determine whether a given zod is of a certain brand
+ */
+export type IsBrand<T extends z.ZodTypeAny, TBrand extends string> = T extends z.ZodBranded<infer TZod, any>
+  ? z.infer<T> extends z.infer<TZod> & z.BRAND<TBrand>
+    ? true
+    : false
+  : false
+
+//!Good attempt but cannot use this with generic in createApi
+export type BrandedKeys<T extends z.ZodRawShape> = keyof {
+  [K in keyof T as T[K] extends z.ZodBranded<any, any> ? K : never]: K
+}
+
+export type UnwrapBranded<T extends z.ZodRawShape, TBrandType extends string | number | symbol = any> = {
+  [K in keyof T]: T[K] extends z.ZodBranded<infer TUnwrapped, TBrandType> ? TUnwrapped : T[K]
+}

@@ -105,6 +105,7 @@ describe("zodToSnakeCaseShapeRecursive", () => {
 
     //assert
     //check both ways
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     type tests = [
       Expect<Equals<TestZods, ResultTypeCamelCasedInferred>>,
       Expect<Equals<TestZodsSnakeCasedInferred, InferredResultType>>,

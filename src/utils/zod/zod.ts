@@ -1,5 +1,5 @@
 import { toSnakeCase } from "@thinknimble/tn-utils"
-import { ZodBranded, z } from "zod"
+import { z } from "zod"
 import { ZodPrimitives, ZodRawShapeToSnakedRecursive, zodPrimitivesList } from "./types"
 
 export const isZod = (input: unknown): input is z.ZodSchema => {
@@ -132,51 +132,4 @@ export type ReadonlyField<T> = T & z.BRAND<ReadonlyTag>
 export const readonly = <T extends z.ZodTypeAny>(zod: T) => {
   //we will detect readonly fields with brands at the type level and verify the ReadonlyTag with the description.
   return zod.brand(READONLY_TAG).describe(READONLY_TAG)
-}
-
-/**
- * Determine whether a given zod is of a certain brand
- */
-export type IsBrand<T extends z.ZodTypeAny, TBrand extends string> = T extends z.ZodBranded<infer TZod, any>
-  ? z.infer<T> extends z.infer<TZod> & z.BRAND<TBrand>
-    ? true
-    : false
-  : false
-
-{
-  //IsBrand TS tests
-  const zodStringTest = readonly(z.string())
-  type zodStringTest = typeof zodStringTest
-  const zodObjectTest = readonly(
-    z.object({
-      hello: z.string(),
-    })
-  )
-  type zodObjectTest = typeof zodObjectTest
-  type tests = [
-    Expect<Equals<IsBrand<zodStringTest, "RandomBrand">, false>>,
-    Expect<Equals<IsBrand<zodStringTest, ReadonlyTag>, true>>,
-    Expect<Equals<IsBrand<zodObjectTest, "RandomBrand">, false>>,
-    Expect<Equals<IsBrand<zodObjectTest, ReadonlyTag>, true>>
-  ]
-}
-
-//!Good attempt but cannot use this with generic in createApi
-export type BrandedKeys<T extends z.ZodRawShape> = keyof {
-  [K in keyof T as T[K] extends z.ZodBranded<any, any> ? K : never]: K
-}
-
-/**
- * Strip read only brand from a type, optionally unwrap some types from brands
- */
-export type StripReadonlyBrand<T extends z.ZodRawShape, TUnwrap extends (keyof T)[] = []> = {
-  [K in keyof T as K extends TUnwrap[number]
-    ? K
-    : IsBrand<T[K], ReadonlyTag> extends true
-    ? never
-    : K]: T[K] extends z.ZodBranded<infer TZod, any> ? TZod : T[K]
-}
-
-export type UnwrapBranded<T extends z.ZodRawShape, TBrandType extends string | number | symbol = any> = {
-  [K in keyof T]: T[K] extends ZodBranded<infer TUnwrapped, TBrandType> ? TUnwrapped : T[K]
 }
