@@ -34,7 +34,7 @@ type BaseModelsPlaceholder<
   ?
       | (EntityModelObj<TEntity> & ExtraFiltersObj<TBuiltInFilters>)
       | (EntityModelObj<TEntity> & ExtraFiltersObj<TBuiltInFilters> & CreateModelObj<TCreate>)
-  : unknown
+  : "If you include models entity should be a present shape"
 
 type RetrieveCallObj<TEntity extends EntityShape> = {
   /**
@@ -200,10 +200,13 @@ export function createApi<TCustomServiceCalls extends Record<string, CustomServi
    */
   customServiceCalls: TCustomServiceCalls
 ): ApiService<unknown, TCustomServiceCalls>
-export function createApi<TModels extends BaseModelsPlaceholder>(
-  base: BaseApiParams & { models?: TModels }
+export function createApi<TModels extends BaseModelsPlaceholder | unknown = unknown>(
+  base: BaseApiParams & {
+    models?: TModels extends BaseModelsPlaceholder
+      ? TModels
+      : "You should not pass `create` model without an `entity` model"
+  }
 ): BareApiService<TModels>
-export function createApi(base: BaseApiParams): BareApiService<unknown>
 
 export function createApi<
   TModels extends BaseModelsPlaceholder,
