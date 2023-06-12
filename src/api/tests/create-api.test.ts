@@ -499,8 +499,6 @@ describe("TS Tests", () => {
       client: mockedAxios,
       models: {
         entity: entityShape,
-        //TODO: will soon not be required #91
-        create: { name: entityShape.name, lastName: entityShape.lastName },
       },
     })
     type api = typeof api
