@@ -1,5 +1,11 @@
 # @thinknimble/tn-models-fp
 
+## 2.11.2
+
+### Patch Changes
+
+- ddad1f6: Fix `createApi` resulting type breaking if not passing any models to it
+
 ## 2.11.1
 
 ### Patch Changes
