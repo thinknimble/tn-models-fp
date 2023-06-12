@@ -83,10 +83,10 @@ describe("createApi", async () => {
       //@ts-expect-error should not allow to create this api with just the "create" model (create needs entity)
       type ExpectedReturn = ReturnType<typeof createApi<{ create: typeof entityZodShape }>>
       expect(() => {
-        //@ts-expect-error this should error on TS but checking runtime throw here!
         createApi({
           baseUri: "",
           client: mockedAxios,
+          // @ts-expect-error this should error on TS but checking runtime throw here!
           models: {
             create: createZodShape,
           },
@@ -512,5 +512,22 @@ describe("TS Tests", () => {
       Expect<Equals<Awaited<ReturnType<api["update"]["replace"]>>, unwrappedReadonlyBrands>>,
       Expect<Equals<Awaited<ReturnType<api["update"]["replace"]["asPartial"]>>, unwrappedReadonlyBrands>>
     ]
+  })
+
+  it("should not show up any built-in method if there is no `models` passed", () => {
+    const entityShape = {
+      id: readonly(z.string()),
+      name: z.string(),
+      lastName: z.string(),
+      fullName: readonly(z.string()),
+    }
+    const api = createApi({
+      baseUri: "readonly",
+      client: mockedAxios,
+    })
+    type api = typeof api
+
+    //@ts-expect-error should not expose any of these methods
+    const { create, list, retrieve, remove, update } = api
   })
 })
