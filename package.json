@@ -44,6 +44,6 @@
   },
   "peerDependencies": {
     "axios": ">1.0.0",
-    "zod": ">3.21.4"
+    "zod": ">=3.21.4"
   }
 }
