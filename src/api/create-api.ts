@@ -185,15 +185,16 @@ type ValidModelKeys = keyof { entity: unknown; create?: unknown; extraFilters?: 
 type CheckModelsValidKeysPerKey<TModels> = {
   [K in keyof TModels]: K extends ValidModelKeys ? TModels[K] : "Invalid Key"
 }
+type CheckModels<TModels> = CheckModelsValidKeysPerKey<TModels> extends BaseModelsPlaceholder
+  ? CheckModelsValidKeysPerKey<TModels>
+  : "You should not pass `create` model without an `entity` model"
 
 export function createApi<
   TModels extends BaseModelsPlaceholder,
   TCustomServiceCalls extends Record<string, CustomServiceCallPlaceholder>
 >(
   base: BaseApiParams & {
-    models?: CheckModelsValidKeysPerKey<TModels> extends BaseModelsPlaceholder
-      ? CheckModelsValidKeysPerKey<TModels>
-      : "You should not pass `create` model without an `entity` model"
+    models?: CheckModels<TModels>
   },
   /**
    * Create your own custom service calls to use with this API. Tools for case conversion are provided.
@@ -209,9 +210,7 @@ export function createApi<TCustomServiceCalls extends Record<string, CustomServi
 ): ApiService<unknown, TCustomServiceCalls>
 export function createApi<TModels extends BaseModelsPlaceholder | unknown = unknown>(
   base: BaseApiParams & {
-    models?: CheckModelsValidKeysPerKey<TModels> extends BaseModelsPlaceholder
-      ? CheckModelsValidKeysPerKey<TModels>
-      : "You should not pass `create` model without an `entity` model"
+    models?: CheckModels<TModels>
   }
 ): BareApiService<TModels>
 
