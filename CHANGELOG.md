@@ -1,5 +1,11 @@
 # @thinknimble/tn-models-fp
 
+## 2.11.4
+
+### Patch Changes
+
+- fd42759: Fix `GetInferredFromRaw` inferring readonly brands
+
 ## 2.11.3
 
 ### Patch Changes
