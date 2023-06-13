@@ -39,9 +39,8 @@ const createToApiHandler = <T extends z.ZodRawShape | ZodPrimitives | z.ZodArray
           : arr) as ToApiCall<T>
   }
   if (isInputZodPrimitive) return
-  return isInputZodPrimitive
-    ? undefined
-    : (((obj: object) => zodObjectToSnakeRecursive(z.object(inputShape)).parse(objectToSnakeCase(obj))) as ToApiCall<T>)
+  return ((obj: object) =>
+    zodObjectToSnakeRecursive(z.object(inputShape)).parse(objectToSnakeCase(obj))) as ToApiCall<T>
 }
 
 const createFromApiHandler = <T extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny>>(

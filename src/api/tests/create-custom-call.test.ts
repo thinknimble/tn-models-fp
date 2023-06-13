@@ -3,7 +3,7 @@ import { faker } from "@faker-js/faker"
 import { SnakeCasedPropertiesDeep, objectToSnakeCase } from "@thinknimble/tn-utils"
 import { describe, expect, it, vi } from "vitest"
 import { z } from "zod"
-import { GetInferredFromRaw } from "../../utils"
+import { GetInferredFromRawWithBrand } from "../../utils"
 import { createApi } from "../create-api"
 import { createCustomServiceCall } from "../create-custom-call"
 import { mockedAxios } from "./mocks"
@@ -93,12 +93,12 @@ describe("createCustomServiceCall", () => {
         },
         async ({ input, utils }) => {
           type tests = [
-            Expect<Equals<typeof input, GetInferredFromRaw<typeof inputShape>>>,
-            Expect<Equals<(typeof utils)["fromApi"], (obj: object) => GetInferredFromRaw<typeof outputShape>>>,
+            Expect<Equals<typeof input, GetInferredFromRawWithBrand<typeof inputShape>>>,
+            Expect<Equals<(typeof utils)["fromApi"], (obj: object) => GetInferredFromRawWithBrand<typeof outputShape>>>,
             Expect<
               Equals<
                 (typeof utils)["toApi"],
-                (obj: object) => SnakeCasedPropertiesDeep<GetInferredFromRaw<typeof inputShape>>
+                (obj: object) => SnakeCasedPropertiesDeep<GetInferredFromRawWithBrand<typeof inputShape>>
               >
             >
           ]

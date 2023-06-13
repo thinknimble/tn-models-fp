@@ -3,7 +3,7 @@ import { faker } from "@faker-js/faker"
 import { SnakeCasedPropertiesDeep, objectToCamelCase, objectToSnakeCase } from "@thinknimble/tn-utils"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { z } from "zod"
-import { GetInferredFromRaw, InferShapeOrZod, Pagination, ReadonlyTag, UnwrapBranded, readonly } from "../../utils"
+import { GetInferredFromRaw, GetInferredFromRawWithBrand, InferShapeOrZod, Pagination, readonly } from "../../utils"
 import { createApi } from "../create-api"
 import { createCustomServiceCall } from "../create-custom-call"
 import { CustomServiceCallsRecord, ServiceCallFn } from "../types"
@@ -100,15 +100,13 @@ describe("createApi", async () => {
       mockedAxios.post.mockReset()
     })
 
-    const createInput: GetInferredFromRaw<typeof createZodShape> = {
+    const createInput: GetInferredFromRawWithBrand<typeof createZodShape> = {
       age: 19,
       lastName: "Doe",
       firstName: "Jane",
     }
     const randomId: string = faker.datatype.uuid()
-    const createResponse: SnakeCasedPropertiesDeep<
-      GetInferredFromRaw<UnwrapBranded<typeof entityZodShape, ReadonlyTag>>
-    > = {
+    const createResponse: SnakeCasedPropertiesDeep<GetInferredFromRaw<typeof entityZodShape>> = {
       age: createInput.age,
       last_name: createInput.lastName,
       first_name: createInput.firstName,
@@ -371,19 +369,19 @@ describe("TS Tests", () => {
         inputShape: tInputShape
         outputShape: tOutputShape
         filtersShape: tFiltersShape
-        callback: (params: any) => Promise<GetInferredFromRaw<tOutputShape>>
+        callback: (params: any) => Promise<GetInferredFromRawWithBrand<tOutputShape>>
       }
       noFiltersService: {
         inputShape: tInputShape
         outputShape: tOutputShape
         filtersShape: tFiltersShapeVoid
-        callback: (params: any) => Promise<GetInferredFromRaw<tOutputShape>>
+        callback: (params: any) => Promise<GetInferredFromRawWithBrand<tOutputShape>>
       }
       noInputWithFilterService: {
         inputShape: z.ZodVoid
         outputShape: tOutputShape
         filtersShape: tFiltersShape
-        callback: (params: any) => Promise<GetInferredFromRaw<tOutputShape>>
+        callback: (params: any) => Promise<GetInferredFromRawWithBrand<tOutputShape>>
       }
       justCallback: {
         inputShape: z.ZodVoid
@@ -418,7 +416,7 @@ describe("TS Tests", () => {
         Equals<
           result["noInputWithFilterService"],
           (
-            ...args: [{ filters?: Partial<GetInferredFromRaw<tFiltersShape>> }] | []
+            ...args: [{ filters?: Partial<GetInferredFromRawWithBrand<tFiltersShape>> }] | []
           ) => Promise<InferShapeOrZod<tOutputShape>>
         >
       >,
@@ -506,7 +504,7 @@ describe("TS Tests", () => {
       },
     })
     type api = typeof api
-    type unwrappedReadonlyBrands = GetInferredFromRaw<UnwrapBranded<typeof entityShape, ReadonlyTag>>
+    type unwrappedReadonlyBrands = GetInferredFromRaw<typeof entityShape>
     type tests = [
       Expect<Equals<Awaited<ReturnType<api["retrieve"]>>, unwrappedReadonlyBrands>>,
       Expect<Equals<Awaited<ReturnType<api["create"]>>, unwrappedReadonlyBrands>>,

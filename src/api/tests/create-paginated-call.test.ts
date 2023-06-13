@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { describe, expect, it, vi } from "vitest"
 import { z } from "zod"
-import { GetInferredFromRaw, Pagination } from "../../utils"
+import { GetInferredFromRawWithBrand, Pagination } from "../../utils"
 import { createApi } from "../create-api"
 import { createPaginatedServiceCall } from "../create-paginated-call"
 import { entityZodShape, listResponse, mockEntity1, mockEntity2, mockedAxios } from "./mocks"
@@ -147,7 +147,7 @@ describe("createPaginatedServiceCall", () => {
     mockedAxios.post.mockResolvedValueOnce({
       data: listResponse,
     })
-    const body: Omit<GetInferredFromRaw<(typeof testPostPaginatedServiceCall)["inputShape"]>, "pagination"> = {
+    const body: Omit<GetInferredFromRawWithBrand<(typeof testPostPaginatedServiceCall)["inputShape"]>, "pagination"> = {
       dObj: {
         dObj1: 1,
       },
@@ -181,7 +181,7 @@ describe("createPaginatedServiceCall", () => {
     mockedAxios.post.mockResolvedValueOnce({
       data: listResponse,
     })
-    const body: Omit<GetInferredFromRaw<(typeof testPostPaginatedServiceCall)["inputShape"]>, "pagination"> = {
+    const body: Omit<GetInferredFromRawWithBrand<(typeof testPostPaginatedServiceCall)["inputShape"]>, "pagination"> = {
       dObj: {
         dObj1: 1,
       },
@@ -265,8 +265,7 @@ describe("createPaginatedServiceCall", () => {
       },
     })
   })
-  it("calls api with the right filters", async () => {
-    //TODO: should probably add a couple more that check the filtering but no time atm
+  it("calls api with the right filters - no input", async () => {
     //arrange
     const testPaginatedCallWithFilters = createPaginatedServiceCall({
       outputShape: entityZodShape,

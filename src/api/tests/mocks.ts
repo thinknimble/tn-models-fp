@@ -2,7 +2,7 @@ import { faker } from "@faker-js/faker"
 import axios from "axios"
 import { Mocked, vi } from "vitest"
 import { z } from "zod"
-import { GetInferredFromRaw, ReadonlyField, getPaginatedSnakeCasedZod, readonly } from "../../utils"
+import { GetInferredFromRawWithBrand, ReadonlyField, getPaginatedSnakeCasedZod, readonly } from "../../utils"
 
 vi.mock("axios")
 
@@ -23,7 +23,7 @@ export const entityZodShapeWithIdNumber = {
   id: z.number(),
 }
 
-type Entity = GetInferredFromRaw<typeof entityZodShape>
+type Entity = GetInferredFromRawWithBrand<typeof entityZodShape>
 
 export const createEntityMock: () => Entity = () => {
   const firstName = faker.name.firstName()

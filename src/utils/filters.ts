@@ -1,13 +1,13 @@
 import { SnakeCasedPropertiesDeep, objectToSnakeCase } from "@thinknimble/tn-utils"
 import { z } from "zod"
-import { GetInferredFromRaw } from "./zod"
+import { GetInferredFromRawWithBrand } from "./zod"
 
 export const paginationFiltersZodShape = {
   page: z.number(),
   pageSize: z.number(),
 }
 
-export type PaginationFilters = GetInferredFromRaw<typeof paginationFiltersZodShape>
+export type PaginationFilters = GetInferredFromRawWithBrand<typeof paginationFiltersZodShape>
 
 type AsQueryParam<T extends object> = {
   [K in keyof T as T[K] extends string | number ? K : never]: string
@@ -24,7 +24,7 @@ export const parseFilters = <TFilters extends FiltersShape>(shape?: TFilters, fi
           if (!v) return []
           return [[k, v]]
         })
-      ) as SnakeCasedPropertiesDeep<AsQueryParam<GetInferredFromRaw<TFilters>>>)
+      ) as SnakeCasedPropertiesDeep<AsQueryParam<GetInferredFromRawWithBrand<TFilters>>>)
     : undefined
 }
 
