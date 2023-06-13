@@ -499,6 +499,10 @@ describe("TS Tests", () => {
       client: mockedAxios,
       models: {
         entity: entityShape,
+        //@ts-expect-error keys that are not expected should be rejected by typescript
+        shenaninganCheck: {
+          invalidKey: z.string(),
+        },
       },
     })
     type api = typeof api
