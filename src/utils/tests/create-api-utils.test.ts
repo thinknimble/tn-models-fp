@@ -1,8 +1,11 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { faker } from "@faker-js/faker"
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 import { z } from "zod"
 import { createApiUtils } from "../api"
+import { GetInferredFromRawWithBrand } from "../zod"
+import { mockedAxios } from "../../api/tests/mocks"
+import { objectToSnakeCase } from "@thinknimble/tn-utils"
 
 describe("createApiUtils", () => {
   it("returns undefined when both input output are primitives", () => {
@@ -121,6 +124,25 @@ describe("createApiUtils", () => {
     expect(trial).toEqual({
       test_boolean: false,
     })
+  })
+  it("toApi checks this", () => {
+    const postSpy = vi.spyOn(mockedAxios, "post")
+    const expoTokenInputShape = {
+      expoToken: z.string(),
+    }
+    type ExpoTokenInput = GetInferredFromRawWithBrand<typeof expoTokenInputShape>
+    const expoTokenTest: ExpoTokenInput = {
+      expoToken: "my-expo-token",
+    }
+    const {
+      utils: { toApi },
+    } = createApiUtils({ inputShape: expoTokenInputShape, name: "postExpoToken" })
+    const result = toApi(expoTokenTest)
+    expect(result).toEqual({
+      expo_token: expoTokenTest.expoToken,
+    })
+    mockedAxios.post("/api/test", toApi(expoTokenTest))
+    expect(postSpy).toHaveBeenCalledWith("/api/test", objectToSnakeCase(expoTokenTest))
   })
 
   it("returns fromApi when outputShape is zod array", () => {

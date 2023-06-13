@@ -100,9 +100,9 @@ export type ZodPrimitives =
 type GetZodObjectType<T extends z.ZodRawShape> = ReturnType<typeof z.object<T>>
 
 /**
- * Get the resulting inferred type from a zod shape
+ * Get the resulting inferred type from a zod shape (brands are inferred as such)
  */
-export type GetInferredFromRaw<T extends z.ZodRawShape> = z.infer<GetZodObjectType<T>>
+export type GetInferredFromRawWithBrand<T extends z.ZodRawShape> = z.infer<GetZodObjectType<T>>
 
 /**
  * Strip read only brand from a type, optionally unwrap some types from brands
@@ -118,13 +118,20 @@ export type StripReadonlyBrand<T extends z.ZodRawShape, TUnwrap extends (keyof T
 /**
  * Infer the shape type, removing all the readonly fields in it.
  */
-export type GetInferredWithoutReadonlyBrands<T extends z.ZodRawShape> = GetInferredFromRaw<StripReadonlyBrand<T>>
+export type GetInferredWithoutReadonlyBrands<T extends z.ZodRawShape> = GetInferredFromRawWithBrand<
+  StripReadonlyBrand<T>
+>
+
+/**
+ * Infer the shape type, removing readonly marks and inferring their inner types
+ */
+export type GetInferredFromRaw<T extends z.ZodRawShape> = GetInferredFromRawWithBrand<UnwrapBranded<T, ReadonlyTag>>
 
 export type PartializeShape<T extends z.ZodRawShape> = {
   [K in keyof T]: z.ZodOptional<T[K]>
 }
 export type InferShapeOrZod<T extends object> = T extends z.ZodRawShape
-  ? GetInferredFromRaw<T>
+  ? GetInferredFromRawWithBrand<T>
   : T extends z.ZodTypeAny
   ? z.infer<T>
   : never

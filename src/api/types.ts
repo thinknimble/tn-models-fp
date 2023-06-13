@@ -5,7 +5,7 @@ import {
   And,
   CallbackUtils,
   FiltersShape,
-  GetInferredFromRaw,
+  GetInferredFromRawWithBrand,
   InferShapeOrZod,
   Is,
   IsAny,
@@ -37,9 +37,9 @@ export type CustomServiceCallFiltersObj<
 
 type InferCallbackInput<TInput extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny>> =
   TInput extends z.ZodRawShape
-    ? GetInferredFromRaw<TInput>
+    ? GetInferredFromRawWithBrand<TInput>
     : TInput extends z.ZodRawShape
-    ? GetInferredFromRaw<TInput>
+    ? GetInferredFromRawWithBrand<TInput>
     : TInput extends z.ZodTypeAny
     ? z.infer<TInput>
     : never

@@ -3,7 +3,7 @@ import { Axios } from "axios"
 import { z } from "zod"
 import {
   FiltersShape,
-  GetInferredFromRaw,
+  GetInferredFromRawWithBrand,
   Pagination,
   UnknownIfNever,
   getPaginatedShape,
@@ -103,7 +103,7 @@ export function createPaginatedServiceCall<
     })
     //! although this claims not to be of the same type than our converted TOutput, it actually is, but all the added type complexity with camel casing util makes TS to think it is something different. It should be safe to cast this, we should definitely check this at runtime with tests
     const result: unknown = { ...rawResponse, results: rawResponse.results.map((r) => objectToCamelCase(r)) }
-    return result as GetInferredFromRaw<ReturnType<typeof getPaginatedShape<TOutput>>>
+    return result as GetInferredFromRawWithBrand<ReturnType<typeof getPaginatedShape<TOutput>>>
   }
   if ("inputShape" in models) {
     return {
