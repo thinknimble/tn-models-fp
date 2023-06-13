@@ -1,5 +1,11 @@
 # @thinknimble/tn-models-fp
 
+## 2.11.3
+
+### Patch Changes
+
+- fcd3a2e: `createApi` show error when users try to pass things into `models` that are not valid
+
 ## 2.11.2
 
 ### Patch Changes
