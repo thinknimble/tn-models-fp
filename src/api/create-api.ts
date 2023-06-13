@@ -181,12 +181,19 @@ type BaseApiParams = {
   client: AxiosInstance
 }
 
+type ValidModelKeys = keyof { entity: unknown; create?: unknown; extraFilters?: unknown }
+type CheckModelsValidKeysPerKey<TModels> = {
+  [K in keyof TModels]: K extends ValidModelKeys ? TModels[K] : "Invalid Key"
+}
+
 export function createApi<
   TModels extends BaseModelsPlaceholder,
   TCustomServiceCalls extends Record<string, CustomServiceCallPlaceholder>
 >(
   base: BaseApiParams & {
-    models?: TModels
+    models?: CheckModelsValidKeysPerKey<TModels> extends BaseModelsPlaceholder
+      ? CheckModelsValidKeysPerKey<TModels>
+      : "You should not pass `create` model without an `entity` model"
   },
   /**
    * Create your own custom service calls to use with this API. Tools for case conversion are provided.
@@ -202,8 +209,8 @@ export function createApi<TCustomServiceCalls extends Record<string, CustomServi
 ): ApiService<unknown, TCustomServiceCalls>
 export function createApi<TModels extends BaseModelsPlaceholder | unknown = unknown>(
   base: BaseApiParams & {
-    models?: TModels extends BaseModelsPlaceholder
-      ? TModels
+    models?: CheckModelsValidKeysPerKey<TModels> extends BaseModelsPlaceholder
+      ? CheckModelsValidKeysPerKey<TModels>
       : "You should not pass `create` model without an `entity` model"
   }
 ): BareApiService<TModels>
