@@ -3,7 +3,13 @@ import { faker } from "@faker-js/faker"
 import { SnakeCasedPropertiesDeep, objectToCamelCase, objectToSnakeCase } from "@thinknimble/tn-utils"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { z } from "zod"
-import { GetInferredFromRaw, GetInferredFromRawWithBrand, InferShapeOrZod, Pagination, readonly } from "../../utils"
+import {
+  GetInferredFromRaw,
+  GetInferredFromRawWithBrand,
+  InferShapeOrZod,
+  Pagination,
+  readonlyField,
+} from "../../utils"
 import { createApi } from "../create-api"
 import { createCustomServiceCall } from "../create-custom-call"
 import { CustomServiceCallsRecord, ServiceCallFn } from "../types"
@@ -454,11 +460,11 @@ describe("TS Tests", () => {
 
   it("infers the id with the type declared in the entity shape", () => {
     const entityShapeStrId = {
-      id: readonly(z.string()),
+      id: readonlyField(z.string()),
       name: z.string(),
     }
     const entityShapeNumId = {
-      id: readonly(z.number()),
+      id: readonlyField(z.number()),
       name: z.string(),
     }
     const apiStrId = createApi({
@@ -487,10 +493,10 @@ describe("TS Tests", () => {
 
   it("yields right types when using readonly fields", () => {
     const entityShape = {
-      id: readonly(z.string()),
+      id: readonlyField(z.string()),
       name: z.string(),
       lastName: z.string(),
-      fullName: readonly(z.string()),
+      fullName: readonlyField(z.string()),
     }
     const api = createApi({
       baseUri: "readonly",
@@ -516,10 +522,10 @@ describe("TS Tests", () => {
 
   it("should not show up any built-in method if there is no `models` passed", () => {
     const entityShape = {
-      id: readonly(z.string()),
+      id: readonlyField(z.string()),
       name: z.string(),
       lastName: z.string(),
-      fullName: readonly(z.string()),
+      fullName: readonlyField(z.string()),
     }
     const api = createApi({
       baseUri: "readonly",

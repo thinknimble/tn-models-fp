@@ -112,7 +112,7 @@ export function zodObjectToSnakeRecursive<T extends z.ZodRawShape>(
 }
 
 function zodReadonlyToSnakeRecursive<T extends z.ZodBranded<any, ReadonlyTag>>(zodBrand: T): any {
-  return readonly(resolveRecursiveZod(zodBrand.unwrap()))
+  return readonlyField(resolveRecursiveZod(zodBrand.unwrap()))
 }
 
 function zodBrandToSnakeRecursive<T extends z.ZodBranded<any, any>>(zodBrand: T): any {
@@ -129,7 +129,7 @@ export type ReadonlyField<T> = T & z.BRAND<ReadonlyTag>
  * @param zod
  * @returns
  */
-export const readonly = <T extends z.ZodTypeAny>(zod: T) => {
+export const readonlyField = <T extends z.ZodTypeAny>(zod: T) => {
   //we will detect readonly fields with brands at the type level and verify the ReadonlyTag with the description.
   return zod.brand(READONLY_TAG).describe(READONLY_TAG)
 }

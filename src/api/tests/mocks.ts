@@ -2,7 +2,7 @@ import { faker } from "@faker-js/faker"
 import axios from "axios"
 import { Mocked, vi } from "vitest"
 import { z } from "zod"
-import { GetInferredFromRawWithBrand, ReadonlyField, getPaginatedSnakeCasedZod, readonly } from "../../utils"
+import { GetInferredFromRawWithBrand, ReadonlyField, getPaginatedSnakeCasedZod, readonlyField } from "../../utils"
 
 vi.mock("axios")
 
@@ -16,7 +16,7 @@ export const createZodShape = {
 export const entityZodShape = {
   ...createZodShape,
   id: z.string().uuid(),
-  fullName: readonly(z.string()),
+  fullName: readonlyField(z.string()),
 }
 export const entityZodShapeWithIdNumber = {
   ...entityZodShape,

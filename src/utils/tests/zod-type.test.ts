@@ -1,12 +1,12 @@
 import { describe, it } from "vitest"
 import { z } from "zod"
-import { IsBrand, ReadonlyTag, readonly } from "../zod"
+import { IsBrand, ReadonlyTag, readonlyField } from "../zod"
 
 describe("TS tests for zod utils", () => {
   it("checks on IsBrand util", () => {
-    const zodStringTest = readonly(z.string())
+    const zodStringTest = readonlyField(z.string())
     type zodStringTest = typeof zodStringTest
-    const zodObjectTest = readonly(
+    const zodObjectTest = readonlyField(
       z.object({
         hello: z.string(),
       })
