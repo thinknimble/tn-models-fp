@@ -1,5 +1,11 @@
 # @thinknimble/tn-models-fp
 
+## 2.11.7-canary.0
+
+### Patch Changes
+
+- Change readonly naming to see if that makes error g away
+
 ## 2.11.6
 
 ### Patch Changes
