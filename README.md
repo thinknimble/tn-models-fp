@@ -348,7 +348,10 @@ Returns the resolved type of `entity` from given models.
 
 #### `list` - Get request to obtain a paginated list of the resource
 
-Note: Please check that your backend implements a `${baseUri}/list/` endpoint, otherwise this method will not be useful for you (you can still [ create a paginated call ](#createpaginatedservicecall) )
+Note: Please check that your backend uses the ListMixin in the targetted resource, otherwise this method will not be useful for you.
+
+This method translates as a `GET` call to the `baseUri/` uri.
+
 Returns a paginated version of the resolved type of `entity` from given models.
 
 #### `update` - Put/Patch request to update a resource by id
@@ -555,7 +558,7 @@ For this client to consume your uri strings you should either cast them `as cons
 
 ## `createPaginatedServiceCall`
 
-Allows users to create paginated calls that are not directly related with the `list` endpoint of their resource. Such as when an endpoint retrieves a paginated list of things that are not exactly the resource ig: a search. You can also use this if you did not define a resource service the same way as this library expects (to have a `/list` endpoint).
+Allows users to create paginated calls that are not directly related with the `GET` `baseUri/` endpoint of their resource. Such as when an endpoint retrieves a paginated list of things that are not exactly the resource ig: a search.
 
 IG
 
