@@ -1,5 +1,11 @@
 # @thinknimble/tn-models-fp
 
+## 2.11.5
+
+### Patch Changes
+
+- bb2a6eb: custom calls - allow input and output shape to be native enums
+
 ## 2.11.4
 
 ### Patch Changes
