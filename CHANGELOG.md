@@ -1,5 +1,11 @@
 # @thinknimble/tn-models-fp
 
+## 2.11.7-canary.1
+
+### Patch Changes
+
+- ec97793: Fix missing build!
+
 ## 2.11.7-canary.0
 
 ### Patch Changes

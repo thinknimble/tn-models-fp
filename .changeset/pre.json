@@ -5,6 +5,7 @@
     "@thinknimble/tn-models-fp": "2.11.6"
   },
   "changesets": [
+    "breezy-steaks-teach",
     "empty-buses-rhyme"
   ]
 }
