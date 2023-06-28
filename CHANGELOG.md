@@ -1,5 +1,11 @@
 # @thinknimble/tn-models-fp
 
+## 2.11.6
+
+### Patch Changes
+
+- 5ebb3b2: createCustomServiceCall - allow output shape to be of type ZodArray
+
 ## 2.11.5
 
 ### Patch Changes
