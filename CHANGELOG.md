@@ -1,5 +1,11 @@
 # @thinknimble/tn-models-fp
 
+## 2.11.7
+
+### Patch Changes
+
+- 89f68e2: Fix `readonly` function being exported as type
+
 ## 2.11.6
 
 ### Patch Changes
