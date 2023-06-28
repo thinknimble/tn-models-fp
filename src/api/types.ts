@@ -125,7 +125,7 @@ type ToApiPlaceholder = { toApi: (obj: object) => any }
  */
 export type CustomServiceCallPlaceholder<
   TInput extends z.ZodRawShape | ZodPrimitives | z.ZodVoid = any,
-  TOutput extends z.ZodRawShape | ZodPrimitives | z.ZodVoid = any,
+  TOutput extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny> | z.ZodVoid = any,
   TFilters extends FiltersShape | z.ZodVoid = any
 > = {
   inputShape: TInput

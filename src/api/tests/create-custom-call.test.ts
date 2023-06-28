@@ -3,7 +3,7 @@ import { faker } from "@faker-js/faker"
 import { SnakeCasedPropertiesDeep, objectToSnakeCase } from "@thinknimble/tn-utils"
 import { describe, expect, it, vi } from "vitest"
 import { z } from "zod"
-import { GetInferredFromRawWithBrand } from "../../utils"
+import { GetInferredFromRawWithBrand, objectToCamelCaseArr } from "../../utils"
 import { createApi } from "../create-api"
 import { createCustomServiceCall } from "../create-custom-call"
 import { mockedAxios } from "./mocks"
@@ -358,7 +358,7 @@ describe("createCustomServiceCall", () => {
     const getSpy = vi.spyOn(mockedAxios, "get")
     mockedAxios.get.mockResolvedValueOnce({
       data: {
-        test_output: "test",
+        test_output: "rightFilters",
       },
     })
     const callWithFilter = createCustomServiceCall(
@@ -402,7 +402,7 @@ describe("createCustomServiceCall", () => {
     const getSpy = vi.spyOn(mockedAxios, "get")
     mockedAxios.get.mockResolvedValueOnce({
       data: {
-        test_output: "test",
+        test_output: "noFilters",
       },
     })
     const callWithFilter = createCustomServiceCall(
@@ -438,12 +438,6 @@ describe("createCustomServiceCall", () => {
   })
   it("should TS error if user passes filtersShape but no output", async () => {
     //arrange
-    const getSpy = vi.spyOn(mockedAxios, "get")
-    mockedAxios.get.mockResolvedValueOnce({
-      data: {
-        test_output: "test",
-      },
-    })
     const callWithFilter = createCustomServiceCall(
       {
         //@ts-expect-error cannot pass filter shape if there is no output shape
@@ -456,14 +450,7 @@ describe("createCustomServiceCall", () => {
       }
     )
   })
-  it("Should not allow filters if there is no output (just input)", async () => {
-    //arrange
-    const getSpy = vi.spyOn(mockedAxios, "get")
-    mockedAxios.get.mockResolvedValueOnce({
-      data: {
-        test_output: "test",
-      },
-    })
+  it("TS Should not allow filters if there is no output (just input)", async () => {
     //@ts-expect-error should not allow to create with filter and no outputshape
     const callWithFilter = createCustomServiceCall(
       {
@@ -512,6 +499,46 @@ describe("createCustomServiceCall", () => {
     const expectedResult = 1
     const result = await api.csc.customCall({ nativeEnum: 1 })
     expect(result).toBe(expectedResult)
+  })
+
+  it("Allows an array output shape", async () => {
+    //arrange
+    const inputShape = z.string().uuid()
+    const arrayOutputShape = z
+      .object({
+        testInput: z.number(),
+      })
+      .array()
+    const mockResponse: z.infer<typeof arrayOutputShape> = [
+      { testInput: faker.datatype.number() },
+      { testInput: faker.datatype.number() },
+    ]
+    const mockResponseSnake = mockResponse.map((item) => objectToSnakeCase(item))
+    const customCall = createCustomServiceCall(
+      {
+        inputShape,
+        outputShape: arrayOutputShape,
+      },
+      async ({ client, input, utils, slashEndingBaseUri }) => {
+        await mockedAxios.get.mockResolvedValueOnce({
+          data: mockResponseSnake,
+        })
+        const res = await client.get(`${slashEndingBaseUri}/${input}/`)
+        return utils.fromApi(res.data)
+      }
+    )
+    const api = createApi(
+      {
+        baseUri: "test",
+        client: mockedAxios,
+      },
+      {
+        customCall,
+      }
+    )
+    const fakeId = faker.datatype.uuid()
+    const result = await api.csc.customCall(fakeId)
+    expect(result).toStrictEqual(mockResponse)
   })
 
   describe("standAlone call", () => {
@@ -919,6 +946,7 @@ describe("createCustomServiceCall", () => {
         },
       })
       expect(result).toEqual({ testData: mockResult.test_data })
+
       mockedAxios.post.mockClear()
     })
 
