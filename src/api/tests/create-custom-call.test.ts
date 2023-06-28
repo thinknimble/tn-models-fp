@@ -479,6 +479,40 @@ describe("createCustomServiceCall", () => {
       }
     )
   })
+  it("Allows shapes with native enums", async () => {
+    const myNativeEnum = {
+      test: 1,
+      enum: 2,
+    } as const
+
+    const shapeSubject = {
+      nativeEnum: z.nativeEnum(myNativeEnum),
+    }
+    const customCall = createCustomServiceCall(
+      {
+        inputShape: shapeSubject,
+        outputShape: z.nativeEnum(myNativeEnum),
+      },
+      async ({ input }) => {
+        return input.nativeEnum
+      }
+    )
+
+    const api = createApi(
+      {
+        baseUri: "native-enum",
+        client: mockedAxios,
+      },
+      {
+        customCall,
+      }
+    )
+    type customCallType = (typeof api)["csc"]["customCall"]
+    type test = Expect<Equals<Parameters<customCallType>[0], GetInferredFromRawWithBrand<typeof shapeSubject>>>
+    const expectedResult = 1
+    const result = await api.csc.customCall({ nativeEnum: 1 })
+    expect(result).toBe(expectedResult)
+  })
 
   describe("standAlone call", () => {
     it("calls with right parameters: input object output object", async () => {
