@@ -94,6 +94,7 @@ export type ZodPrimitives =
   | z.ZodDate
   | z.ZodBigInt
   | z.ZodBoolean
+  | z.ZodNativeEnum<any>
   | z.ZodUndefined
   | z.ZodVoid
 
