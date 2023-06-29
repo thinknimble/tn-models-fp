@@ -5,6 +5,7 @@ import { GetInferredFromRawWithBrand, Pagination } from "../../utils"
 import { createApi } from "../create-api"
 import { createPaginatedServiceCall } from "../create-paginated-call"
 import { entityZodShape, listResponse, mockEntity1, mockEntity2, mockedAxios } from "./mocks"
+import { faker } from "@faker-js/faker"
 
 describe("createPaginatedServiceCall", () => {
   it("allows not passing a uri and calls api with the right uri", async () => {
@@ -302,6 +303,103 @@ describe("createPaginatedServiceCall", () => {
     })
     //assert
     expect(getSpy).toHaveBeenCalledWith(`${baseUri}/`, {
+      params: {
+        page: pagination.page.toString(),
+        page_size: pagination.size.toString(),
+        my_extra_filter: myExtraFilter,
+      },
+    })
+  })
+
+  it("Allows passing url params with a builder uri function", async () => {
+    // arrange
+    const getSpy = vi.spyOn(mockedAxios, "get")
+    mockedAxios.get.mockResolvedValueOnce({
+      data: listResponse,
+    })
+    const uriBuilder = (input: { someId: string }) => `myUriWithInput/${input.someId}`
+    const callWithUrlParams = createPaginatedServiceCall(
+      {
+        inputShape: {
+          urlParams: z.object({
+            someId: z.string(),
+          }),
+        },
+        outputShape: entityZodShape,
+      },
+      {
+        uri: uriBuilder,
+      }
+    )
+    const baseUri = "urlParams"
+    const api = createApi(
+      {
+        baseUri,
+        client: mockedAxios,
+      },
+      {
+        callWithUrlParams,
+      }
+    )
+    const pagination = new Pagination({ page: 1, size: 20 })
+    const randomId = faker.datatype.uuid()
+    //act
+    await api.csc.callWithUrlParams({ pagination, urlParams: { someId: randomId } })
+    //assert
+    expect(getSpy).toHaveBeenCalledWith(`${baseUri}/${uriBuilder({ someId: randomId })}/`, {
+      params: {
+        page: pagination.page.toString(),
+        page_size: pagination.size.toString(),
+      },
+    })
+  })
+  it("Allows passing url params with a builder uri function and filters", async () => {
+    // arrange
+    const getSpy = vi.spyOn(mockedAxios, "get")
+    mockedAxios.get.mockResolvedValueOnce({
+      data: listResponse,
+    })
+    const uriBuilder = (input: { someId: string }) => `myUriWithInput/${input.someId}`
+    const myExtraFilter = "test"
+    const callWithUrlParamsWithFilter = createPaginatedServiceCall(
+      {
+        inputShape: {
+          urlParams: z.object({
+            someId: z.string(),
+          }),
+        },
+        outputShape: entityZodShape,
+        filtersShape: {
+          myExtraFilter: z.string(),
+          anotherExtraFilter: z.number(),
+        },
+      },
+      {
+        uri: uriBuilder,
+      }
+    )
+    const baseUri = "urlParamsWithFilters"
+    const api = createApi(
+      {
+        baseUri,
+        client: mockedAxios,
+      },
+      {
+        callWithUrlParamsWithFilter,
+      }
+    )
+    const pagination = new Pagination({ page: 1, size: 20 })
+    const randomId = faker.datatype.uuid()
+    //act
+    await api.csc.callWithUrlParamsWithFilter({
+      input: {
+        pagination,
+        urlParams: { someId: randomId },
+      },
+      filters: { myExtraFilter },
+    })
+    //assert
+    expect(getSpy).toHaveBeenCalledWith(`${baseUri}/${uriBuilder({ someId: randomId })}/`, {
       params: {
         page: pagination.page.toString(),
         page_size: pagination.size.toString(),
