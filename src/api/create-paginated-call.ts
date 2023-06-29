@@ -34,15 +34,24 @@ const paginationObjShape = {
   pagination: z.instanceof(Pagination),
 }
 
+type ResolvedCreatePaginatedServiceCallParameters<
+  TOutput extends z.ZodRawShape,
+  TFilters extends FiltersShape | z.ZodVoid = z.ZodVoid,
+  TInput extends (z.ZodRawShape & { urlParams?: z.ZodObject<any> }) | z.ZodVoid = z.ZodVoid
+> = [
+  models: CustomServiceCallInputObj<TInput> &
+    CustomServiceCallOutputObj<TOutput> &
+    CustomServiceCallFiltersObj<TFilters, TOutput>,
+  ...opts: TInput extends { urlParams: z.ZodObject<any> }
+    ? [{ uri: (input: z.infer<TInput["urlParams"]>) => string; httpMethod?: keyof Pick<Axios, "get" | "post"> }]
+    : [{ uri?: string; httpMethod?: keyof Pick<Axios, "get" | "post"> } | undefined]
+]
 export function createPaginatedServiceCall<
   TOutput extends z.ZodRawShape,
   TFilters extends FiltersShape | z.ZodVoid = z.ZodVoid,
   TInput extends (z.ZodRawShape & { urlParams?: z.ZodObject<any> }) | z.ZodVoid = z.ZodVoid
 >(
-  models: CustomServiceCallInputObj<TInput> &
-    CustomServiceCallOutputObj<TOutput> &
-    CustomServiceCallFiltersObj<TFilters, TOutput>,
-  opts?: PaginatedServiceCallOptions<TInput>
+  ...args: ResolvedCreatePaginatedServiceCallParameters<TOutput, TFilters, TInput>
 ): CustomServiceCallOpts<
   UnknownIfNever<TInput> & typeof paginationObjShape,
   ReturnType<typeof getPaginatedZod<TOutput>>["shape"],
