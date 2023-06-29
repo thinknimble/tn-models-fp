@@ -11,6 +11,7 @@ import {
   getPaginatedShape,
   getPaginatedSnakeCasedZod,
   getPaginatedZod,
+  objectToCamelCaseArr,
   paginationFiltersZodShape,
   parseFilters,
   parseResponse,
@@ -137,7 +138,7 @@ export function createPaginatedServiceCall<
       zod: paginatedZod,
     })
     //! although this claims not to be of the same type than our converted TOutput, it actually is, but all the added type complexity with camel casing util makes TS to think it is something different. It should be safe to cast this, we should definitely check this at runtime with tests
-    const result: unknown = { ...rawResponse, results: rawResponse.results.map((r) => objectToCamelCase(r)) }
+    const result: unknown = { ...rawResponse, results: rawResponse.results.map((r) => objectToCamelCaseArr(r)) }
     return result as GetInferredFromRawWithBrand<ReturnType<typeof getPaginatedShape<TOutput>>>
   }
   if ("inputShape" in models) {

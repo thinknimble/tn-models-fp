@@ -1,4 +1,3 @@
-import { objectToCamelCase } from "@thinknimble/tn-utils"
 import { AxiosInstance } from "axios"
 import { z } from "zod"
 import {
@@ -15,6 +14,7 @@ import {
   defineProperty,
   getPaginatedSnakeCasedZod,
   getPaginatedZod,
+  objectToCamelCaseArr,
   paginationFiltersZodShape,
   parseFilters,
   parseResponse,
@@ -304,7 +304,7 @@ export function createApi<
       zod: paginatedZod,
     })
 
-    return { ...rawResponse, results: rawResponse.results.map((r) => objectToCamelCase(r)) }
+    return { ...rawResponse, results: rawResponse.results.map((r) => objectToCamelCaseArr(r)) }
   }
 
   const remove = (id: GetInferredFromRaw<TApiEntityShape>["id"]) => {

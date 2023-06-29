@@ -407,4 +407,59 @@ describe("createPaginatedServiceCall", () => {
       },
     })
   })
+  it("Camel cases nested array in output shape", async () => {
+    //arrange
+    const testPaginatedCallWithFilters = createPaginatedServiceCall({
+      outputShape: {
+        id: z.string().uuid(),
+        nestedArray: z
+          .object({
+            nestedField: z.string(),
+          })
+          .array(),
+      },
+      filtersShape: {
+        myExtraFilter: z.string(),
+      },
+    })
+    const baseUri = "camelCaseNestedArray"
+    const api = createApi(
+      {
+        baseUri,
+        client: mockedAxios,
+      },
+      {
+        testPaginatedCallWithFilters,
+      }
+    )
+    const mockValue = { id: faker.datatype.uuid(), nested_array: [{ nested_field: faker.datatype.string() }] }
+
+    const getSpy = vi.spyOn(mockedAxios, "get")
+    mockedAxios.get.mockResolvedValueOnce({
+      data: { next: null, previous: null, count: 10, results: [mockValue] },
+    })
+    const pagination = new Pagination({ page: 1, size: 20 })
+    const myExtraFilter = "test"
+    //act
+    type testing = Parameters<typeof api.csc.testPaginatedCallWithFilters>
+    const result = await api.csc.testPaginatedCallWithFilters({
+      input: {
+        pagination,
+      },
+      filters: {
+        myExtraFilter,
+      },
+    })
+    //assert
+    expect(getSpy).toHaveBeenCalledWith(`${baseUri}/`, {
+      params: {
+        page: pagination.page.toString(),
+        page_size: pagination.size.toString(),
+        my_extra_filter: myExtraFilter,
+      },
+    })
+    expect(result.results).toEqual([
+      { id: mockValue.id, nestedArray: [{ nestedField: mockValue.nested_array[0]?.nested_field }] },
+    ])
+  })
 })
