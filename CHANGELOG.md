@@ -1,5 +1,11 @@
 # @thinknimble/tn-models-fp
 
+## 2.12.1
+
+### Patch Changes
+
+- b051a97: `createPaginatedServiceCall` fix not properly camel casing nested array fields
+
 ## 2.12.0
 
 ### Minor Changes
