@@ -58,7 +58,7 @@ type CreateCallObj<TEntity extends EntityShape, TCreate extends z.ZodRawShape = 
   create: (
     inputs: IsNever<TCreate> extends true
       ? Omit<GetInferredWithoutReadonlyBrands<TEntity>, "id">
-      : GetInferredFromRawWithBrand<TCreate>
+      : GetInferredWithoutReadonlyBrands<TCreate>
   ) => Promise<GetInferredFromRaw<TEntity>>
 }
 type ErrorEntityShapeMustHaveAnIdField = '[TypeError] Your entity should have an "id" field'
@@ -263,7 +263,7 @@ export function createApi<
   const create = async (inputs: TApiCreate) => {
     const { id: _, ...entityShapeWithoutReadonlyFieldsNorId } = entityShapeWithoutReadonlyFields
     const { utils } = createApiUtils({
-      inputShape: "create" in models ? models.create : entityShapeWithoutReadonlyFieldsNorId,
+      inputShape: "create" in models ? removeReadonlyFields(models.create) : entityShapeWithoutReadonlyFieldsNorId,
       name: create.name,
       outputShape: models.entity,
     })
