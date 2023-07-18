@@ -1,0 +1,8 @@
+{
+  "mode": "pre",
+  "tag": "canary",
+  "initialVersions": {
+    "@thinknimble/tn-models-fp": "2.12.0"
+  },
+  "changesets": []
+}
