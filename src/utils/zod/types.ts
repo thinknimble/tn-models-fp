@@ -1,6 +1,6 @@
 import { SnakeCase } from "@thinknimble/tn-utils"
 import { z } from "zod"
-import { ReadonlyTag } from "./zod"
+import { READONLY_TAG, ReadonlyField, ReadonlyTag } from "./zod"
 
 type InferZodArray<T extends z.ZodArray<z.ZodTypeAny>> = T extends z.ZodArray<infer TEl>
   ? z.ZodArray<ZodRecursiveResult<TEl>>
@@ -61,7 +61,9 @@ export type ZodRawShapeToSnakedRecursive<T extends z.ZodRawShape> = {
     ? InferZodIntersection<T[K]>
     : T[K] extends z.ZodUnion<z.ZodUnionOptions>
     ? InferZodUnion<T[K]>
-    : T[K]
+    : // : T[K] extends z.ZodBranded<infer TZod, string | number | symbol>
+      // ? TZod
+      T[K]
 }
 type ZodRecursiveResult<T extends z.ZodTypeAny> = T extends z.ZodObject<z.ZodRawShape>
   ? InferZodObject<T>

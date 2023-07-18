@@ -18,6 +18,11 @@ export const entityZodShape = {
   id: z.string().uuid(),
   fullName: readonly(z.string()),
 }
+export const entityZodShapeWithReadonlyId = {
+  ...createZodShape,
+  id: readonly(entityZodShape.id),
+  fullName: readonly(entityZodShape.fullName),
+}
 export const entityZodShapeWithIdNumber = {
   ...entityZodShape,
   id: z.number(),

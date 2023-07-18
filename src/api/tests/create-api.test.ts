@@ -11,6 +11,7 @@ import {
   createZodShape,
   entityZodShape,
   entityZodShapeWithIdNumber,
+  entityZodShapeWithReadonlyId,
   listResponse,
   mockEntity1,
   mockEntity1Snaked,
@@ -134,7 +135,7 @@ describe("createApi", async () => {
         baseUri: "create-camel-case",
         models: {
           create: {
-            //non-sensical but just want to test that the input could be anything and that's what is going to be used to call the api
+            //nonsensical but just want to test that the input could be anything and that's what is going to be used to call the api
             testInput: z.string(),
           },
           entity: entityZodShape,
@@ -167,6 +168,57 @@ describe("createApi", async () => {
       //assert
       expect(response).toEqual(mockEntity1)
     })
+    it("It properly works with create model and readonly id", async () => {
+      //arrange
+      const baseShape = {
+        id: readonly(z.string().uuid()),
+        datetimeCreated: readonly(z.string().datetime().optional()),
+        lastEdited: readonly(z.string().datetime().optional()),
+      }
+      const entityShape = {
+        ...baseShape,
+        email: z.string().email(),
+        firstName: z.string(),
+        lastName: z.string(),
+        fullName: readonly(z.string()),
+        token: readonly(z.string().nullable().optional()),
+      }
+      const testApi = createApi({
+        client: mockedAxios,
+        baseUri: testBaseUri,
+        models: {
+          entity: entityShape,
+          create: {
+            ...entityShape,
+            password: z.string(),
+          },
+        },
+      })
+      const postSpy = vi.spyOn(mockedAxios, "post")
+      const testCreate = {
+        email: faker.internet.email(),
+        firstName: faker.name.firstName(),
+        lastName: faker.name.lastName(),
+        password: faker.internet.password(),
+      }
+      const expected = {
+        data: {
+          id: randomId,
+          datetime_created: new Date().toISOString(),
+          last_edited: new Date().toISOString(),
+          email: testCreate.email,
+          first_name: testCreate.firstName,
+          last_name: testCreate.lastName,
+          full_name: `${testCreate.firstName} ${testCreate.lastName}`,
+          token: faker.datatype.uuid(),
+        },
+      }
+      mockedAxios.post.mockResolvedValueOnce(expected)
+      const res = await testApi.create({
+        ...testCreate,
+      })
+      expect(res).toStrictEqual(objectToCamelCase(expected.data))
+    })
   })
 
   describe("retrieve", () => {
@@ -196,7 +248,6 @@ describe("createApi", async () => {
     beforeEach(() => {
       mockedAxios.get.mockReset()
     })
-
     it("returns camelCased paginated result", async () => {
       //arrange
       mockedAxios.get.mockResolvedValueOnce({ data: listResponse })
@@ -513,7 +564,6 @@ describe("TS Tests", () => {
       Expect<Equals<Awaited<ReturnType<api["update"]["replace"]["asPartial"]>>, unwrappedReadonlyBrands>>
     ]
   })
-
   it("should not show up any built-in method if there is no `models` passed", () => {
     const entityShape = {
       id: readonly(z.string()),

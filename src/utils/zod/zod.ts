@@ -123,7 +123,10 @@ function zodBrandToSnakeRecursive<T extends z.ZodBranded<any, any>>(zodBrand: T)
 export const READONLY_TAG = "ReadonlyField"
 export type ReadonlyTag = typeof READONLY_TAG
 export type ReadonlyField<T> = T & z.BRAND<ReadonlyTag>
+const mybrand = z.string().brand(READONLY_TAG)
 
+type result = z.infer<typeof mybrand> extends ReadonlyField<infer T> ? T : false
+//^?
 /**
  * Identity function that just brands this type so we can recognize readonly fields
  * @param zod
