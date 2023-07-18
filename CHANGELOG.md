@@ -1,5 +1,11 @@
 # @thinknimble/tn-models-fp
 
+## 2.12.2
+
+### Patch Changes
+
+- 77705b2: Fix readonly fields not working properly on create model override. Now readonly fields should be completely ignored for create model override. Allowing you to re-use your entity models that have readonly fields in case you want to.
+
 ## 2.12.1
 
 ### Patch Changes
