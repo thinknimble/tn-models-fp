@@ -1,5 +1,35 @@
 # @thinknimble/tn-models-fp
 
+## 2.12.3-canary.4
+
+### Patch Changes
+
+- Rework on zodbrand check
+
+## 2.12.3-canary.3
+
+### Patch Changes
+
+- logging more to find out wth
+
+## 2.12.3-canary.2
+
+### Patch Changes
+
+- more logs...
+
+## 2.12.3-canary.1
+
+### Patch Changes
+
+- Rework removeReadonlyFields not to use flatMap (which may be causing issues in vue)
+
+## 2.12.3-canary.0
+
+### Patch Changes
+
+- add logs for create built-in method and try to solve issues with its input shape
+
 ## 2.12.2
 
 ### Patch Changes

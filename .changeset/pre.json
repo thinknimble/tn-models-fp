@@ -1,0 +1,14 @@
+{
+  "mode": "pre",
+  "tag": "canary",
+  "initialVersions": {
+    "@thinknimble/tn-models-fp": "2.12.2"
+  },
+  "changesets": [
+    "heavy-chefs-judge",
+    "odd-schools-agree",
+    "sour-lobsters-behave",
+    "tasty-flowers-try",
+    "wild-hairs-juggle"
+  ]
+}
