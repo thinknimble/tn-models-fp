@@ -180,18 +180,18 @@ describe("createApi", async () => {
         email: z.string().email(),
         firstName: z.string(),
         lastName: z.string(),
-        fullName: readonly(z.string()),
         token: readonly(z.string().nullable().optional()),
+      }
+      const createShape = {
+        ...entityShape,
+        password: z.string(),
       }
       const testApi = createApi({
         client: mockedAxios,
         baseUri: testBaseUri,
         models: {
           entity: entityShape,
-          create: {
-            ...entityShape,
-            password: z.string(),
-          },
+          create: createShape,
         },
       })
       const postSpy = vi.spyOn(mockedAxios, "post")
@@ -209,7 +209,6 @@ describe("createApi", async () => {
           email: testCreate.email,
           first_name: testCreate.firstName,
           last_name: testCreate.lastName,
-          full_name: `${testCreate.firstName} ${testCreate.lastName}`,
           token: faker.datatype.uuid(),
         },
       }

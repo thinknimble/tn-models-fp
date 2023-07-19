@@ -2,8 +2,8 @@
 import { faker } from "@faker-js/faker"
 import { describe, expect, it, vi } from "vitest"
 import { z } from "zod"
-import { createApiUtils } from "../api"
-import { GetInferredFromRawWithBrand } from "../zod"
+import { createApiUtils, removeReadonlyFields } from "../api"
+import { GetInferredFromRawWithBrand, readonly } from "../zod"
 import { mockedAxios } from "../../api/tests/mocks"
 import { objectToSnakeCase } from "@thinknimble/tn-utils"
 
@@ -202,5 +202,30 @@ describe("createApiUtils", () => {
     const [trialInput, trialOutput] = [utils.toApi(input), utils.fromApi(output)]
     expect(trialInput).toEqual([{ test_input: input[0]?.testInput }, { test_input: input[1]?.testInput }])
     expect(trialOutput).toEqual([{ testOutput: output[0]?.test_output }, { testOutput: output[1]?.test_output }])
+  })
+})
+
+describe("removeReadonlyFields", () => {
+  it("properly removes a readonly field", () => {
+    const baseModelShape = {
+      id: readonly(z.string().uuid()),
+      datetimeCreated: readonly(z.string().datetime().optional()),
+      lastEdited: readonly(z.string().datetime().optional()),
+    }
+    const userShape = {
+      ...baseModelShape,
+      email: z.string().email(),
+      firstName: z.string(),
+      lastName: z.string(),
+      token: readonly(z.string().nullable().optional()),
+    }
+
+    const userCreateShape = {
+      ...userShape,
+      password: z.string(),
+    }
+
+    const withoutId = removeReadonlyFields(userCreateShape)
+    expect(withoutId).not.toHaveProperty("id")
   })
 })

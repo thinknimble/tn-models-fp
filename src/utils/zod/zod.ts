@@ -27,10 +27,10 @@ export const isZodUnion = (input: z.ZodTypeAny): input is z.ZodUnion<readonly [z
   return input instanceof z.ZodUnion
 }
 export const isZodBrand = (input: z.ZodTypeAny): input is z.ZodBranded<any, any> => {
-  return input instanceof z.ZodBranded
+  return input._def?.typeName === "ZodBranded"
 }
 export const isZodReadonly = (input: z.ZodTypeAny): input is z.ZodBranded<any, ReadonlyTag> => {
-  return input instanceof z.ZodBranded && input.description === READONLY_TAG
+  return isZodBrand(input) && input.description === READONLY_TAG
 }
 
 //TODO: we should probably revisit the types here but they seem not too friendly to tackle given the recursive nature of this operation

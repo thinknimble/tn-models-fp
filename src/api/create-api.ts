@@ -262,8 +262,9 @@ export function createApi<
   type TApiCreate = GetInferredFromRawWithBrand<TApiCreateShape>
   const create = async (inputs: TApiCreate) => {
     const { id: _, ...entityShapeWithoutReadonlyFieldsNorId } = entityShapeWithoutReadonlyFields
+    const inputShape = "create" in models ? removeReadonlyFields(models.create) : entityShapeWithoutReadonlyFieldsNorId
     const { utils } = createApiUtils({
-      inputShape: "create" in models ? removeReadonlyFields(models.create) : entityShapeWithoutReadonlyFieldsNorId,
+      inputShape,
       name: create.name,
       outputShape: models.entity,
     })
