@@ -1,5 +1,11 @@
 # @thinknimble/tn-models-fp
 
+## 2.12.3
+
+### Patch Changes
+
+- 98b8519: Fix issue with `readonly` not properly working on Vue and other JS environments. Changed the way ZodBrand is being checked.
+
 ## 2.12.2
 
 ### Patch Changes
