@@ -11,6 +11,7 @@ import {
   ZodPrimitives,
   isZod,
   isZodArray,
+  isZodReadonly,
   resolveRecursiveZod,
   zodObjectToSnakeRecursive,
 } from "../zod"
@@ -171,14 +172,17 @@ export const removeReadonlyFields = <T extends z.ZodRawShape, TUnwrap extends (k
   shape: T,
   unwrap?: TUnwrap
 ) => {
-  const entries = Object.entries(shape).flatMap(([k, v]) => {
-    if (v instanceof z.ZodBranded && v.description === READONLY_TAG) {
+  const nonReadonlyEntries: [key: string, value: z.ZodTypeAny][] = []
+  const allEntries = Object.entries(shape)
+  for (const [k, v] of allEntries) {
+    if (isZodReadonly(v)) {
       if (unwrap && unwrap.includes(k)) {
-        return [[k, v.unwrap()]]
+        nonReadonlyEntries.push([k, v.unwrap()])
+        continue
       }
-      return []
+      continue
     }
-    return [[k, v]]
-  })
-  return Object.fromEntries(entries) as StripReadonlyBrand<T, TUnwrap>
+    nonReadonlyEntries.push([k, v])
+  }
+  return Object.fromEntries(nonReadonlyEntries) as StripReadonlyBrand<T, TUnwrap>
 }
