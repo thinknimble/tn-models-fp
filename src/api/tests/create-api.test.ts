@@ -11,7 +11,6 @@ import {
   createZodShape,
   entityZodShape,
   entityZodShapeWithIdNumber,
-  entityZodShapeWithReadonlyId,
   listResponse,
   mockEntity1,
   mockEntity1Snaked,
@@ -301,6 +300,41 @@ describe("createApi", async () => {
   })
 
   describe("slash ending url", () => {
+    it("calls api with slash ending by default", async () => {
+      //arrange
+      mockedAxios.get.mockResolvedValue({ data: mockEntity1Snaked })
+      const getSpy = vi.spyOn(mockedAxios, "get")
+      const baseUri = "slashDefault"
+      const testApi = createApi({
+        baseUri,
+        client: mockedAxios,
+        models: {
+          entity: entityZodShape,
+        },
+      })
+      //act
+      await testApi.retrieve(mockEntity1Snaked.id)
+      //assert
+      expect(getSpy).toHaveBeenCalledWith(`${baseUri}/${mockEntity1Snaked.id}/`)
+    })
+    it("allows disabling slash ending uris", async () => {
+      //arrange
+      mockedAxios.get.mockResolvedValue({ data: mockEntity1Snaked })
+      const getSpy = vi.spyOn(mockedAxios, "get")
+      const baseUri = "disableSlash"
+      const testApi = createApi({
+        baseUri,
+        client: mockedAxios,
+        models: {
+          entity: entityZodShape,
+        },
+        disableTrailingSlash: true,
+      })
+      //act
+      await testApi.retrieve(mockEntity1Snaked.id)
+      //assert
+      expect(getSpy).toHaveBeenCalledWith(`${baseUri}/${mockEntity1Snaked.id}`)
+    })
     it("passes these TS tests", () => {
       createCustomServiceCall(async ({ client, slashEndingBaseUri }) => {
         type TClient = typeof client

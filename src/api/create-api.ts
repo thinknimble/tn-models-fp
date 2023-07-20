@@ -178,6 +178,7 @@ type BaseApiParams = {
    * The axios instance created for the app.
    */
   client: AxiosInstance
+  disableTrailingSlash?: boolean
 }
 
 type ValidModelKeys = keyof { entity: unknown; create?: unknown; extraFilters?: unknown }
@@ -217,14 +218,18 @@ export function createApi<
   TModels extends BaseModelsPlaceholder,
   TCustomServiceCalls extends Record<string, CustomServiceCallPlaceholder> = never
 >(
-  { models, client, baseUri }: BaseApiParams & { models?: TModels },
+  { models, client, baseUri, disableTrailingSlash }: BaseApiParams & { models?: TModels },
   customServiceCalls: TCustomServiceCalls | undefined = undefined
 ) {
   if (models && "create" in models && !("entity" in models)) {
     throw new Error("You should not pass `create` model without an `entity` model")
   }
   //standardize the uri
+  const parsedEndingSlash = (disableTrailingSlash ? "" : "/") as `${string}/`
   const slashEndingBaseUri = (baseUri[baseUri.length - 1] === "/" ? baseUri : baseUri + "/") as `${string}/`
+  const parsedBaseUri = (
+    disableTrailingSlash ? slashEndingBaseUri.substring(0, slashEndingBaseUri.length - 1) : slashEndingBaseUri
+  ) as `${string}/`
   const axiosLikeClient = client as AxiosLike
 
   const modifiedCustomServiceCalls = customServiceCalls
@@ -268,7 +273,7 @@ export function createApi<
       name: create.name,
       outputShape: models.entity,
     })
-    const res = await axiosLikeClient.post(slashEndingBaseUri, utils.toApi(inputs))
+    const res = await axiosLikeClient.post(parsedBaseUri, utils.toApi(inputs))
     return utils.fromApi(res.data)
   }
 
@@ -277,7 +282,7 @@ export function createApi<
       name: retrieve.name,
       outputShape: models.entity,
     })
-    const res = await axiosLikeClient.get(`${slashEndingBaseUri}${id}/`)
+    const res = await axiosLikeClient.get(`${slashEndingBaseUri}${id}${parsedEndingSlash}`)
     return utils.fromApi(res.data)
   }
 
@@ -296,7 +301,7 @@ export function createApi<
 
     const paginatedZod = getPaginatedSnakeCasedZod(models.entity)
 
-    const res = await axiosLikeClient.get(slashEndingBaseUri, {
+    const res = await axiosLikeClient.get(parsedBaseUri, {
       params: allFilters,
     })
     const rawResponse = parseResponse({
@@ -309,7 +314,7 @@ export function createApi<
   }
 
   const remove = (id: GetInferredFromRaw<TApiEntityShape>["id"]) => {
-    return client.delete(`${slashEndingBaseUri}${id}/`)
+    return client.delete(`${slashEndingBaseUri}${id}${parsedEndingSlash}`)
   }
 
   const updateBase = async <TType extends "partial" | "total" = "partial">({
@@ -342,7 +347,7 @@ export function createApi<
       },
       cb: ({ client, input, utils }) => {
         const { id, ...body } = utils.toApi(input)
-        return client[httpMethod](`${slashEndingBaseUri}${id}/`, body)
+        return client[httpMethod](`${slashEndingBaseUri}${id}${parsedEndingSlash}`, body)
       },
     })
     return updateCall(parsedInput)
