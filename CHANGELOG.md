@@ -1,5 +1,11 @@
 # @thinknimble/tn-models-fp
 
+## 2.13.0
+
+### Minor Changes
+
+- 1aa2f85: Add chance to call built in methods without a trailing slash. TODO: type level remove restriction of axios
+
 ## 2.12.3
 
 ### Patch Changes
