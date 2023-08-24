@@ -1,5 +1,11 @@
 # @thinknimble/tn-models-fp
 
+## 2.14.0
+
+### Minor Changes
+
+- 71c1cc8: Prevent obfuscation of extra fields coming from responses. Now these fields will be available in the response (just won't be type-discoverable). Paginated calls will receive them as camelCased, whereas regular calls will receive them as they come from the raw response.
+
 ## 2.13.0
 
 ### Minor Changes
