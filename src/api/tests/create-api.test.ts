@@ -281,6 +281,37 @@ describe("createApi", async () => {
         },
       })
     })
+    it("should not obfuscate response fields even if they're not in the model", async () => {
+      //arrange
+      const extraField = faker.datatype.string()
+      mockedAxios.get.mockResolvedValueOnce({
+        data: {
+          count: 10,
+          next: null,
+          previous: null,
+          results: [
+            {
+              ...mockEntity1,
+              first_name: mockEntity1.firstName,
+              last_name: mockEntity1.lastName,
+              full_name: mockEntity1.fullName,
+              extra_field: extraField,
+            },
+            {
+              ...mockEntity2,
+              first_name: mockEntity2.firstName,
+              last_name: mockEntity2.lastName,
+              full_name: mockEntity2.fullName,
+              extra_field: extraField,
+            },
+          ],
+        },
+      })
+      //act
+      const result = await testApi.list()
+      //assert
+      expect(result.results[0]).toHaveProperty("extraField")
+    })
     it("verifies these ts tests", async () => {
       try {
         //use existing filter

@@ -3,17 +3,23 @@ import { zodObjectToSnakeRecursive } from "./zod"
 
 //TODO: this needs cleanup. I am not happy with the usage of these across the library. Seems like we could have at least one of these less
 
-export const getPaginatedShape = <T extends z.ZodRawShape>(zodRawShape: T) => {
+export const getPaginatedShape = <T extends z.ZodRawShape>(
+  zodRawShape: T,
+  options: {
+    allowPassthrough?: boolean
+  } = { allowPassthrough: false }
+) => {
+  const zObject = options.allowPassthrough ? z.object(zodRawShape).passthrough() : z.object(zodRawShape)
   return {
     count: z.number(),
     next: z.string().nullable(),
     previous: z.string().nullable(),
-    results: z.array(zodObjectToSnakeRecursive(z.object(zodRawShape))),
+    results: z.array(zodObjectToSnakeRecursive(zObject)),
   }
 }
 
 export const getPaginatedSnakeCasedZod = <T extends z.ZodRawShape>(zodRawShape: T) =>
-  z.object(getPaginatedShape(zodRawShape))
+  z.object(getPaginatedShape(zodRawShape, { allowPassthrough: true })).passthrough()
 
 export const getPaginatedZod = <T extends z.ZodRawShape>(zodRawShape: T) =>
   z.object({
