@@ -60,15 +60,16 @@ const createFromApiHandler = <T extends z.ZodRawShape | ZodPrimitives | z.ZodArr
         zod: outputShape,
       })
   }
-  return isOutputZodPrimitive
-    ? undefined
-    : (((obj: object) => {
-        return parseResponse({
-          identifier: callerName,
-          data: objectToCamelCaseArr(obj) ?? {},
-          zod: z.object(outputShape),
-        })
-      }) as FromApiCall<T>)
+  //! This would send all other things that are not shapes (and not primitives) such as unions and intersections down the drain since we don't have support for those in outputShapes.
+  if (isOutputZodPrimitive) return
+  // Then it is a shape
+  return ((obj: object) => {
+    return parseResponse({
+      identifier: callerName,
+      data: objectToCamelCaseArr(obj) ?? {},
+      zod: z.object(outputShape),
+    })
+  }) as FromApiCall<T>
 }
 
 export function createApiUtils<

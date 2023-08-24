@@ -462,4 +462,32 @@ describe("createPaginatedServiceCall", () => {
       { id: mockValue.id, nestedArray: [{ nestedField: mockValue.nested_array[0]?.nested_field }] },
     ])
   })
+  it("should not obfuscate extra keys coming from response", async () => {
+    //arrange
+    const testTrivialPaginatedCall = createPaginatedServiceCall({
+      outputShape: {
+        id: z.string().uuid(),
+        //not declaring extraField, it will just come unannounced from the response
+      },
+    })
+    const baseUri = "noObfuscatedFields"
+    const api = createApi(
+      {
+        baseUri,
+        client: mockedAxios,
+      },
+      {
+        testTrivialPaginatedCall,
+      }
+    )
+    const mockValue = { id: faker.datatype.uuid(), extra_field: faker.datatype.string() }
+
+    mockedAxios.get.mockResolvedValueOnce({
+      data: { next: null, previous: null, count: 10, results: [mockValue] },
+    })
+    //act
+    const result = await api.csc.testTrivialPaginatedCall({ pagination: new Pagination() })
+    //assert
+    expect(result.results).toEqual([{ id: mockValue.id, extraField: mockValue.extra_field }])
+  })
 })

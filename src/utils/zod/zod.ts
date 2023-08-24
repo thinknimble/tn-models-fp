@@ -108,7 +108,7 @@ export function zodObjectToSnakeRecursive<T extends z.ZodRawShape>(
       return [snakeCasedKey, resolveRecursiveZod(v)]
     })
   ) as ZodRawShapeToSnakedRecursive<T>
-  return z.object(resultingShape)
+  return zodObj._def.unknownKeys === "passthrough" ? z.object(resultingShape).passthrough() : z.object(resultingShape)
 }
 
 function zodReadonlyToSnakeRecursive<T extends z.ZodBranded<any, ReadonlyTag>>(zodBrand: T): any {
