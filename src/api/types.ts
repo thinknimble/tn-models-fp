@@ -7,6 +7,7 @@ import {
   FiltersShape,
   GetInferredFromRawWithBrand,
   InferShapeOrZod,
+  InferShapeOrZodWithoutBrand,
   Is,
   IsAny,
   UnknownIfNever,
@@ -85,7 +86,7 @@ export type ServiceCallFn<
   TInput extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny> = z.ZodVoid,
   TOutput extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny> = z.ZodVoid,
   TFilters extends FiltersShape | z.ZodVoid = z.ZodVoid
-> = (...args: ResolveServiceCallArgs<TInput, TFilters>) => Promise<InferShapeOrZod<TOutput>>
+> = (...args: ResolveServiceCallArgs<TInput, TFilters>) => Promise<InferShapeOrZodWithoutBrand<TOutput>>
 
 type BaseUriInput<TCallType extends string = ""> = TCallType extends "StandAlone"
   ? unknown
@@ -105,7 +106,7 @@ export type CustomServiceCallback<
     CallbackUtils<TInput, TOutput> &
     CallbackInput<TInput> &
     CallbackFilters<TFilters, TOutput>
-) => Promise<InferShapeOrZod<TOutput>>
+) => Promise<InferShapeOrZodWithoutBrand<TOutput>>
 
 export type CustomServiceCallOpts<
   TInput extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny> = z.ZodVoid,

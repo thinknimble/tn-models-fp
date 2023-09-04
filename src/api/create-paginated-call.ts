@@ -1,13 +1,11 @@
-import { objectToCamelCase } from "@thinknimble/tn-utils"
 import { Axios } from "axios"
 import { z } from "zod"
 import {
   FiltersShape,
-  GetInferredFromRaw,
   GetInferredFromRawWithBrand,
-  InferShapeOrZod,
   Pagination,
   UnknownIfNever,
+  UnwrapBrandedRecursive,
   getPaginatedShape,
   getPaginatedSnakeCasedZod,
   getPaginatedZod,
@@ -55,7 +53,8 @@ export function createPaginatedServiceCall<
   ...args: ResolvedCreatePaginatedServiceCallParameters<TOutput, TFilters, TInput>
 ): CustomServiceCallOpts<
   UnknownIfNever<TInput> & typeof paginationObjShape,
-  ReturnType<typeof getPaginatedZod<TOutput>>["shape"],
+  // TODO: test this callback return type
+  ReturnType<typeof getPaginatedZod<UnwrapBrandedRecursive<TOutput>>>["shape"],
   TFilters
 >
 
@@ -65,7 +64,11 @@ export function createPaginatedServiceCall<
 >(
   models: CustomServiceCallOutputObj<TOutput> & CustomServiceCallFiltersObj<TFilters, TOutput>,
   opts?: PaginatedServiceCallOptions
-): CustomServiceCallOpts<typeof paginationObjShape, ReturnType<typeof getPaginatedZod<TOutput>>["shape"], TFilters>
+): CustomServiceCallOpts<
+  typeof paginationObjShape,
+  ReturnType<typeof getPaginatedZod<UnwrapBrandedRecursive<TOutput>>>["shape"],
+  TFilters
+>
 
 export function createPaginatedServiceCall<
   TOutput extends z.ZodRawShape,
