@@ -1,5 +1,12 @@
 # @thinknimble/tn-models-fp
 
+## 2.0.1
+
+### Patch Changes
+
+- 0363678: - Fix paginated response returning brand in its type.
+  - Fix wrong type error when trying to add models without entity or without an id field
+
 ## 2.0.0
 
 ### Major Changes
