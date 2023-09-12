@@ -644,4 +644,23 @@ describe("TS Tests", () => {
     //@ts-expect-error should not expose any of these methods
     const { create, list, retrieve, remove, update } = api
   })
+  describe("Test", () => {
+    it("TS - errors on createApi for entity", () => {
+      //ts assert
+      createApi({
+        baseUri: "something",
+        client: mockedAxios,
+        //@ts-expect-error Call out on entity not being passed to models
+        models: {},
+      })
+      createApi({
+        baseUri: "something",
+        client: mockedAxios,
+        //@ts-expect-error Call out on entity not being properly formatted - should include id
+        models: {
+          entity: { nonIdField: z.string() },
+        },
+      })
+    })
+  })
 })

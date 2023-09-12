@@ -181,13 +181,21 @@ type BaseApiParams = {
   disableTrailingSlash?: boolean
 }
 
+type CheckEntityIntegrity<TModels> = TModels extends { entity: any }
+  ? TModels extends { entity: { id: any } }
+    ? true
+    : "An `id` field in `entity` is required"
+  : "`entity` field is required"
+
 type ValidModelKeys = keyof { entity: unknown; create?: unknown; extraFilters?: unknown }
 type CheckModelsValidKeysPerKey<TModels> = {
   [K in keyof TModels]: K extends ValidModelKeys ? TModels[K] : "Invalid Key"
 }
-type CheckModels<TModels> = CheckModelsValidKeysPerKey<TModels> extends BaseModelsPlaceholder
-  ? CheckModelsValidKeysPerKey<TModels>
-  : "You should not pass `create` model without an `entity` model"
+type CheckModels<TModels> = CheckEntityIntegrity<TModels> extends true
+  ? CheckModelsValidKeysPerKey<TModels> extends BaseModelsPlaceholder
+    ? CheckModelsValidKeysPerKey<TModels>
+    : "You should not pass `create` model without an `entity` model"
+  : CheckEntityIntegrity<TModels>
 
 export function createApi<
   TModels extends BaseModelsPlaceholder,

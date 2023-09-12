@@ -1,6 +1,6 @@
 import { SnakeCase } from "@thinknimble/tn-utils"
 import { z } from "zod"
-import { READONLY_TAG, ReadonlyField, ReadonlyTag } from "./zod"
+import { ReadonlyTag } from "./zod"
 
 type InferZodArray<T extends z.ZodArray<z.ZodTypeAny>> = T extends z.ZodArray<infer TEl>
   ? z.ZodArray<ZodRecursiveResult<TEl>>
@@ -128,13 +128,20 @@ export type GetInferredWithoutReadonlyBrands<T extends z.ZodRawShape> = GetInfer
 /**
  * Infer the shape type, removing readonly marks and inferring their inner types
  */
-export type GetInferredFromRaw<T extends z.ZodRawShape> = GetInferredFromRawWithBrand<UnwrapBranded<T, ReadonlyTag>>
+export type GetInferredFromRaw<T extends z.ZodRawShape> = GetInferredFromRawWithBrand<
+  UnwrapBrandedRecursive<T, ReadonlyTag>
+>
 
 export type PartializeShape<T extends z.ZodRawShape> = {
   [K in keyof T]: z.ZodOptional<T[K]>
 }
 export type InferShapeOrZod<T extends object> = T extends z.ZodRawShape
   ? GetInferredFromRawWithBrand<T>
+  : T extends z.ZodTypeAny
+  ? z.infer<T>
+  : never
+export type InferShapeOrZodWithoutBrand<T extends object> = T extends z.ZodRawShape
+  ? GetInferredFromRaw<T>
   : T extends z.ZodTypeAny
   ? z.infer<T>
   : never
@@ -155,4 +162,25 @@ export type BrandedKeys<T extends z.ZodRawShape> = keyof {
 
 export type UnwrapBranded<T extends z.ZodRawShape, TBrandType extends string | number | symbol = any> = {
   [K in keyof T]: T[K] extends z.ZodBranded<infer TUnwrapped, TBrandType> ? TUnwrapped : T[K]
+}
+
+type UnwrapBrandedInArray<
+  T extends z.ZodArray<z.ZodTypeAny>,
+  TBrandType extends string | number | symbol = any
+> = T extends z.ZodArray<infer TZod>
+  ? TZod extends z.ZodObject<z.ZodRawShape>
+    ? TZod["shape"] extends z.ZodRawShape
+      ? z.ZodArray<z.ZodObject<UnwrapBrandedRecursive<TZod["shape"], TBrandType>>>
+      : T
+    : T
+  : T
+
+export type UnwrapBrandedRecursive<T extends z.ZodRawShape, TBrandType extends string | number | symbol = any> = {
+  [K in keyof T]: T[K] extends z.ZodObject<z.ZodRawShape>
+    ? z.ZodObject<UnwrapBrandedRecursive<T[K]["shape"], TBrandType>>
+    : T[K] extends z.ZodArray<z.ZodObject<z.ZodRawShape>>
+    ? UnwrapBrandedInArray<T[K], TBrandType>
+    : T[K] extends z.ZodBranded<infer TUnwrapped, TBrandType>
+    ? TUnwrapped
+    : T[K]
 }

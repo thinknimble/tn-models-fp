@@ -1,11 +1,11 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
+import { faker } from "@faker-js/faker"
 import { describe, expect, it, vi } from "vitest"
 import { z } from "zod"
-import { GetInferredFromRawWithBrand, Pagination } from "../../utils"
+import { GetInferredFromRawWithBrand, Pagination, readonly } from "../../utils"
 import { createApi } from "../create-api"
 import { createPaginatedServiceCall } from "../create-paginated-call"
 import { entityZodShape, listResponse, mockEntity1, mockEntity2, mockedAxios } from "./mocks"
-import { faker } from "@faker-js/faker"
 
 describe("createPaginatedServiceCall", () => {
   it("allows not passing a uri and calls api with the right uri", async () => {
@@ -489,5 +489,27 @@ describe("createPaginatedServiceCall", () => {
     const result = await api.csc.testTrivialPaginatedCall({ pagination: new Pagination() })
     //assert
     expect(result.results).toEqual([{ id: mockValue.id, extraField: mockValue.extra_field }])
+  })
+  it("Does not return a brand in the response if there's one in the shape", async () => {
+    //arrange
+    const testTrivialPaginatedCall = createPaginatedServiceCall({
+      outputShape: {
+        id: z.string().uuid(),
+        brandedField: readonly(z.string()),
+      },
+    })
+    const baseUri = "checkBrands"
+    const api = createApi(
+      {
+        baseUri,
+        client: mockedAxios,
+      },
+      {
+        testTrivialPaginatedCall,
+      }
+    )
+    type callbackResult = (typeof api)["customServiceCalls"]["testTrivialPaginatedCall"]
+    type result = Awaited<ReturnType<callbackResult>>["results"]
+    type tests = [Expect<result extends { brandedField: z.BRAND<"ReadonlyField"> }[] ? false : true>]
   })
 })
