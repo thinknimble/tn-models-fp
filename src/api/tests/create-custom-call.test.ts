@@ -1,9 +1,9 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { faker } from "@faker-js/faker"
-import { SnakeCasedPropertiesDeep, objectToSnakeCase } from "@thinknimble/tn-utils"
+import { SnakeCasedPropertiesDeep } from "@thinknimble/tn-utils"
 import { describe, expect, it, vi } from "vitest"
 import { z } from "zod"
-import { GetInferredFromRawWithBrand, objectToCamelCaseArr } from "../../utils"
+import { GetInferredFromRawWithBrand, objectToCamelCaseArr, objectToSnakeCaseArr } from "../../utils"
 import { createApi } from "../create-api"
 import { createCustomServiceCall } from "../create-custom-call"
 import { mockedAxios } from "./mocks"
@@ -350,7 +350,7 @@ describe("createCustomServiceCall", () => {
     })
     //assert
     expect(getSpy).toHaveBeenCalledWith(`${baseUri}/`, {
-      params: objectToSnakeCase(filters),
+      params: objectToSnakeCaseArr(filters),
     })
   })
   it("passes the right filters to callback: only output", async () => {
@@ -394,7 +394,7 @@ describe("createCustomServiceCall", () => {
     })
     //assert
     expect(getSpy).toHaveBeenCalledWith(`${baseUri}/`, {
-      params: objectToSnakeCase(filters),
+      params: objectToSnakeCaseArr(filters),
     })
   })
   it("does not error on not passing filters", async () => {
@@ -513,7 +513,7 @@ describe("createCustomServiceCall", () => {
       { testInput: faker.datatype.number() },
       { testInput: faker.datatype.number() },
     ]
-    const mockResponseSnake = mockResponse.map((item) => objectToSnakeCase(item))
+    const mockResponseSnake = mockResponse.map((item) => objectToSnakeCaseArr(item))
     const customCall = createCustomServiceCall(
       {
         inputShape,

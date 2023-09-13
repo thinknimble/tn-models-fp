@@ -13,7 +13,8 @@
     "test": "vitest run",
     "test:dev": "vitest",
     "ci": "pnpm run lint && pnpm run test && pnpm run build",
-    "release": "pnpm run ci && changeset publish"
+    "release": "pnpm run ci && changeset publish",
+    "dev:watch": "tsup src/index.ts --format cjs,esm --dts --watch"
   },
   "repository": {
     "type": "git",

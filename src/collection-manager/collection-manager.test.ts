@@ -1,10 +1,10 @@
 import { faker } from "@faker-js/faker"
-import { objectToCamelCase, objectToSnakeCase } from "@thinknimble/tn-utils"
 import axios from "axios"
 import { Mocked, beforeEach, describe, expect, it, vi } from "vitest"
 import { z } from "zod"
 import { createCollectionManager } from "."
 import { createApi } from "../api"
+import { objectToCamelCaseArr, objectToSnakeCaseArr } from "../utils"
 import { Pagination, getPaginatedSnakeCasedZod } from "../utils/pagination"
 
 vi.mock("axios")
@@ -40,7 +40,7 @@ const mockedPaginatedEntitySnakeCased: PaginatedEntity = {
 }
 const mockedPaginatedEntity = {
   ...mockedPaginatedEntitySnakeCased,
-  results: mockedPaginatedEntitySnakeCased.results.map((r) => objectToCamelCase(r)!),
+  results: mockedPaginatedEntitySnakeCased.results.map((r) => objectToCamelCaseArr(r)!),
 }
 
 describe("collection manager v2 tests", () => {
@@ -60,7 +60,7 @@ describe("collection manager v2 tests", () => {
   const feedFilters = {
     anExtraFilter: "my extra filter",
   }
-  const feedFiltersSnakeCased = objectToSnakeCase(feedFilters)!
+  const feedFiltersSnakeCased = objectToSnakeCaseArr(feedFilters)!
   const feedPagination = new Pagination({
     next: "https://mock.list/?page=6",
     page: 5,

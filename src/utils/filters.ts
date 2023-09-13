@@ -1,6 +1,7 @@
-import { SnakeCasedPropertiesDeep, objectToSnakeCase } from "@thinknimble/tn-utils"
+import { SnakeCasedPropertiesDeep } from "@thinknimble/tn-utils"
 import { z } from "zod"
 import { GetInferredFromRawWithBrand } from "./zod"
+import { objectToSnakeCaseArr } from "./api"
 
 export const paginationFiltersZodShape = {
   page: z.number(),
@@ -16,7 +17,7 @@ type AsQueryParam<T extends object> = {
 export const parseFilters = <TFilters extends FiltersShape>(shape?: TFilters, filters?: unknown) => {
   if (!filters || !shape) return
   const filtersParsed = z.object(shape).partial().parse(filters)
-  const snakedFilters = objectToSnakeCase(filtersParsed)
+  const snakedFilters = objectToSnakeCaseArr(filtersParsed)
   return snakedFilters
     ? (Object.fromEntries(
         Object.entries(snakedFilters).flatMap(([k, v]) => {
