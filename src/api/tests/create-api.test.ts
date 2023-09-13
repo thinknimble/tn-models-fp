@@ -1,9 +1,17 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { faker } from "@faker-js/faker"
-import { SnakeCasedPropertiesDeep, objectToCamelCase, objectToSnakeCase } from "@thinknimble/tn-utils"
+import { SnakeCasedPropertiesDeep } from "@thinknimble/tn-utils"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { z } from "zod"
-import { GetInferredFromRaw, GetInferredFromRawWithBrand, InferShapeOrZod, Pagination, readonly } from "../../utils"
+import {
+  GetInferredFromRaw,
+  GetInferredFromRawWithBrand,
+  InferShapeOrZod,
+  Pagination,
+  objectToCamelCaseArr,
+  objectToSnakeCaseArr,
+  readonly,
+} from "../../utils"
 import { createApi } from "../create-api"
 import { createCustomServiceCall } from "../create-custom-call"
 import { CustomServiceCallsRecord, ServiceCallFn } from "../types"
@@ -148,7 +156,7 @@ describe("createApi", async () => {
         testInput: "test",
       })
       //assert
-      expect(response).toEqual(objectToCamelCase(createResponse))
+      expect(response).toEqual(objectToCamelCaseArr(createResponse))
     })
     it("uses entity response if no create shape was passed", async () => {
       const baseUri = "create"
@@ -215,7 +223,70 @@ describe("createApi", async () => {
       const res = await testApi.create({
         ...testCreate,
       })
-      expect(res).toStrictEqual(objectToCamelCase(expected.data))
+      expect(res).toStrictEqual(objectToCamelCaseArr(expected.data))
+    })
+    it("Works with nested fields", async () => {
+      //arrange
+      const postSpy = vi.spyOn(mockedAxios, "post")
+      const arrayElementShape = {
+        id: z.string().uuid(),
+        textElement: z.string(),
+      }
+      const baseModelShape = {
+        id: z.string().uuid(),
+        datetimeCreated: readonly(z.string().datetime().optional()),
+        lastEdited: readonly(z.string().datetime().optional()),
+      }
+      const subEntityShape = {
+        firstName: z.string(),
+        lastName: z.string(),
+      }
+      const nestedObjectShape = {
+        ...baseModelShape,
+        ...subEntityShape,
+      }
+      const entityShape = {
+        ...baseModelShape,
+        nestedObject: z.object(nestedObjectShape),
+      }
+      const createShape = {
+        nestedObject: z.object(subEntityShape),
+        nestedArray: z.array(z.object(arrayElementShape)).optional().nullable(),
+      }
+      const testApi = createApi({
+        client: mockedAxios,
+        baseUri: testBaseUri,
+        models: {
+          entity: entityShape,
+          create: createShape,
+        },
+      })
+      const testCreate = {
+        nestedObject: {
+          firstName: faker.datatype.string(),
+          lastName: faker.datatype.string(),
+        },
+        nestedArray: [{ id: faker.datatype.uuid(), textElement: faker.datatype.string() }],
+      }
+      const expected = {
+        data: {
+          id: faker.datatype.uuid(),
+          datetime_created: faker.datatype.datetime().toISOString(),
+          last_edited: faker.datatype.datetime().toISOString(),
+          nested_object: {
+            id: faker.datatype.uuid(),
+            datetime_created: faker.datatype.datetime().toISOString(),
+            last_edited: faker.datatype.datetime().toISOString(),
+            first_name: faker.datatype.string(),
+            last_name: faker.datatype.string(),
+          },
+        },
+      }
+      mockedAxios.post.mockResolvedValueOnce(expected)
+      // act
+      const res = await testApi.create(testCreate)
+      // assert
+      expect(res).toStrictEqual(objectToCamelCaseArr(expected.data))
     })
   })
 
@@ -445,7 +516,7 @@ describe("createApi", async () => {
         id,
         ...body,
       })
-      expect(patchSpy).toHaveBeenCalledWith(`${baseUri}/${id}/`, objectToSnakeCase(body))
+      expect(patchSpy).toHaveBeenCalledWith(`${baseUri}/${id}/`, objectToSnakeCaseArr(body))
     })
     it("calls update with partial and put", async () => {
       //arrange
@@ -459,7 +530,7 @@ describe("createApi", async () => {
         id,
         ...body,
       })
-      expect(putSpy).toHaveBeenCalledWith(`${baseUri}/${id}/`, objectToSnakeCase(body))
+      expect(putSpy).toHaveBeenCalledWith(`${baseUri}/${id}/`, objectToSnakeCaseArr(body))
     })
     it("calls update with total and put", async () => {
       //arrange
@@ -468,7 +539,7 @@ describe("createApi", async () => {
       const { id, fullName, ...body } = mockEntity1
       //act
       await api.update.replace(mockEntity1)
-      expect(putSpy).toHaveBeenCalledWith(`${baseUri}/${id}/`, objectToSnakeCase(body))
+      expect(putSpy).toHaveBeenCalledWith(`${baseUri}/${id}/`, objectToSnakeCaseArr(body))
     })
   })
 })

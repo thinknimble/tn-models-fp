@@ -13,7 +13,7 @@ describe("parseResponse", () => {
     }
     const zod = z.object({
       name: z.string(),
-      lastName: z.string(),
+      last_name: z.string(),
     })
     //act
     const parsed = parseResponse({

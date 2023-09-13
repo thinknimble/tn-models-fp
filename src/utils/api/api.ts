@@ -1,4 +1,4 @@
-import { CamelCasedPropertiesDeep, objectToCamelCase, objectToSnakeCase, toCamelCase } from "@thinknimble/tn-utils"
+import { CamelCasedPropertiesDeep, SnakeCasedPropertiesDeep, toCamelCase, toSnakeCase } from "@thinknimble/tn-utils"
 import { AxiosInstance } from "axios"
 import { z } from "zod"
 import { AxiosLike } from "../../api/types"
@@ -6,12 +6,12 @@ import { parseFilters } from "../filters"
 import { Pagination } from "../pagination"
 import { parseResponse } from "../response"
 import {
-  READONLY_TAG,
   StripReadonlyBrand,
   ZodPrimitives,
-  isZod,
   isZodArray,
+  isZodPrimitive,
   isZodReadonly,
+  isZodVoid,
   resolveRecursiveZod,
   zodObjectToSnakeRecursive,
 } from "../zod"
@@ -28,35 +28,44 @@ export const objectToCamelCaseArr = <T extends object>(obj: T): CamelCasedProper
   }
   return Object.fromEntries(newEntries)
 }
+export const objectToSnakeCaseArr = <T extends object>(obj: T): SnakeCasedPropertiesDeep<T> => {
+  if (typeof obj !== "object" || obj === null) return obj
+  if (Array.isArray(obj)) return obj.map((o) => objectToSnakeCaseArr(o)) as SnakeCasedPropertiesDeep<T>
+  const entries = Object.entries(obj)
+  const newEntries = []
+  for (const [k, v] of entries) {
+    newEntries.push([toSnakeCase(k), objectToSnakeCaseArr(v)])
+  }
+  return Object.fromEntries(newEntries)
+}
 
 const createToApiHandler = <T extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny>>(inputShape: T) => {
-  const isInputZodPrimitive = inputShape instanceof z.ZodSchema
   // Given that this is under our control, we should not do safe parse, if the parsing fails means something is wrong (you're not complying with the schema you defined)
-  if (isZod(inputShape) && isZodArray(inputShape)) {
-    if (inputShape.element)
-      return (arr: unknown[]) =>
-        (typeof arr?.[0] === "object"
-          ? resolveRecursiveZod(inputShape).parse(arr.map((i) => objectToSnakeCase(i as object)))
-          : arr) as ToApiCall<T>
+  if (isZodArray(inputShape)) {
+    return (arr: unknown[]) =>
+      (typeof arr?.[0] === "object"
+        ? resolveRecursiveZod(inputShape).parse(arr.map((i) => objectToSnakeCaseArr(i as object)))
+        : arr) as ToApiCall<T>
   }
-  if (isInputZodPrimitive) return
-  return ((obj: object) =>
-    zodObjectToSnakeRecursive(z.object(inputShape)).parse(objectToSnakeCase(obj))) as ToApiCall<T>
+  if (isZodPrimitive(inputShape)) return
+  return ((obj: object) => {
+    return zodObjectToSnakeRecursive(z.object(inputShape)).parse(objectToSnakeCaseArr(obj))
+  }) as ToApiCall<T>
 }
 
 const createFromApiHandler = <T extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny>>(
   outputShape: T,
   callerName: string
 ) => {
-  const isOutputZodArray = outputShape instanceof z.ZodArray
-  const isOutputZodPrimitive = outputShape instanceof z.ZodSchema
+  const isOutputZodArray = isZodArray(outputShape)
+  const isOutputZodPrimitive = isZodPrimitive(outputShape)
 
   // since this checks for the api response, which we don't control, we can't strict parse, else we would break the flow. We'd rather safe parse and show a warning if there's a mismatch
   if (isOutputZodArray) {
     return (obj: unknown[]) =>
       parseResponse({
         identifier: callerName,
-        data: typeof obj?.[0] === "object" && obj ? obj.map((o) => objectToCamelCase(o as object)) : obj,
+        data: typeof obj?.[0] === "object" && obj ? obj.map((o) => objectToCamelCaseArr(o as object)) : obj,
         zod: outputShape,
       })
   }
@@ -117,7 +126,7 @@ export const createCustomServiceCallHandler =
     baseUri?: string
   }) =>
   async (args: unknown) => {
-    const expectsInput = !(serviceCallOpts.inputShape instanceof z.ZodVoid)
+    const expectsInput = !isZodVoid(serviceCallOpts.inputShape)
     const hasPagination = (
       argCheck: unknown
     ): argCheck is { pagination: Pagination } | { input: { pagination: Pagination } } =>
@@ -130,7 +139,7 @@ export const createCustomServiceCallHandler =
               argCheck.input &&
               "pagination" in argCheck.input))
       )
-    const expectsFilters = !(serviceCallOpts.filtersShape instanceof z.ZodVoid)
+    const expectsFilters = !isZodVoid(serviceCallOpts.filtersShape)
     const utils = createApiUtils({
       name: name ?? "No-Name call",
       inputShape: serviceCallOpts.inputShape,

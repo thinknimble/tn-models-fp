@@ -2,10 +2,9 @@
 import { faker } from "@faker-js/faker"
 import { describe, expect, it, vi } from "vitest"
 import { z } from "zod"
-import { createApiUtils, removeReadonlyFields } from "../api"
+import { createApiUtils, objectToSnakeCaseArr, removeReadonlyFields } from "../api"
 import { GetInferredFromRawWithBrand, readonly } from "../zod"
 import { mockedAxios } from "../../api/tests/mocks"
-import { objectToSnakeCase } from "@thinknimble/tn-utils"
 
 describe("createApiUtils", () => {
   it("returns undefined when both input output are primitives", () => {
@@ -142,7 +141,7 @@ describe("createApiUtils", () => {
       expo_token: expoTokenTest.expoToken,
     })
     mockedAxios.post("/api/test", toApi(expoTokenTest))
-    expect(postSpy).toHaveBeenCalledWith("/api/test", objectToSnakeCase(expoTokenTest))
+    expect(postSpy).toHaveBeenCalledWith("/api/test", objectToSnakeCaseArr(expoTokenTest))
   })
 
   it("returns fromApi when outputShape is zod array", () => {

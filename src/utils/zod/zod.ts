@@ -2,35 +2,48 @@ import { toSnakeCase } from "@thinknimble/tn-utils"
 import { z } from "zod"
 import { ZodPrimitives, ZodRawShapeToSnakedRecursive, zodPrimitivesList } from "./types"
 
-export const isZod = (input: unknown): input is z.ZodSchema => {
-  return input instanceof z.ZodSchema
+//! `instanceof` and `z.instanceof` (which might be using the built-in instanceof keyword) does not compile well when using this library in certain node environments so this has been causing a lot of trouble for some users and myself to debug. Will likely have to do
+
+export const isZod = (input: unknown): input is z.ZodSchema & { _def: { typeName: unknown } } => {
+  //! we can't use `instanceof` due to some weird compilation error which we need to investigate. So we're going to old-school duck type here
+  return Boolean(
+    input &&
+      typeof input === "object" &&
+      "_def" in input &&
+      input._def &&
+      typeof input._def === "object" &&
+      "typeName" in input._def
+  )
 }
-export const isZodArray = (input: z.ZodTypeAny): input is z.ZodArray<z.ZodTypeAny> => {
-  return input instanceof z.ZodArray
+export const isZodArray = (input: unknown): input is z.ZodArray<z.ZodTypeAny> => {
+  return isZod(input) && input._def?.typeName === z.ZodArray.name
 }
-export const isZodObject = (input: z.ZodTypeAny): input is z.ZodObject<z.ZodRawShape> => {
-  return input instanceof z.ZodObject
+export const isZodObject = (input: unknown): input is z.ZodObject<z.ZodRawShape> => {
+  return isZod(input) && input._def?.typeName === z.ZodObject.name
 }
 export const isZodOptional = (input: z.ZodTypeAny): input is z.ZodOptional<z.ZodTypeAny> => {
-  return input instanceof z.ZodOptional
+  return isZod(input) && input._def?.typeName === z.ZodOptional.name
 }
-export const isZodNullable = (input: z.ZodTypeAny): input is z.ZodNullable<z.ZodTypeAny> => {
-  return input instanceof z.ZodNullable
+export const isZodNullable = (input: unknown): input is z.ZodNullable<z.ZodTypeAny> => {
+  return isZod(input) && input._def?.typeName === z.ZodNullable.name
 }
-export const isZodPrimitive = (input: z.ZodTypeAny): input is ZodPrimitives => {
-  return zodPrimitivesList.some((inst) => input instanceof inst)
+export const isZodPrimitive = (input: unknown): input is ZodPrimitives => {
+  return isZod(input) && zodPrimitivesList.some((inst) => input._def?.typeName === inst.name)
 }
-export const isZodIntersection = (input: z.ZodTypeAny): input is z.ZodIntersection<z.ZodTypeAny, z.ZodTypeAny> => {
-  return input instanceof z.ZodIntersection
+export const isZodIntersection = (input: unknown): input is z.ZodIntersection<z.ZodTypeAny, z.ZodTypeAny> => {
+  return isZod(input) && input._def?.typeName === z.ZodIntersection.name
 }
-export const isZodUnion = (input: z.ZodTypeAny): input is z.ZodUnion<readonly [z.ZodTypeAny]> => {
-  return input instanceof z.ZodUnion
+export const isZodUnion = (input: unknown): input is z.ZodUnion<readonly [z.ZodTypeAny]> => {
+  return isZod(input) && input._def?.typeName === z.ZodUnion.name
 }
-export const isZodBrand = (input: z.ZodTypeAny): input is z.ZodBranded<any, any> => {
-  return input._def?.typeName === "ZodBranded"
+export const isZodBrand = (input: unknown): input is z.ZodBranded<any, any> => {
+  return isZod(input) && input._def?.typeName === z.ZodBranded.name
 }
-export const isZodReadonly = (input: z.ZodTypeAny): input is z.ZodBranded<any, ReadonlyTag> => {
-  return isZodBrand(input) && input.description === READONLY_TAG
+export const isZodReadonly = (input: unknown): input is z.ZodBranded<any, ReadonlyTag> => {
+  return isZod(input) && isZodBrand(input) && input.description === READONLY_TAG
+}
+export const isZodVoid = (input: unknown): input is z.ZodVoid => {
+  return isZod(input) && input._def.typeName === z.ZodVoid.name
 }
 
 //TODO: we should probably revisit the types here but they seem not too friendly to tackle given the recursive nature of this operation
@@ -67,7 +80,6 @@ export function resolveRecursiveZod<T extends z.ZodTypeAny>(zod: T) {
 function zodArrayRecursive<T extends z.ZodTypeAny>(zodArray: z.ZodArray<T>): any {
   //: InferZodArray<z.ZodArray<T>>
   const innerElement = zodArray.element
-
   return resolveRecursiveZod(innerElement).array()
 }
 
