@@ -35,6 +35,7 @@ The package is based in zod to replace models and fields approach from previous 
 - [Contribution guide](#contribution-guide)
   - [pnpm](#pnpm)
   - [Tests](#tests)
+  - [Side by side debugging](#side-by-side-debugging)
   - [Publishing new version of the package.](#publishing-new-version-of-the-package)
 
 # Getting started
@@ -656,6 +657,29 @@ describe.only("some test suite", () => {
   //...
 })
 ```
+
+## Side by side debugging
+
+If you want to debug this library from an external application, you can run the watch command (below) so any changes would generate a new build, that is it will generate the lib files in `/dist`
+
+```
+pnpm run dev:watch
+```
+
+These build files enable us to refer to this package in an external app's `package.json` as a file:
+
+```json
+// package.json of external application
+//...
+dependencies:{
+  //...
+  "@thinknimble/tn-models":"file:../path/to/tn-models"
+  //...
+}
+//...
+```
+
+If you don't have an app and want a very simple one where you can test out tn-models you can check out this one which we set up for this sole purpose: [tn-models-script-app](https://github.com/thinknimble/tn-models-script-app). Please follow the README in there to get the app set up.
 
 ## Publishing new version of the package.
 
