@@ -1,5 +1,12 @@
 # @thinknimble/tn-models-fp
 
+## 2.1.0
+
+### Minor Changes
+
+- 1821769: - Fix issue with `instanceof` operator not working as expected in different nodeJS environments.
+  - Replaced with a naive but more reliable implementation which uses `typeName` from `zod` to be able to tell apart zod instance types.
+
 ## 2.0.1
 
 ### Patch Changes
