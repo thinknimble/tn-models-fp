@@ -29,4 +29,4 @@ export const parseFilters = <TFilters extends FiltersShape>(shape?: TFilters, fi
     : undefined
 }
 
-export type FiltersShape = Record<string, z.ZodString | z.ZodNumber>
+export type FiltersShape = Record<string, z.ZodString | z.ZodNumber | z.ZodArray<z.ZodNumber> | z.ZodArray<z.ZodString>>

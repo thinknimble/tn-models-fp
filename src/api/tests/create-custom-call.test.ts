@@ -323,6 +323,7 @@ describe("createCustomServiceCall", () => {
         },
         filtersShape: {
           testFilter: z.string(),
+          testArrayFilter: z.string().array(),
         },
       },
       async ({ client, slashEndingBaseUri, parsedFilters }) => {
@@ -332,7 +333,8 @@ describe("createCustomServiceCall", () => {
     )
     const baseUri = "filters"
     const filters = {
-      testFilter: "myFilter",
+      testFilter: faker.datatype.string(),
+      testArrayFilter: [faker.datatype.string(), faker.datatype.string()],
     }
     const api = createApi(
       {
