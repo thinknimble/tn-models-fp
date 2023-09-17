@@ -1,5 +1,11 @@
 # @thinknimble/tn-models-fp
 
+## 2.1.1
+
+### Patch Changes
+
+- c9f65b6: Allow to pass array of strings or numbers to filters
+
 ## 2.1.0
 
 ### Minor Changes
