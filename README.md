@@ -28,6 +28,7 @@ The package is based in zod to replace models and fields approach from previous 
     - [`standAlone` calls](#standalone-calls)
     - [On the service callback parameters](#on-the-service-callback-parameters)
   - [`createPaginatedServiceCall`](#createpaginatedservicecall)
+    - [Build a uri dynamically](#build-a-uri-dynamically)
   - [`createApiUtils`](#createapiutils)
   - [`createCollectionManager`](#createcollectionmanager)
     - [Example use](#example-use)
@@ -583,6 +584,40 @@ const api = createApi(
     getMatches
   }
 )
+```
+
+### Build a uri dynamically
+
+You can create paginated calls and have their uri to be dynamic.
+
+Previous example simply showed a static uri but adding a `urlParams` to the `inputShape` would result in `uri` to be a builder function:
+
+```typescript
+const callWithUrlParams = createPaginatedServiceCall(
+  {
+    inputShape: {
+      urlParams: z.object({
+        someId: z.string(),
+      }),
+    },
+    outputShape,
+  },
+  {
+    uri: ({ someId }) => `myUri/${someId}`,
+  }
+)
+const api = createApi(
+  {
+    baseUri,
+    client,
+  },
+  {
+    callWithUrlParams,
+  }
+)
+const pagination = new Pagination({ page: 1, size: 20 })
+const randomId = faker.datatype.uuid()
+await api.csc.callWithUrlParams({ pagination, urlParams: { someId: randomId } }) // requests myUri/${randomId}
 ```
 
 ## `createApiUtils`
