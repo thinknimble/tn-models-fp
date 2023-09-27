@@ -25,9 +25,11 @@ The package is based in zod to replace models and fields approach from previous 
     - [Why shapes and not zods?](#why-shapes-and-not-zods)
     - [Make fields readonly ( only applicable for `entity`)](#make-fields-readonly--only-applicable-for-entity)
   - [`createCustomServiceCall`](#createcustomservicecall)
+    - [Call with filters](#call-with-filters)
     - [`standAlone` calls](#standalone-calls)
     - [On the service callback parameters](#on-the-service-callback-parameters)
   - [`createPaginatedServiceCall`](#createpaginatedservicecall)
+    - [Add filters to your call](#add-filters-to-your-call)
     - [Build a uri dynamically](#build-a-uri-dynamically)
   - [`createApiUtils`](#createapiutils)
   - [`createCollectionManager`](#createcollectionmanager)
@@ -446,9 +448,10 @@ We provided multiple overloads for it to be fully type-safe and properly infer t
 
 Without this function, you cannot add custom service calls. This was designed as to enforce the type safety of the custom calls. If you're looking for a way to self-host one of these calls please check [`standAlone` calls](#standalone-calls)
 
-Example:
+<details>
+<summary>Example</summary>
 
-```ts
+```typescript
 // from tn-models-client sample repo
 const deleteTodo = createCustomServiceCall(
   {
@@ -474,9 +477,11 @@ const updatePartial = createCustomServiceCall(
 )
 ```
 
+</details>
+
 To add these custom calls to your created api you simply pass them as object to the second parameter in `createApi`
 
-IG: (same as first createApi example but with custom calls)
+IG (same as first createApi example but with custom calls)
 
 ```ts
 export const todoApi = createApi(
@@ -497,6 +502,49 @@ export const todoApi = createApi(
 ```
 
 We also added a `csc` alias in case you feel `customServiceCall` is too long.
+
+### Call with filters
+
+To make calls that include query params a `filtersShape` object has to be added in the first parameter of `createCustomServiceCall`. This enables the resulting service call function to include a filter parameter to have readily available the filters to pass them as parameter or parse them in your own way:
+
+<details>
+<summary>Example</summary>
+
+```typescript
+const callWithFilter = createCustomServiceCall(
+  {
+    inputShape,
+    outputShape,
+    filtersShape: {
+      testFilter: z.string(),
+      testArrayFilter: z.string().array(),
+    },
+  },
+  // `parsedFilters` contains your filters ready to be used in the uri. They're snake cased so expect `test_filter` and `test_array_filter`
+  async ({ client, slashEndingBaseUri, parsedFilters }) => {
+    const result = await client.get(slashEndingBaseUri, { params: parsedFilters })
+    return result.data
+  }
+)
+const api = createApi(
+  {
+    client,
+    baseUri,
+  },
+  {
+    callWithFilter,
+  }
+)
+await api.csc.callWithFilter({
+  input: { testInput: "testInput" },
+  filters: {
+    testFilter: "test",
+    testArrayFilter: [1, 22],
+  },
+})
+```
+
+</details>
 
 ### `standAlone` calls
 
@@ -586,11 +634,53 @@ const api = createApi(
 )
 ```
 
+### Add filters to your call
+
+Add filters to calls by passing a `filtersShape` in the first parameter. This will allow to pass filters in the resulting service call function
+
+<details>
+<summary>Example</summary>
+
+```typescript
+const paginatedCallWithFilters = createPaginatedServiceCall({
+  outputShape,
+  filtersShape: {
+    myExtraFilter: z.string(),
+    anotherExtraFilter: z.number(),
+  },
+})
+const api = createApi(
+  {
+    baseUri,
+    client,
+  },
+  {
+    paginatedCallWithFilters,
+  }
+)
+const pagination = new Pagination({ page: 1, size: 20 })
+const myExtraFilter = "test"
+//act
+await api.csc.paginatedCallWithFilters({
+  input: {
+    pagination,
+  },
+  filters: {
+    myExtraFilter, // besides the pagination qparams this will also pass my_extra_filter as a query param
+  },
+})
+```
+
+</details>
+
 ### Build a uri dynamically
 
 You can create paginated calls and have their uri to be dynamic.
 
 Previous example simply showed a static uri but adding a `urlParams` to the `inputShape` would result in `uri` to be a builder function:
+
+<details>
+<summary>Example</summary>
 
 ```typescript
 const callWithUrlParams = createPaginatedServiceCall(
@@ -619,6 +709,8 @@ const pagination = new Pagination({ page: 1, size: 20 })
 const randomId = faker.datatype.uuid()
 await api.csc.callWithUrlParams({ pagination, urlParams: { someId: randomId } }) // requests myUri/${randomId}
 ```
+
+</details>
 
 ## `createApiUtils`
 
