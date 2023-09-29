@@ -43,7 +43,7 @@ export const isZodReadonly = (input: unknown): input is z.ZodBranded<any, Readon
   return isZod(input) && isZodBrand(input) && input.description === READONLY_TAG
 }
 export const isZodVoid = (input: unknown, ref?: string): input is z.ZodVoid => {
-  ref && console.log("🚀 ~ file: zod.ts:46 ~ isZodVoid ~ ref:", ref)
+  ref && console.log("🚀 ~ file: zod.ts:46 ~ isZodVoid ~ ref:", input, ref)
   return isZod(input) && input._def.typeName === z.ZodVoid.name
 }
 

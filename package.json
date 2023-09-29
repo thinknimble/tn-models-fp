@@ -1,6 +1,6 @@
 {
   "name": "@thinknimble/tn-models",
-  "version": "2.1.2-canary.5",
+  "version": "2.1.2-canary.6",
   "description": "Utilities for building front-end models when using snake-cased backends.",
   "author": "Thinknimble",
   "license": "MIT",
