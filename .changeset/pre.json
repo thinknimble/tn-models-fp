@@ -5,6 +5,7 @@
     "@thinknimble/tn-models": "2.1.1"
   },
   "changesets": [
+    "cool-hornets-sing",
     "many-adults-visit"
   ]
 }

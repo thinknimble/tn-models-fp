@@ -141,18 +141,22 @@ export const createCustomServiceCallHandler =
               "pagination" in argCheck.input))
       )
     const expectsFilters = !isZodVoid(serviceCallOpts.filtersShape)
+    console.log("🚀 ~ file: api.ts:144 ~ expectsFilters:", expectsFilters)
     const utils = createApiUtils({
       name: name ?? "No-Name call",
       inputShape: serviceCallOpts.inputShape,
       outputShape: serviceCallOpts.outputShape,
     }) as object
+
     const baseArgs = {
       client,
       slashEndingBaseUri: baseUri,
       ...utils,
     }
+    console.log("🚀 ~ file: api.ts:156 ~ baseArgs:", baseArgs)
     if (expectsFilters) {
-      return serviceCallOpts.callback({
+      console.log("🚀 ~ file: api.ts:156 ~ baseArgs:", baseArgs)
+      const callbackArgs = {
         ...baseArgs,
         ...(expectsInput || hasPagination(args)
           ? {
@@ -171,7 +175,14 @@ export const createCustomServiceCallHandler =
           args && typeof args === "object" && "filters" in args
             ? parseFilters(serviceCallOpts.filtersShape, args.filters)
             : undefined,
+      }
+      console.log("🚀 ~ file: api.ts:160 ~ callbackArgs:", callbackArgs, {
+        whatIsArgs: args,
+        result: args && typeof args === "object" && "input" in args,
+        hasPagination: hasPagination(args),
+        doesNotExpectInput: !expectsInput,
       })
+      return serviceCallOpts.callback(callbackArgs)
     }
     const callbackInputs = {
       ...baseArgs,
