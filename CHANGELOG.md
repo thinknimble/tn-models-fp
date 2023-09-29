@@ -1,5 +1,11 @@
 # @thinknimble/tn-models-fp
 
+## 2.1.2-canary.7
+
+### Patch Changes
+
+- logs
+
 ## 2.1.2-canary.6
 
 ### Patch Changes
