@@ -126,7 +126,7 @@ export const createCustomServiceCallHandler =
     baseUri?: string
   }) =>
   async (args: unknown) => {
-    console.log("🚀 ~ file: api.ts:129 ~ args:", args)
+    console.log("🚀 ~ file: api.ts:129 ~ args:", { args, isZodVoid })
     const expectsInput = !isZodVoid(serviceCallOpts.inputShape, "custom call")
     console.log("🚀 ~ file: api.ts:131 ~ expectsInput:", expectsInput)
     const hasPagination = (
