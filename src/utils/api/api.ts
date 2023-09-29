@@ -155,7 +155,10 @@ export const createCustomServiceCallHandler =
     }
     console.log("🚀 ~ file: api.ts:156 ~ baseArgs:", baseArgs)
     if (expectsFilters) {
-      console.log("🚀 ~ file: api.ts:156 ~ baseArgs:", baseArgs)
+      console.log("🚀 ~ file: api.ts:156 ~ baseArgs:", {
+        baseArgs,
+        expectsInput,
+      })
       const callbackArgs = {
         ...baseArgs,
         ...(expectsInput || hasPagination(args)
