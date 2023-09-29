@@ -127,7 +127,8 @@ export const createCustomServiceCallHandler =
   }) =>
   async (args: unknown) => {
     console.log("🚀 ~ file: api.ts:129 ~ args:", args)
-    const expectsInput = !isZodVoid(serviceCallOpts.inputShape)
+    const expectsInput = !isZodVoid(serviceCallOpts.inputShape, "custom call")
+    console.log("🚀 ~ file: api.ts:131 ~ expectsInput:", expectsInput)
     const hasPagination = (
       argCheck: unknown
     ): argCheck is { pagination: Pagination } | { input: { pagination: Pagination } } =>
@@ -140,6 +141,7 @@ export const createCustomServiceCallHandler =
               argCheck.input &&
               "pagination" in argCheck.input))
       )
+    console.log("🚀 ~ file: api.ts:135 ~ hasPagination:", hasPagination)
     const expectsFilters = !isZodVoid(serviceCallOpts.filtersShape)
     console.log("🚀 ~ file: api.ts:144 ~ expectsFilters:", expectsFilters)
     const utils = createApiUtils({

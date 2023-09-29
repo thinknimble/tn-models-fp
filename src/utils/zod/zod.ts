@@ -42,7 +42,8 @@ export const isZodBrand = (input: unknown): input is z.ZodBranded<any, any> => {
 export const isZodReadonly = (input: unknown): input is z.ZodBranded<any, ReadonlyTag> => {
   return isZod(input) && isZodBrand(input) && input.description === READONLY_TAG
 }
-export const isZodVoid = (input: unknown): input is z.ZodVoid => {
+export const isZodVoid = (input: unknown, ref?: string): input is z.ZodVoid => {
+  ref && console.log("🚀 ~ file: zod.ts:46 ~ isZodVoid ~ ref:", ref)
   return isZod(input) && input._def.typeName === z.ZodVoid.name
 }
 
