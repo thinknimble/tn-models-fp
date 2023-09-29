@@ -1,5 +1,11 @@
 # @thinknimble/tn-models-fp
 
+## 2.1.2
+
+### Patch Changes
+
+- Fix issue where zod names were not properly resolved in some environments, thus internal zod checks were failing unnoticeably
+
 ## 2.1.1
 
 ### Patch Changes
