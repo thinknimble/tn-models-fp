@@ -126,6 +126,7 @@ export const createCustomServiceCallHandler =
     baseUri?: string
   }) =>
   async (args: unknown) => {
+    console.log("🚀 ~ file: api.ts:129 ~ args:", args)
     const expectsInput = !isZodVoid(serviceCallOpts.inputShape)
     const hasPagination = (
       argCheck: unknown
@@ -172,10 +173,12 @@ export const createCustomServiceCallHandler =
             : undefined,
       })
     }
-    return serviceCallOpts.callback({
+    const callbackInputs = {
       ...baseArgs,
       ...(expectsInput || hasPagination(args) ? { input: args } : {}),
-    })
+    }
+    console.log("🚀 ~ file: api.ts:177 ~ callbackInputs:", callbackInputs)
+    return serviceCallOpts.callback(callbackInputs)
   }
 
 export const removeReadonlyFields = <T extends z.ZodRawShape, TUnwrap extends (keyof T)[] = []>(
