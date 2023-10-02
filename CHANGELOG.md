@@ -1,5 +1,11 @@
 # @thinknimble/tn-models-fp
 
+## 2.1.3-canary.0
+
+### Patch Changes
+
+- Add some exports in case they're needed for type inference
+
 ## 2.1.2
 
 ### Patch Changes

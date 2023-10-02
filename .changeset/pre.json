@@ -1,0 +1,10 @@
+{
+  "mode": "pre",
+  "tag": "canary",
+  "initialVersions": {
+    "@thinknimble/tn-models": "2.1.2"
+  },
+  "changesets": [
+    "mighty-falcons-glow"
+  ]
+}
