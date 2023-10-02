@@ -8,5 +8,6 @@ export {
   PaginationKwargs,
   parseResponse,
   readonly,
+  getPaginatedZod,
 } from "./utils"
-export type { FromApiCall, GetInferredFromRaw, PaginationFilters, ToApiCall } from "./utils"
+export type { FromApiCall, GetInferredFromRaw, PaginationFilters, ToApiCall, UnwrapBranded } from "./utils"
