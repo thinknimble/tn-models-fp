@@ -1,5 +1,11 @@
 # @thinknimble/tn-models-fp
 
+## 2.1.3
+
+### Patch Changes
+
+- 545bcf4: Fix: add missing exports which were causing some type inference issues
+
 ## 2.1.2
 
 ### Patch Changes
