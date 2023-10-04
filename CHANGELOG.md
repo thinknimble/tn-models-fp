@@ -1,5 +1,11 @@
 # @thinknimble/tn-models-fp
 
+## 2.1.4-canary.0
+
+### Patch Changes
+
+- testing issue with zod recursive
+
 ## 2.1.3
 
 ### Patch Changes

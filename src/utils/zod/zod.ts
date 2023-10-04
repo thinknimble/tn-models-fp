@@ -117,6 +117,7 @@ export function zodObjectToSnakeRecursive<T extends z.ZodRawShape>(
   const resultingShape = Object.fromEntries(
     Object.entries(zodObj.shape).map(([k, v]) => {
       const snakeCasedKey = toSnakeCase(k)
+      console.log(k, snakeCasedKey, v?._type)
       return [snakeCasedKey, resolveRecursiveZod(v)]
     })
   ) as ZodRawShapeToSnakedRecursive<T>
