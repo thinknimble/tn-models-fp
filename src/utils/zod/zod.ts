@@ -114,10 +114,17 @@ function zodUnionRecursive<T extends z.ZodUnion<readonly [z.ZodTypeAny]>>(zod: T
 export function zodObjectToSnakeRecursive<T extends z.ZodRawShape>(
   zodObj: z.ZodObject<T>
 ): z.ZodObject<ZodRawShapeToSnakedRecursive<T>> {
+  console.log({
+    justBeforeDisaster: {
+      zodObj,
+      def: zodObj?._def,
+      itsShape: zodObj?._def?.shape(),
+    },
+  })
   const resultingShape = Object.fromEntries(
-    Object.entries(zodObj.shape).map(([k, v]) => {
+    Object.entries(zodObj._def.shape()).map(([k, v]) => {
       const snakeCasedKey = toSnakeCase(k)
-      console.log(k, snakeCasedKey, v?._type)
+      console.log(k, snakeCasedKey, v?._def?.typeName, "shape" in v ? v.shape : "no-shape for this guy...")
       return [snakeCasedKey, resolveRecursiveZod(v)]
     })
   ) as ZodRawShapeToSnakedRecursive<T>

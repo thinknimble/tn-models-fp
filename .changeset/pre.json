@@ -5,6 +5,13 @@
     "@thinknimble/tn-models": "2.1.3"
   },
   "changesets": [
-    "good-mugs-hear"
+    "chilled-tools-search",
+    "flat-boxes-arrive",
+    "good-mugs-hear",
+    "lucky-clocks-jam",
+    "polite-dolls-boil",
+    "strange-tools-flow",
+    "thin-beans-think",
+    "tricky-hairs-refuse"
   ]
 }

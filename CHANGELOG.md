@@ -1,5 +1,47 @@
 # @thinknimble/tn-models-fp
 
+## 2.1.4-canary.7
+
+### Patch Changes
+
+- logs
+
+## 2.1.4-canary.6
+
+### Patch Changes
+
+- logs
+
+## 2.1.4-canary.5
+
+### Patch Changes
+
+- logs
+
+## 2.1.4-canary.4
+
+### Patch Changes
+
+- logs
+
+## 2.1.4-canary.3
+
+### Patch Changes
+
+- minor change in logs
+
+## 2.1.4-canary.2
+
+### Patch Changes
+
+- more longs
+
+## 2.1.4-canary.1
+
+### Patch Changes
+
+- Adding more logs
+
 ## 2.1.4-canary.0
 
 ### Patch Changes

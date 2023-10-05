@@ -10,6 +10,16 @@ export const getPaginatedShape = <T extends z.ZodRawShape>(
   } = { allowPassthrough: false }
 ) => {
   const zObject = options.allowPassthrough ? z.object(zodRawShape).passthrough() : z.object(zodRawShape)
+  const requesterField = zObject.shape?.["requester"]
+  console.log({
+    testingDeeperBeforeProblem: {
+      requester: {
+        field: requesterField,
+        innerShape: requesterField && "shape" in requesterField ? requesterField.shape : "none...",
+      },
+    },
+  })
+
   return {
     count: z.number(),
     next: z.string().nullable(),
