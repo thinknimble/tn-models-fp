@@ -1,5 +1,11 @@
 # @thinknimble/tn-models-fp
 
+## 2.1.4
+
+### Patch Changes
+
+- a7eec87: Fix issue with type exposing an enpty object typed filter when no extra filters were passed to models
+
 ## 2.1.3
 
 ### Patch Changes
