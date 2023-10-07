@@ -399,6 +399,19 @@ describe("createApi", async () => {
         //ignore
       }
     })
+    it("ts - should not include filters if no filters were passed", async () => {
+      const listApi = createApi({
+        baseUri: "test-no-filters",
+        client: mockedAxios,
+        models: {
+          entity: entityZodShape,
+        },
+      })
+      type parameters = Parameters<(typeof listApi)["list"]>[0]
+      type hasPagination = parameters extends { pagination?: any } | undefined ? true : false
+      type doesNotHaveFilters = parameters extends { filters?: any } | undefined ? true : false
+      type test = [Expect<hasPagination>, Expect<Equals<doesNotHaveFilters, false>>]
+    })
   })
 
   describe("slash ending url", () => {

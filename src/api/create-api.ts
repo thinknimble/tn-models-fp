@@ -49,10 +49,13 @@ type ListCallObj<TEntity extends EntityShape, TExtraFilters extends FiltersShape
   /**
    * This calls the `{baseUri}/list` endpoint. Note that this has to be available in the api you're consuming for this method to actually work
    */
-  list: (params?: {
-    filters?: GetInferredFromRawWithBrand<TExtraFilters>
-    pagination?: IPagination
-  }) => Promise<z.infer<ReturnType<typeof getPaginatedZod<UnwrapBranded<TEntity, ReadonlyTag>>>>>
+  list: (
+    params?: IsNever<TExtraFilters> extends true
+      ? {
+          pagination?: IPagination
+        }
+      : { pagination?: IPagination; filters?: GetInferredFromRawWithBrand<TExtraFilters> }
+  ) => Promise<z.infer<ReturnType<typeof getPaginatedZod<UnwrapBranded<TEntity, ReadonlyTag>>>>>
 }
 type CreateCallObj<TEntity extends EntityShape, TCreate extends z.ZodRawShape = never> = {
   create: (
