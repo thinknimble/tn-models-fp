@@ -110,5 +110,6 @@ export const createCollectionManager = <TFetchList extends FilterFn>({
     get pagination() {
       return pagination
     },
+    filters,
   }
 }
