@@ -356,9 +356,10 @@ export function createApi<
         inputShape: finalEntityShape.shape,
         outputShape: models.entity,
       },
-      cb: ({ client, input, utils }) => {
+      cb: async ({ client, input, utils }) => {
         const { id, ...body } = utils.toApi(input)
-        return client[httpMethod](`${slashEndingBaseUri}${id}${parsedEndingSlash}`, body)
+        const result = await client[httpMethod](`${slashEndingBaseUri}${id}${parsedEndingSlash}`, body)
+        return utils.fromApi(result?.data)
       },
     })
     return updateCall(parsedInput)
