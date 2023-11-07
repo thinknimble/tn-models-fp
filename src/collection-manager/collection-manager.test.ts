@@ -136,7 +136,39 @@ describe("collection manager v2 tests", () => {
           page_size: feedPagination.size.toString(),
         },
       })
+
     })
+    it("updates the filters for the params", async ()=>{
+      //arrange
+      const getSpy = vi.spyOn(mockedAxios, "get")
+      mockedAxios.get.mockResolvedValue({ data: mockedPaginatedEntitySnakeCased })
+      // changing the filters object
+      feedFilters.anExtraFilter = "new value"
+      //act
+      
+      await collectionManager.refresh()
+      //assert
+      expect(getSpy).toHaveBeenCalledWith(testBaseUri + "/", {
+        params: {
+          page: feedPagination.page.toString(),
+          page_size: feedPagination.size.toString(),
+          an_extra_filter: "new value"
+        },
+      })
+      // changing the filters
+      collectionManager!.filters!.anExtraFilter = "new values"
+
+      await collectionManager.refresh()
+      //assert
+      expect(getSpy).toHaveBeenCalledWith(testBaseUri + "/", {
+        params: {
+          page: feedPagination.page.toString(),
+          page_size: feedPagination.size.toString(),
+          an_extra_filter: "new values"
+        },
+      })
+    })
+
     it("sets refreshing true and false during fetch", async () => {
       //arrange
       mockedAxios.get.mockResolvedValueOnce({ data: mockedPaginatedEntitySnakeCased })
