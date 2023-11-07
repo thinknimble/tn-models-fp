@@ -1,5 +1,11 @@
 # @thinknimble/tn-models-fp
 
+## 2.1.5
+
+### Patch Changes
+
+- 650e5b8: Fix issue with `update` not properly camel casing the return object
+
 ## 2.1.4
 
 ### Patch Changes
