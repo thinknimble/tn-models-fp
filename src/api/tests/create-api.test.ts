@@ -533,6 +533,9 @@ describe("createApi", async () => {
     })
     it("calls update with partial and put", async () => {
       //arrange
+      mockedAxios.put.mockResolvedValueOnce({
+        data: mockEntity1Snaked,
+      })
       const putSpy = vi.spyOn(mockedAxios, "put")
       const { id, ...body } = {
         id: mockEntity1.id,
@@ -547,12 +550,32 @@ describe("createApi", async () => {
     })
     it("calls update with total and put", async () => {
       //arrange
+      mockedAxios.put.mockResolvedValueOnce({
+        data: mockEntity1Snaked,
+      })
       const putSpy = vi.spyOn(mockedAxios, "put")
       // fullName is readonly so won't be sent as parameter!
       const { id, fullName, ...body } = mockEntity1
       //act
       await api.update.replace(mockEntity1)
       expect(putSpy).toHaveBeenCalledWith(`${baseUri}/${id}/`, objectToSnakeCaseArr(body))
+    })
+    it("returns camelCased", async () => {
+      //arrange
+      mockedAxios.patch.mockResolvedValueOnce({
+        data: mockEntity1Snaked,
+      })
+      const patchSpy = vi.spyOn(mockedAxios, "patch")
+      const { id, ...body } = {
+        id: mockEntity1.id,
+        age: mockEntity1.age,
+      }
+      //act
+      const result = await api.update({
+        id,
+        ...body,
+      })
+      expect(result).toEqual(mockEntity1)
     })
   })
 })
