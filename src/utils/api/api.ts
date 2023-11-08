@@ -168,7 +168,7 @@ export const createCustomServiceCallHandler =
           : {}),
         parsedFilters:
           args && typeof args === "object" && "filters" in args
-            ? parseFilters(serviceCallOpts.filtersShape, args.filters)
+            ? parseFilters({ shape: serviceCallOpts.filtersShape, filters: args.filters })
             : undefined,
       })
     }

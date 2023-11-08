@@ -352,7 +352,10 @@ describe("createCustomServiceCall", () => {
     })
     //assert
     expect(getSpy).toHaveBeenCalledWith(`${baseUri}/`, {
-      params: objectToSnakeCaseArr(filters),
+      params: {
+        test_filter: filters.testFilter,
+        test_array_filter: filters.testArrayFilter.join(","),
+      },
     })
   })
   it("passes the right filters to callback: only output", async () => {

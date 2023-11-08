@@ -105,7 +105,7 @@ export function createPaginatedServiceCall<
     const paginationFilters = input.pagination
       ? { page: input.pagination.page, pageSize: input.pagination.size }
       : undefined
-    const parsedPaginationFilters = parseFilters(paginationFiltersZodShape, paginationFilters) ?? {}
+    const parsedPaginationFilters = parseFilters({ shape: paginationFiltersZodShape, filters: paginationFilters }) ?? {}
     const snakedCleanParsedFilters = { ...parsedPaginationFilters, ...(parsedFilters ?? {}) }
     let res
     let parsedInput = input
