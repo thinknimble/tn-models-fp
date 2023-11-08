@@ -1,5 +1,11 @@
 # @thinknimble/tn-models-fp
 
+## 2.2.0
+
+### Minor Changes
+
+- c8fa1f2: Add default parsing for array query params to be a joined comma separated string
+
 ## 2.1.5
 
 ### Patch Changes
