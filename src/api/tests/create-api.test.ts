@@ -12,7 +12,7 @@ import {
   objectToSnakeCaseArr,
   readonly,
 } from "../../utils"
-import { createApi } from "../create-api"
+import { CheckEntityIntegrity, CheckModels, createApi } from "../create-api"
 import { createCustomServiceCall } from "../create-custom-call"
 import { CustomServiceCallsRecord, ServiceCallFn } from "../types"
 import {
@@ -728,23 +728,56 @@ describe("TS Tests", () => {
     //@ts-expect-error should not expose any of these methods
     const { create, list, retrieve, remove, update } = api
   })
-  describe("Test", () => {
-    it("TS - errors on createApi for entity", () => {
-      //ts assert
-      createApi({
-        baseUri: "something",
-        client: mockedAxios,
-        //@ts-expect-error Call out on entity not being passed to models
-        models: {},
-      })
-      createApi({
-        baseUri: "something",
-        client: mockedAxios,
-        //@ts-expect-error Call out on entity not being properly formatted - should include id
-        models: {
-          entity: { nonIdField: z.string() },
+
+  it("should not error on inline model", async () => {
+    const shape = {
+      id: z.string(),
+      name: z.string(),
+      lastName: z.string(),
+      fullName: readonly(z.string()),
+    }
+    type Shape = typeof shape
+    type IsGoodEntity = CheckModels<{
+      //    ^?
+      entity: {
+        id: z.ZodString
+        name: z.ZodString
+        lastName: z.ZodString
+      }
+    }>
+    //wow what's going on here...
+
+    const api = createApi({
+      baseUri: "inline",
+      client: mockedAxios,
+      //This should not error
+      models: {
+        entity: {
+          id: z.string(),
+          name: z.string(),
+          lastName: z.string(),
+          // fullName: readonly(z.string()),
         },
-      })
+      },
+    })
+  })
+})
+describe("Test", () => {
+  it("TS - errors on createApi for entity", () => {
+    //ts assert
+    createApi({
+      baseUri: "something",
+      client: mockedAxios,
+      //@ts-expect-error Call out on entity not being passed to models
+      models: {},
+    })
+    createApi({
+      baseUri: "something",
+      client: mockedAxios,
+      //@ts-expect-error Call out on entity not being properly formatted - should include id
+      models: {
+        entity: { nonIdField: z.string() },
+      },
     })
   })
 })
