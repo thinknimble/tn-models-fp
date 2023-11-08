@@ -302,11 +302,11 @@ export function createApi<
     const pagination = params ? params.pagination : undefined
     // Filters parsing, throws if the fields do not comply with the zod schema
 
-    const filtersParsed = parseFilters(models.extraFilters, filters)
-    const paginationFilters = parseFilters(
-      paginationFiltersZodShape,
-      pagination ? { page: pagination.page, pageSize: pagination.size } : undefined
-    )
+    const filtersParsed = parseFilters({ shape: models.extraFilters, filters })
+    const paginationFilters = parseFilters({
+      shape: paginationFiltersZodShape,
+      filters: pagination ? { page: pagination.page, pageSize: pagination.size } : undefined,
+    })
     const allFilters =
       filtersParsed || paginationFilters ? { ...(filtersParsed ?? {}), ...(paginationFilters ?? {}) } : undefined
 
