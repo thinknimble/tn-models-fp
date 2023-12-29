@@ -1,5 +1,11 @@
 # @thinknimble/tn-models-fp
 
+## 2.2.1
+
+### Patch Changes
+
+- 5678bcd: - Fix issue where using shapes with `readonly` fields in custom service calls would break `createApi` resulting custom call type.
+
 ## 2.2.0
 
 ### Minor Changes
