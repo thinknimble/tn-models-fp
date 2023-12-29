@@ -11,6 +11,7 @@ import {
   Is,
   IsAny,
   UnknownIfNever,
+  UnwrapBranded,
   ZodPrimitives,
 } from "../utils"
 
@@ -155,6 +156,8 @@ type ResolveServiceCallArgs<TInput extends z.ZodRawShape | z.ZodType, TFilters e
   ? [args: ResolveFilterArg<TFilters>] | []
   : [args: ResolveInputArg<TInput> & ResolveFilterArg<TFilters>]
 
+export type InvalidEntryMessage = "Invalid entry does not match CustomServiceCall type"
+
 /**
  * Get resulting custom service call from `createApi`
  */
@@ -168,6 +171,6 @@ export type CustomServiceCallsRecord<TOpts extends object> = TOpts extends Recor
               : ServiceCallFn<TInput, TOutput, z.ZodVoid>
             : ServiceCallFn<TInput, TOutput, z.ZodVoid>
           : ServiceCallFn<TInput, z.ZodVoid, z.ZodVoid>
-        : "Invalid entry does not match CustomServiceCall type"
+        : TOpts[K]
     }
   : "This should be a record of custom calls"

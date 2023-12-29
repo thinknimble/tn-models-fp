@@ -3,11 +3,11 @@ import { faker } from "@faker-js/faker"
 import { SnakeCasedPropertiesDeep } from "@thinknimble/tn-utils"
 import { describe, expect, it, vi } from "vitest"
 import { z } from "zod"
-import { GetInferredFromRawWithBrand, objectToCamelCaseArr, objectToSnakeCaseArr } from "../../utils"
+import { GetInferredFromRawWithBrand, UnwrapBrandedUnknown, objectToSnakeCaseArr, readonly } from "../../utils"
 import { createApi } from "../create-api"
 import { createCustomServiceCall } from "../create-custom-call"
 import { mockedAxios } from "./mocks"
-import { CustomServiceCallPlaceholder } from "../types"
+import { CustomServiceCallOpts, CustomServiceCallPlaceholder, InvalidEntryMessage } from "../types"
 
 describe("createCustomServiceCall", () => {
   const inputShape = {
@@ -1064,6 +1064,92 @@ describe("createCustomServiceCall", () => {
         params: { test_filter: testFilter },
       })
       expect(result).toEqual(mockResult)
+    })
+  })
+
+  describe("readonly util", () => {
+    it("TS - doesn't break custom call type if adding readonly util to output", async () => {
+      const outputShape = {
+        id: z.string().uuid(),
+        fieldWithReadonly: readonly(z.string().uuid()),
+      }
+      const customCall = createCustomServiceCall(
+        {
+          outputShape,
+        },
+        async ({ client, slashEndingBaseUri, utils }) => {
+          return utils.fromApi({})
+        }
+      )
+      const api = createApi(
+        {
+          baseUri: "test-readonly",
+          client: mockedAxios,
+        },
+        {
+          customCall,
+        }
+      )
+      api.csc.customCall
+      type CustomCall = typeof api.csc.customCall
+      type test = Expect<Equals<Equals<CustomCall, InvalidEntryMessage>, false>>
+    })
+    it("TS - doesn't break custom call type if adding readonly util to input", async () => {
+      const inputShape = {
+        id: z.string().uuid(),
+        fieldWithReadonly: readonly(z.string().uuid()),
+      }
+      const customCall = createCustomServiceCall(
+        {
+          inputShape,
+        },
+        async ({ client, slashEndingBaseUri, utils }) => {
+          return
+        }
+      )
+      const api = createApi(
+        {
+          baseUri: "test-readonly",
+          client: mockedAxios,
+        },
+        {
+          customCall,
+        }
+      )
+      api.csc.customCall
+      type CustomCall = typeof api.csc.customCall
+      type test = Expect<Equals<Equals<CustomCall, InvalidEntryMessage>, false>>
+    })
+    it("TS - doesn't break custom call type if adding readonly util to input and output", async () => {
+      const inputShape = {
+        id: z.string().uuid(),
+        fieldWithReadonly: readonly(z.string().uuid()),
+      }
+      const outputShape = {
+        id: z.string().uuid(),
+        fieldWithReadonly: readonly(z.string().uuid()),
+      }
+      const customCall = createCustomServiceCall(
+        {
+          inputShape,
+          outputShape,
+        },
+        async ({ client, slashEndingBaseUri, utils }) => {
+          return utils.fromApi({})
+        }
+      )
+      const api = createApi(
+        {
+          baseUri: "test-readonly",
+          client: mockedAxios,
+        },
+        {
+          customCall,
+        }
+      )
+      api.csc.customCall
+      type CustomCall = typeof api.csc.customCall
+      type test = Expect<Equals<Equals<CustomCall, InvalidEntryMessage>, false>>
     })
   })
 })

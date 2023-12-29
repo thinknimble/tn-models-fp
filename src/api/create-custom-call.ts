@@ -1,5 +1,5 @@
 import { z } from "zod"
-import { FiltersShape, ZodPrimitives, createCustomServiceCallHandler } from "../utils"
+import { FiltersShape, UnwrapBranded, ZodPrimitives, createCustomServiceCallHandler } from "../utils"
 import {
   AxiosLike,
   CustomServiceCallFiltersObj,
@@ -10,6 +10,7 @@ import {
   ServiceCallFn,
 } from "./types"
 
+//TODO: remove this way of handling overloads. Prefer unions rather so that we can condense everything in a single site (the implementation)
 //! The order of overloads MATTER. This was quite a foot-gun-ish thing to discover. Lesson is: declare overloads from most generic > most narrowed. It kind of makes sense to go narrowing down the parameter possibilities. Seems like the first overload that matches is the one that is used.
 /**
  * Create a custom type-inferred service call with both input and output
@@ -22,8 +23,12 @@ export function createCustomServiceCall<
   models: CustomServiceCallInputObj<TInput> &
     CustomServiceCallOutputObj<TOutput> &
     CustomServiceCallFiltersObj<TFilters, TOutput>,
-  cb: CustomServiceCallback<TInput, TOutput, TFilters>
-): CustomServiceCallOpts<TInput, TOutput, TFilters>
+  cb: TOutput extends z.ZodRawShape
+    ? CustomServiceCallback<TInput, UnwrapBranded<TOutput>, TFilters>
+    : CustomServiceCallback<TInput, TOutput, TFilters>
+): TOutput extends z.ZodRawShape
+  ? CustomServiceCallOpts<TInput, UnwrapBranded<TOutput>, TFilters>
+  : CustomServiceCallOpts<TInput, TOutput, TFilters>
 /**
  * Create a custom type-inferred service call with input only
  */
@@ -39,8 +44,12 @@ export function createCustomServiceCall<
   TFilters extends FiltersShape | z.ZodVoid = z.ZodVoid
 >(
   models: CustomServiceCallOutputObj<TOutput> & CustomServiceCallFiltersObj<TFilters, TOutput>,
-  cb: CustomServiceCallback<z.ZodVoid, TOutput, TFilters>
-): CustomServiceCallOpts<z.ZodVoid, TOutput, TFilters>
+  cb: TOutput extends z.ZodRawShape
+    ? CustomServiceCallback<z.ZodVoid, UnwrapBranded<TOutput>, TFilters>
+    : CustomServiceCallback<z.ZodVoid, TOutput, TFilters>
+): TOutput extends z.ZodRawShape
+  ? CustomServiceCallOpts<z.ZodVoid, UnwrapBranded<TOutput>, TFilters>
+  : CustomServiceCallOpts<z.ZodVoid, TOutput, TFilters>
 /**
  * Create a custom type-inferred service call with neither input nor output
  */
