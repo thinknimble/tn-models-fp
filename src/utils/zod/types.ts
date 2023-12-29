@@ -163,6 +163,9 @@ export type BrandedKeys<T extends z.ZodRawShape> = keyof {
 export type UnwrapBranded<T extends z.ZodRawShape, TBrandType extends string | number | symbol = any> = {
   [K in keyof T]: T[K] extends z.ZodBranded<infer TUnwrapped, TBrandType> ? TUnwrapped : T[K]
 }
+export type UnwrapBrandedUnknown<T> = {
+  [K in keyof T]: T[K] extends z.ZodBranded<infer TUnwrapped, any> ? TUnwrapped : T[K]
+}
 
 type UnwrapBrandedInArray<
   T extends z.ZodArray<z.ZodTypeAny>,
