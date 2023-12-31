@@ -94,6 +94,26 @@ type UpdateCallObj<
   }
 }
 
+type UpsertCallObj<
+  TEntity extends EntityShape,
+  TCreate extends z.ZodRawShape = never,
+  TInferredEntityWithoutReadonlyFields = GetInferredWithoutReadonlyBrands<TEntity>,
+  TInferredIdObj = TInferredEntityWithoutReadonlyFields extends { id: infer TId }
+    ? { id: TId }
+    : ErrorEntityShapeMustHaveAnIdField
+> = {
+  upsert(
+    /**
+     * Perform a patch request with a partial body
+     */
+    inputs:
+      | (IsNever<TCreate> extends true
+          ? Omit<GetInferredWithoutReadonlyBrands<TEntity>, "id">
+          : GetInferredWithoutReadonlyBrands<TCreate>)
+      | (Omit<Partial<TInferredEntityWithoutReadonlyFields>, "id"> & TInferredIdObj)
+  ): Promise<GetInferredFromRaw<TEntity>>
+}
+
 type WithCreateModelCall<TModels extends BaseModelsPlaceholder> = TModels extends EntityModelObj<infer TE>
   ? TModels extends CreateModelObj<infer TC>
     ? CreateCallObj<TE, TC>
@@ -113,12 +133,18 @@ type WithRemoveModelCall<TModels extends BaseModelsPlaceholder> = TModels extend
 type WithUpdateModelCall<TModels extends BaseModelsPlaceholder> = TModels extends EntityModelObj<infer TE>
   ? UpdateCallObj<TE>
   : unknown
+type WithUpsertModelCall<TModels extends BaseModelsPlaceholder> = TModels extends EntityModelObj<infer TE>
+  ? TModels extends CreateModelObj<infer TC>
+    ? UpsertCallObj<TE, TC>
+    : UpsertCallObj<TE>
+  : unknown
 
 type BaseApiCalls<TModels extends BaseModelsPlaceholder> = WithCreateModelCall<TModels> &
   WithEntityModelCall<TModels> &
   WithExtraFiltersModelCall<TModels> &
   WithRemoveModelCall<TModels> &
-  WithUpdateModelCall<TModels>
+  WithUpdateModelCall<TModels> &
+  WithUpsertModelCall<TModels>
 
 type BareApiService<TModels extends BaseModelsPlaceholder | unknown> = TModels extends BaseModelsPlaceholder
   ? {
@@ -384,7 +410,21 @@ export function createApi<
       updateBase({ newValue: inputs, httpMethod: "put", type: "partial" })
   )
 
-  const baseReturn = { client: axiosLikeClient, retrieve, list, remove, update, create }
+  const upsert = async (
+    args: TApiCreate | (Partial<GetInferredFromRawWithBrand<typeof entityShapeWithoutReadonlyFields>> & { id: string })
+  ) => {
+    if ("id" in args && args.id) {
+      return updateBase({
+        newValue: args as Partial<GetInferredFromRawWithBrand<typeof entityShapeWithoutReadonlyFields>> & {
+          id: string
+        },
+      })
+    } else {
+      return create(args as TApiCreate)
+    }
+  }
+
+  const baseReturn = { client: axiosLikeClient, retrieve, list, remove, update, create, upsert }
 
   if (!modifiedCustomServiceCalls) return baseReturn
 
