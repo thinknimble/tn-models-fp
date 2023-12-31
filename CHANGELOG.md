@@ -1,5 +1,11 @@
 # @thinknimble/tn-models-fp
 
+## 2.3.0
+
+### Minor Changes
+
+- 54e7707: Add upsert built-in method. This method merges both create and update into a single one. if an ID property is passed an update is performed, otherwise a create is called.
+
 ## 2.2.1
 
 ### Patch Changes
