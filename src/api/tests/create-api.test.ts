@@ -39,7 +39,6 @@ describe("createApi", async () => {
       },
     },
   })
-
   describe("general checks + TS", () => {
     it("does not expose any method if no models were passed", () => {
       type ExpectedReturn = ReturnType<typeof createApi>
@@ -576,6 +575,49 @@ describe("createApi", async () => {
         ...body,
       })
       expect(result).toEqual(mockEntity1)
+    })
+  })
+  describe("upsert", () => {
+    it("TS - upsert Checks", () => {
+      const nonCalled = () => {
+        // allows create (all fields are required as per create shape)
+        testApi.upsert({ age: 10, firstName: "damian", lastName: "lucero" })
+        //passing id would allow partial update without the need of all the fields
+        testApi.upsert({ id: "hello-there", age: 10 })
+      }
+      //not passing id
+    })
+    it("calls create if there is no id passed", async () => {
+      //arrange
+      const postSpy = vi.spyOn(mockedAxios, "post")
+      mockedAxios.post.mockResolvedValueOnce({
+        data: mockEntity1Snaked,
+      })
+      //act
+      const createFakeData = {
+        age: faker.datatype.number(),
+        firstName: faker.name.firstName(),
+        lastName: faker.name.lastName(),
+      }
+      const res = await testApi.upsert(createFakeData)
+      expect(postSpy).toHaveBeenCalledWith(`${testBaseUri}/`, objectToSnakeCaseArr(createFakeData))
+    })
+    it("calls calls update if there is no id passed", async () => {
+      //arrange
+      const patchSpy = vi.spyOn(mockedAxios, "patch")
+      mockedAxios.patch.mockResolvedValueOnce({
+        data: mockEntity1Snaked,
+      })
+      //act
+      const id = faker.datatype.uuid()
+      const createFakeData = {
+        lastName: faker.name.lastName(),
+      }
+      const res = await testApi.upsert({
+        ...createFakeData,
+        id,
+      })
+      expect(patchSpy).toHaveBeenCalledWith(`${testBaseUri}/${id}/`, objectToSnakeCaseArr(createFakeData))
     })
   })
 })
