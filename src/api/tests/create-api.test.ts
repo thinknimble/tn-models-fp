@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import { faker } from "@faker-js/faker"
 import { SnakeCasedPropertiesDeep } from "@thinknimble/tn-utils"
 import { beforeEach, describe, expect, it, vi } from "vitest"
@@ -12,7 +11,10 @@ import {
   objectToSnakeCaseArr,
   readonly,
 } from "../../utils"
-import { createApi } from "../create-api"
+import {
+  // createApi,
+  createApiV2,
+} from "../create-api"
 import { createCustomServiceCall } from "../create-custom-call"
 import { CustomServiceCallsRecord, ServiceCallFn } from "../types"
 import {
@@ -25,6 +27,8 @@ import {
   mockEntity2,
   mockedAxios,
 } from "./mocks"
+
+const createApi = createApiV2
 
 describe("createApi", async () => {
   const testBaseUri = "users"
@@ -39,16 +43,23 @@ describe("createApi", async () => {
       },
     },
   })
+
   describe("general checks + TS", () => {
     it("does not expose any method if no models were passed", () => {
-      type ExpectedReturn = ReturnType<typeof createApi>
+      type ExpectedReturn = ReturnType<typeof createApi<never, never, never, never>>
       type tests = [
         //@ts-expect-error should not include list method
         ExpectedReturn["list"],
         //@ts-expect-error should not include retrieve method
         ExpectedReturn["retrieve"],
         //@ts-expect-error should not include create method
-        ExpectedReturn["create"]
+        ExpectedReturn["create"],
+        //@ts-expect-error should not include create method
+        ExpectedReturn["remove"],
+        //@ts-expect-error should not include create method
+        ExpectedReturn["update"],
+        //@ts-expect-error should not include create method
+        ExpectedReturn["upsert"]
       ]
       const testApiNoModels = createApi({
         baseUri: "",
@@ -59,8 +70,7 @@ describe("createApi", async () => {
       expect(testApiNoModels).not.toHaveProperty("create")
     })
     it("only exposes retrieve, list, update if `entity` is passed, no custom calls", () => {
-      //@ts-expect-error don't mind this it is hard for TS to determine which overload it should check, on the tests below it is picking up the correct one!
-      type ExpectedReturn = ReturnType<typeof createApi<{ entity: typeof entityZodShape }>>
+      type ExpectedReturn = ReturnType<typeof createApi<typeof entityZodShape>>
       type tests = [
         ExpectedReturn["list"],
         ExpectedReturn["retrieve"],
@@ -442,7 +452,9 @@ describe("createApi", async () => {
         models: {
           entity: entityZodShape,
         },
-        disableTrailingSlash: true,
+        options: {
+          disableTrailingSlash: true,
+        },
       })
       //act
       await testApi.retrieve(mockEntity1Snaked.id)
@@ -762,7 +774,7 @@ describe("TS Tests", () => {
       models: {
         entity: entityShape,
         //@ts-expect-error keys that are not expected should be rejected by typescript
-        shenaninganCheck: {
+        shenaniganCheck: {
           invalidKey: z.string(),
         },
       },
@@ -805,8 +817,8 @@ describe("TS Tests", () => {
       createApi({
         baseUri: "something",
         client: mockedAxios,
-        //@ts-expect-error Call out on entity not being properly formatted - should include id
         models: {
+          //@ts-expect-error Call out on entity not being properly formatted - should include id
           entity: { nonIdField: z.string() },
         },
       })
