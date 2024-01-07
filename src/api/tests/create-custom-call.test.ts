@@ -1,13 +1,12 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import { faker } from "@faker-js/faker"
 import { SnakeCasedPropertiesDeep } from "@thinknimble/tn-utils"
 import { describe, expect, it, vi } from "vitest"
 import { z } from "zod"
-import { GetInferredFromRawWithBrand, UnwrapBrandedUnknown, objectToSnakeCaseArr, readonly } from "../../utils"
+import { GetInferredFromRawWithBrand, objectToSnakeCaseArr, readonly } from "../../utils"
 import { createApi } from "../create-api"
 import { createCustomServiceCall } from "../create-custom-call"
+import { InvalidEntryMessage } from "../types"
 import { mockedAxios } from "./mocks"
-import { CustomServiceCallOpts, CustomServiceCallPlaceholder, InvalidEntryMessage } from "../types"
 
 describe("createCustomServiceCall", () => {
   const inputShape = {

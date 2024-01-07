@@ -12,7 +12,6 @@ describe("TS tests for zod utils", () => {
       })
     )
     type zodObjectTest = typeof zodObjectTest
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     type tests = [
       Expect<Equals<IsBrand<zodStringTest, "RandomBrand">, false>>,
       Expect<Equals<IsBrand<zodStringTest, ReadonlyTag>, true>>,
