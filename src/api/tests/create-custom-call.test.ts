@@ -1,13 +1,17 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import { faker } from "@faker-js/faker"
 import { SnakeCasedPropertiesDeep } from "@thinknimble/tn-utils"
 import { describe, expect, it, vi } from "vitest"
 import { z } from "zod"
-import { GetInferredFromRawWithBrand, UnwrapBrandedUnknown, objectToSnakeCaseArr, readonly } from "../../utils"
+import { GetInferredFromRawWithBrand, objectToSnakeCaseArr, readonly } from "../../utils"
 import { createApi } from "../create-api"
-import { createCustomServiceCall } from "../create-custom-call"
+import {
+  // createCustomServiceCall ,
+  createCustomServiceCallV2,
+} from "../create-custom-call"
+import { InvalidEntryMessage } from "../types"
 import { mockedAxios } from "./mocks"
-import { CustomServiceCallOpts, CustomServiceCallPlaceholder, InvalidEntryMessage } from "../types"
+
+const createCustomServiceCall = createCustomServiceCallV2
 
 describe("createCustomServiceCall", () => {
   const inputShape = {
@@ -16,18 +20,16 @@ describe("createCustomServiceCall", () => {
   const outputShape = {
     justAny: z.any(),
   }
-  const testPost = createCustomServiceCall(
-    {
-      inputShape,
-      outputShape,
-    },
-    async ({ client, input, utils, slashEndingBaseUri }) => {
+  const testPost = createCustomServiceCall({
+    inputShape,
+    outputShape,
+    cb: async ({ client, input, utils, slashEndingBaseUri }) => {
       const toApiInput = utils.toApi(input)
       const res = await client.post(slashEndingBaseUri, toApiInput)
       const parsed = utils.fromApi(res.data)
       return parsed
-    }
-  )
+    },
+  })
 
   it("calls api with snake case", async () => {
     //arrange
@@ -86,12 +88,10 @@ describe("createCustomServiceCall", () => {
         givenInput: z.string(),
         inputLength: z.number(),
       }
-      return createCustomServiceCall(
-        {
-          inputShape,
-          outputShape,
-        },
-        async ({ input, utils }) => {
+      return createCustomServiceCall({
+        inputShape,
+        outputShape,
+        cb: async ({ input, utils }) => {
           type tests = [
             Expect<Equals<typeof input, GetInferredFromRawWithBrand<typeof inputShape>>>,
             Expect<Equals<(typeof utils)["fromApi"], (obj: object) => GetInferredFromRawWithBrand<typeof outputShape>>>,
@@ -106,8 +106,8 @@ describe("createCustomServiceCall", () => {
             givenInput: input.myInput,
             inputLength: input.myInput.length,
           }
-        }
-      )
+        },
+      })
     })()
 
     const baseUri = "returnsCamelCasedResponse"
@@ -132,8 +132,11 @@ describe("createCustomServiceCall", () => {
     expect(res).toEqual(expected)
   })
   it("receives baseUri as parameter within the callback and has a trailing slash", async () => {
-    const testBaseUriParam = createCustomServiceCall({ outputShape: z.string() }, async ({ slashEndingBaseUri }) => {
-      return slashEndingBaseUri
+    const testBaseUriParam = createCustomServiceCall({
+      outputShape: z.string(),
+      cb: async ({ slashEndingBaseUri }) => {
+        return slashEndingBaseUri
+      },
     })
     const baseUri = "returnsCamelCasedResponse"
     const testApi = createApi(
@@ -151,19 +154,17 @@ describe("createCustomServiceCall", () => {
   it("checks output only overload", async () => {
     const testNoInputPlainZodOutput = (() => {
       const outputShape = z.string()
-      return createCustomServiceCall(
-        {
-          outputShape,
-        },
-        async ({
+      return createCustomServiceCall({
+        outputShape,
+        cb: async ({
           //@ts-expect-error no utils fns since outputShape is primitive
           utils,
           //@ts-expect-error no input if there is no inputShape
           input,
         }) => {
           return "output only overload"
-        }
-      )
+        },
+      })
     })()
     const baseUri = "returnsCamelCasedResponse"
     const testApi = createApi(
@@ -181,19 +182,17 @@ describe("createCustomServiceCall", () => {
   it("checks input only overload", async () => {
     const testNoOutputPlainZodInput = (() => {
       const inputShape = z.number()
-      return createCustomServiceCall(
-        {
-          inputShape,
-        },
-        async ({
+      return createCustomServiceCall({
+        inputShape,
+        cb: async ({
           input,
           //@ts-expect-error no utils fn since inputShape is primitive
           utils,
         }) => {
           type tests = [Expect<Equals<typeof input, z.infer<typeof inputShape>>>]
           return
-        }
-      )
+        },
+      })
     })()
     const baseUri = "inputOnlyOverload"
     const testApi = createApi(
@@ -247,20 +246,18 @@ describe("createCustomServiceCall", () => {
     const testInputOutputPlainZods = (() => {
       const inputShape = z.string()
       const outputShape = z.number()
-      return createCustomServiceCall(
-        {
-          inputShape,
-          outputShape,
-        },
-        async ({
+      return createCustomServiceCall({
+        inputShape,
+        outputShape,
+        cb: async ({
           input,
           //@ts-expect-error no utils fns since both input and output are primitives
           utils,
         }) => {
           type tests = [Expect<Equals<typeof input, z.infer<typeof inputShape>>>]
           return 10
-        }
-      )
+        },
+      })
     })()
 
     const baseUri = "tsTests"
@@ -313,24 +310,22 @@ describe("createCustomServiceCall", () => {
         test_output: "test",
       },
     })
-    const callWithFilter = createCustomServiceCall(
-      {
-        inputShape: {
-          testInput: z.string(),
-        },
-        outputShape: {
-          testOutput: z.string(),
-        },
-        filtersShape: {
-          testFilter: z.string(),
-          testArrayFilter: z.string().array(),
-        },
+    const callWithFilter = createCustomServiceCall({
+      inputShape: {
+        testInput: z.string(),
       },
-      async ({ client, slashEndingBaseUri, parsedFilters }) => {
+      outputShape: {
+        testOutput: z.string(),
+      },
+      filtersShape: {
+        testFilter: z.string(),
+        testArrayFilter: z.string().array(),
+      },
+      cb: async ({ client, slashEndingBaseUri, parsedFilters }) => {
         const result = await client.get(slashEndingBaseUri, { params: parsedFilters })
         return result.data
-      }
-    )
+      },
+    })
     const baseUri = "filters"
     const filters = {
       testFilter: faker.datatype.string(),
@@ -366,20 +361,18 @@ describe("createCustomServiceCall", () => {
         test_output: "rightFilters",
       },
     })
-    const callWithFilter = createCustomServiceCall(
-      {
-        outputShape: {
-          testOutput: z.string(),
-        },
-        filtersShape: {
-          testFilter: z.string(),
-        },
+    const callWithFilter = createCustomServiceCall({
+      outputShape: {
+        testOutput: z.string(),
       },
-      async ({ client, slashEndingBaseUri, parsedFilters }) => {
+      filtersShape: {
+        testFilter: z.string(),
+      },
+      cb: async ({ client, slashEndingBaseUri, parsedFilters }) => {
         const result = await client.get(slashEndingBaseUri, { params: parsedFilters })
         return result.data
-      }
-    )
+      },
+    })
     const baseUri = "filters"
     const filters = {
       testFilter: "myFilter",
@@ -410,20 +403,18 @@ describe("createCustomServiceCall", () => {
         test_output: "noFilters",
       },
     })
-    const callWithFilter = createCustomServiceCall(
-      {
-        outputShape: {
-          testOutput: z.string(),
-        },
-        filtersShape: {
-          testFilter: z.string(),
-        },
+    const callWithFilter = createCustomServiceCall({
+      outputShape: {
+        testOutput: z.string(),
       },
-      async ({ client, slashEndingBaseUri, parsedFilters }) => {
+      filtersShape: {
+        testFilter: z.string(),
+      },
+      cb: async ({ client, slashEndingBaseUri, parsedFilters }) => {
         const result = await client.get(slashEndingBaseUri, { params: parsedFilters })
         return result.data
-      }
-    )
+      },
+    })
     const baseUri = "filters"
     const api = createApi(
       {
@@ -443,33 +434,29 @@ describe("createCustomServiceCall", () => {
   })
   it("should TS error if user passes filtersShape but no output", async () => {
     //arrange
-    const callWithFilter = createCustomServiceCall(
-      {
-        //@ts-expect-error cannot pass filter shape if there is no output shape
-        filtersShape: {
-          testFilter: z.string(),
-        },
+    const callWithFilter = createCustomServiceCall({
+      //@ts-expect-error cannot pass filter shape if there is no output shape
+      filtersShape: {
+        testFilter: z.string(),
       },
-      async () => {
+      cb: async () => {
         //no-op
-      }
-    )
+      },
+    })
   })
   it("TS Should not allow filters if there is no output (just input)", async () => {
-    //@ts-expect-error should not allow to create with filter and no outputshape
-    const callWithFilter = createCustomServiceCall(
-      {
-        inputShape: {
-          testInput: z.string(),
-        },
-        filtersShape: {
-          testFilter: z.string(),
-        },
+    const callWithFilter = createCustomServiceCall({
+      inputShape: {
+        testInput: z.string(),
       },
-      async ({ client, slashEndingBaseUri }) => {
+      //@ts-expect-error should not allow to create with filter and no outputshape
+      filtersShape: {
+        testFilter: z.string(),
+      },
+      cb: async ({ client, slashEndingBaseUri }) => {
         //no-op
-      }
-    )
+      },
+    })
   })
   it("Allows shapes with native enums", async () => {
     const myNativeEnum = {
@@ -480,15 +467,13 @@ describe("createCustomServiceCall", () => {
     const shapeSubject = {
       nativeEnum: z.nativeEnum(myNativeEnum),
     }
-    const customCall = createCustomServiceCall(
-      {
-        inputShape: shapeSubject,
-        outputShape: z.nativeEnum(myNativeEnum),
-      },
-      async ({ input }) => {
+    const customCall = createCustomServiceCall({
+      inputShape: shapeSubject,
+      outputShape: z.nativeEnum(myNativeEnum),
+      cb: async ({ input }) => {
         return input.nativeEnum
-      }
-    )
+      },
+    })
 
     const api = createApi(
       {
@@ -519,19 +504,18 @@ describe("createCustomServiceCall", () => {
       { testInput: faker.datatype.number() },
     ]
     const mockResponseSnake = mockResponse.map((item) => objectToSnakeCaseArr(item))
-    const customCall = createCustomServiceCall(
-      {
-        inputShape,
-        outputShape: arrayOutputShape,
-      },
-      async ({ client, input, utils, slashEndingBaseUri }) => {
+    const customCall = createCustomServiceCall({
+      inputShape,
+      //TODO: fix zod arrays on output shape
+      outputShape: arrayOutputShape,
+      cb: async ({ client, input, utils, slashEndingBaseUri }) => {
         await mockedAxios.get.mockResolvedValueOnce({
           data: mockResponseSnake,
         })
         const res = await client.get(`${slashEndingBaseUri}/${input}/`)
         return utils.fromApi(res.data)
-      }
-    )
+      },
+    })
     const api = createApi(
       {
         baseUri: "test",
@@ -1073,14 +1057,12 @@ describe("createCustomServiceCall", () => {
         id: z.string().uuid(),
         fieldWithReadonly: readonly(z.string().uuid()),
       }
-      const customCall = createCustomServiceCall(
-        {
-          outputShape,
-        },
-        async ({ client, slashEndingBaseUri, utils }) => {
+      const customCall = createCustomServiceCall({
+        outputShape,
+        cb: async ({ client, slashEndingBaseUri, utils }) => {
           return utils.fromApi({})
-        }
-      )
+        },
+      })
       const api = createApi(
         {
           baseUri: "test-readonly",
@@ -1099,14 +1081,12 @@ describe("createCustomServiceCall", () => {
         id: z.string().uuid(),
         fieldWithReadonly: readonly(z.string().uuid()),
       }
-      const customCall = createCustomServiceCall(
-        {
-          inputShape,
-        },
-        async ({ client, slashEndingBaseUri, utils }) => {
+      const customCall = createCustomServiceCall({
+        inputShape,
+        cb: async ({ client, slashEndingBaseUri, utils }) => {
           return
-        }
-      )
+        },
+      })
       const api = createApi(
         {
           baseUri: "test-readonly",
@@ -1129,15 +1109,13 @@ describe("createCustomServiceCall", () => {
         id: z.string().uuid(),
         fieldWithReadonly: readonly(z.string().uuid()),
       }
-      const customCall = createCustomServiceCall(
-        {
-          inputShape,
-          outputShape,
-        },
-        async ({ client, slashEndingBaseUri, utils }) => {
+      const customCall = createCustomServiceCall({
+        inputShape,
+        outputShape,
+        cb: async ({ client, slashEndingBaseUri, utils }) => {
           return utils.fromApi({})
-        }
-      )
+        },
+      })
       const api = createApi(
         {
           baseUri: "test-readonly",

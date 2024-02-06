@@ -1,5 +1,5 @@
 import { z } from "zod"
-import { FiltersShape, UnwrapBranded, ZodPrimitives, createCustomServiceCallHandler } from "../utils"
+import { FiltersShape, IsNever, UnwrapBranded, ZodPrimitives, createCustomServiceCallHandler } from "../utils"
 import {
   AxiosLike,
   CustomServiceCallFiltersObj,
@@ -56,6 +56,7 @@ export function createCustomServiceCall<
 export function createCustomServiceCall(
   cb: CustomServiceCallback<z.ZodVoid, z.ZodVoid, z.ZodVoid>
 ): CustomServiceCallOpts<z.ZodVoid, z.ZodVoid, z.ZodVoid>
+
 export function createCustomServiceCall(...args: any[]): CustomServiceCallOpts<any, any, any> {
   const [first, second] = args
   const inputShape = typeof first === "function" || !("inputShape" in first) ? z.void() : first.inputShape
@@ -152,3 +153,74 @@ function standAlone(
  * Useful when you don't have a specific api resource you want to attach this call to (probably an rpc-like call)
  */
 createCustomServiceCall.standAlone = standAlone
+
+type ResolveShapeOrVoid<
+  TInputShape extends z.ZodRawShape | ZodPrimitives = never,
+  TOutputShape extends z.ZodRawShape | ZodPrimitives = never,
+  TFiltersShape extends FiltersShape = never
+> = {
+  input: IsNever<TInputShape> extends true ? z.ZodVoid : TInputShape
+  output: IsNever<TOutputShape> extends true
+    ? z.ZodVoid
+    : TOutputShape extends z.ZodRawShape
+    ? UnwrapBranded<TOutputShape>
+    : TOutputShape
+  filters: IsNever<TOutputShape> extends true
+    ? z.ZodVoid
+    : IsNever<TFiltersShape> extends true
+    ? z.ZodVoid
+    : TFiltersShape
+}
+
+type ResolveCustomServiceCallback<
+  TInputShape extends z.ZodRawShape | ZodPrimitives = never,
+  TOutputShape extends z.ZodRawShape | ZodPrimitives = never,
+  TFilters extends FiltersShape = never,
+  TShapeOrVoid extends ResolveShapeOrVoid<any, any, any> = ResolveShapeOrVoid<TInputShape, TOutputShape, TFilters>
+> = CustomServiceCallback<TShapeOrVoid["input"], TShapeOrVoid["output"], TShapeOrVoid["filters"]>
+
+type ResolveServiceCallFn<
+  TInputShape extends z.ZodRawShape | ZodPrimitives = never,
+  TOutputShape extends z.ZodRawShape = never,
+  TFiltersShape extends FiltersShape = never,
+  TShapeOrVoid extends ResolveShapeOrVoid<any, any, any> = ResolveShapeOrVoid<TInputShape, TOutputShape, TFiltersShape>
+> = ServiceCallFn<TShapeOrVoid["input"], TShapeOrVoid["output"], TShapeOrVoid["filters"]>
+
+type ResolveCustomServiceCallOpts<
+  TInputShape extends z.ZodRawShape | ZodPrimitives = never,
+  TOutputShape extends z.ZodRawShape | ZodPrimitives = never,
+  TFiltersShape extends FiltersShape = never,
+  TShapeOrVoid extends ResolveShapeOrVoid<any, any, any> = ResolveShapeOrVoid<TInputShape, TOutputShape, TFiltersShape>
+> = CustomServiceCallOpts<TShapeOrVoid["input"], TShapeOrVoid["output"], TShapeOrVoid["filters"]>
+
+export const createCustomServiceCallV2 = <
+  TInputShape extends z.ZodRawShape | ZodPrimitives = never,
+  TOutputShape extends z.ZodRawShape | ZodPrimitives = never,
+  TFiltersShape extends FiltersShape = never
+>(
+  args:
+    | ({
+        inputShape?: TInputShape
+        outputShape?: TOutputShape
+        cb: ResolveCustomServiceCallback<TInputShape, TOutputShape, TFiltersShape>
+      } & (IsNever<TOutputShape> extends true ? unknown : { filtersShape?: TFiltersShape }))
+    | CustomServiceCallback<z.ZodVoid, z.ZodVoid, z.ZodVoid>
+): ResolveCustomServiceCallOpts<TInputShape, TOutputShape, TFiltersShape> => {
+  //TODO:
+  return 0 as any
+}
+
+const result = createCustomServiceCallV2({
+  inputShape: {
+    id: z.string(),
+  },
+  outputShape: {
+    id: z.string(),
+  },
+  filtersShape: {
+    id: z.string(),
+  },
+  cb: async ({ client, input, slashEndingBaseUri, utils, parsedFilters }) => {
+    return utils.fromApi({})
+  },
+})

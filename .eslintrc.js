@@ -16,5 +16,6 @@ module.exports = {
     "prettier/prettier": "off",
     // Trusting people won't use reckless any on stuff
     "@typescript-eslint/no-explicit-any": "off",
+    "@typescript-eslint/no-unused-vars": "off",
   },
 }
