@@ -54,7 +54,7 @@ type ListCallObj<TEntity extends EntityShape, TExtraFilters extends FiltersShape
       ? {
           pagination?: IPagination
         }
-      : { pagination?: IPagination; filters?: GetInferredFromRawWithBrand<TExtraFilters> }
+      : { pagination?: IPagination; filters?: Partial<GetInferredFromRawWithBrand<TExtraFilters>> }
   ) => Promise<z.infer<ReturnType<typeof getPaginatedZod<UnwrapBranded<TEntity, ReadonlyTag>>>>>
 }
 type CreateCallObj<TEntity extends EntityShape, TCreate extends z.ZodRawShape = never> = {

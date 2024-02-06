@@ -6,6 +6,7 @@ import { z } from "zod"
 import {
   GetInferredFromRaw,
   GetInferredFromRawWithBrand,
+  GetInferredWithoutReadonlyBrands,
   InferShapeOrZod,
   Pagination,
   objectToCamelCaseArr,
@@ -28,15 +29,17 @@ import {
 
 describe("createApi", async () => {
   const testBaseUri = "users"
+  const extraFiltersShape = {
+    anExtraFilter: z.string(),
+    anotherFilter: z.string(),
+  }
   const testApi = createApi({
     client: mockedAxios,
     baseUri: testBaseUri,
     models: {
       create: createZodShape,
       entity: entityZodShape,
-      extraFilters: {
-        anExtraFilter: z.string(),
-      },
+      extraFilters: extraFiltersShape,
     },
   })
   describe("general checks + TS", () => {
@@ -410,6 +413,14 @@ describe("createApi", async () => {
       type hasPagination = parameters extends { pagination?: any } | undefined ? true : false
       type doesNotHaveFilters = parameters extends { filters?: any } | undefined ? true : false
       type test = [Expect<hasPagination>, Expect<Equals<doesNotHaveFilters, false>>]
+    })
+    it("ts - filters should all be optional", () => {
+      type list = (typeof testApi)["list"]
+      type isPartial = Equals<
+        Required<Parameters<list>[0]> extends { filters?: infer TFilters } | undefined ? TFilters : unknown,
+        Partial<GetInferredWithoutReadonlyBrands<typeof extraFiltersShape>>
+      >
+      type test = Expect<isPartial>
     })
   })
 
