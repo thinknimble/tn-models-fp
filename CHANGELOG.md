@@ -1,5 +1,11 @@
 # @thinknimble/tn-models-fp
 
+## 2.4.0
+
+### Minor Changes
+
+- cdb5ea6: Make filters in built-in method `list` to be partial
+
 ## 2.3.0
 
 ### Minor Changes
