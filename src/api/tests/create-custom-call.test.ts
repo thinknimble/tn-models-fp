@@ -354,7 +354,7 @@ describe("createCustomServiceCall", () => {
     expect(getSpy).toHaveBeenCalledWith(`${baseUri}/`, {
       params: {
         test_filter: filters.testFilter,
-        test_array_filter: filters.testArrayFilter.join(","),
+        test_array_filter: filters.testArrayFilter,
       },
     })
   })
