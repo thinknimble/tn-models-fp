@@ -227,6 +227,7 @@ export const createApi = <
   options?: {
     disableTrailingSlash?: boolean
   }
+  //TODO: need to make this work with custom calls as well
 }): BareApiService<{ entity: TEntity; create: TCreate; extraFilters: TExtraFilters }> => {
   const { baseUri, client, customCalls, models, options } = args
   if (models && "create" in models && !("entity" in models)) {

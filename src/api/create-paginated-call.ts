@@ -6,6 +6,7 @@ import {
   Pagination,
   UnknownIfNever,
   UnwrapBrandedRecursive,
+  ZodPrimitives,
   getPaginatedShape,
   getPaginatedSnakeCasedZod,
   getPaginatedZod,
@@ -20,6 +21,7 @@ import {
   CustomServiceCallOpts,
   CustomServiceCallOutputObj,
   CustomServiceCallback,
+  ResolveCustomServiceCallOpts,
 } from "./types"
 
 type PaginatedServiceCallOptions<
@@ -33,6 +35,7 @@ const paginationObjShape = {
   pagination: z.instanceof(Pagination),
 }
 
+// very complex shit going on here..
 type ResolvedCreatePaginatedServiceCallParameters<
   TOutput extends z.ZodRawShape,
   TFilters extends FiltersShape | z.ZodVoid = z.ZodVoid,
@@ -45,56 +48,46 @@ type ResolvedCreatePaginatedServiceCallParameters<
     ? [{ uri: (input: z.infer<TInput["urlParams"]>) => string; httpMethod?: keyof Pick<Axios, "get" | "post"> }]
     : [{ uri?: string; httpMethod?: keyof Pick<Axios, "get" | "post"> } | undefined]
 ]
-export function createPaginatedServiceCall<
-  TOutput extends z.ZodRawShape,
-  TFilters extends FiltersShape | z.ZodVoid = z.ZodVoid,
-  TInput extends (z.ZodRawShape & { urlParams?: z.ZodObject<any> }) | z.ZodVoid = z.ZodVoid
->(
-  ...args: ResolvedCreatePaginatedServiceCallParameters<TOutput, TFilters, TInput>
-): CustomServiceCallOpts<
-  UnknownIfNever<TInput> & typeof paginationObjShape,
-  // TODO: test this callback return type
-  ReturnType<typeof getPaginatedZod<UnwrapBrandedRecursive<TOutput>>>["shape"],
-  TFilters
->
 
-export function createPaginatedServiceCall<
-  TOutput extends z.ZodRawShape,
-  TFilters extends FiltersShape | z.ZodVoid = z.ZodVoid
->(
-  models: CustomServiceCallOutputObj<TOutput> & CustomServiceCallFiltersObj<TFilters, TOutput>,
-  opts?: PaginatedServiceCallOptions
-): CustomServiceCallOpts<
-  typeof paginationObjShape,
-  ReturnType<typeof getPaginatedZod<UnwrapBrandedRecursive<TOutput>>>["shape"],
-  TFilters
->
-
-export function createPaginatedServiceCall<
-  TOutput extends z.ZodRawShape,
+export const createPaginatedServiceCall = <
+  TOutput extends z.ZodRawShape = z.ZodRawShape,
   TFilters extends FiltersShape = never,
-  TInput extends z.ZodRawShape & { urlParams?: z.ZodObject<any> } = never
->(models: object, opts: PaginatedServiceCallOptions<TInput> | undefined): CustomServiceCallOpts<any, any, any> {
+  //things that are optional are better off being  never so that we can decided later whether we want to void them or not to exclude them from things
+  TInput extends z.ZodRawShape | ZodPrimitives = never,
+  TReturnType extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny> = ReturnType<
+    typeof getPaginatedZod<UnwrapBrandedRecursive<TOutput>>
+  >["shape"]
+>({
+  inputShape,
+  outputShape,
+  filtersShape,
+  opts,
+}: {
+  outputShape: TOutput
+  inputShape?: TInput
+  filtersShape?: TFilters
+  opts?: {
+    /**
+     * Choose the http method you want this call to be executed as
+     */
+    httpMethod?: "post" | "get"
+    /**
+     * Optionally point to another uri different than the original
+     */
+    uri?: string
+  }
+}): ResolveCustomServiceCallOpts<UnknownIfNever<TInput> & typeof paginationObjShape, TReturnType, TFilters> => {
   const uri = opts?.uri as ((input: unknown) => string) | undefined | string
   const httpMethod = opts?.httpMethod ?? "get"
-  const filtersShape =
-    "filtersShape" in models && Object.keys(models.filtersShape as TFilters).length
-      ? (models.filtersShape as TFilters)
-      : undefined
+  const filtersShapeResolved = filtersShape && Object.keys(filtersShape).length ? filtersShape : undefined
   // The output shape should still be the camelCased one so as long as we make sure that we return the same we should be able to cast the result right?. OutputShape will always be camelCased from the user input...
-  if (!("outputShape" in models)) {
+  if (!outputShape) {
     throw new Error("You should provide an output shape ")
   }
-  if (
-    "inputShape" in models &&
-    typeof models.inputShape === "object" &&
-    models.inputShape !== null &&
-    "urlParams" in models.inputShape &&
-    typeof opts?.uri !== "function"
-  ) {
+  if (inputShape && "urlParams" in inputShape && typeof opts?.uri !== "function") {
     throw new Error("If you provide url params you should pass an uri builder function in opts.uri")
   }
-  const outputShape = models.outputShape as TOutput
+
   const newOutputShape = getPaginatedShape(outputShape)
 
   const callback: CustomServiceCallback<
@@ -144,18 +137,28 @@ export function createPaginatedServiceCall<
     const result: unknown = { ...rawResponse, results: rawResponse.results.map((r) => objectToCamelCaseArr(r)) }
     return result as GetInferredFromRawWithBrand<ReturnType<typeof getPaginatedShape<TOutput>>>
   }
-  if ("inputShape" in models) {
+  if (inputShape) {
     return {
       callback: callback as CustomServiceCallback<any, any, any>,
-      inputShape: models.inputShape,
+      inputShape,
       outputShape: newOutputShape,
-      filtersShape: filtersShape ?? z.void(),
-    }
+      filtersShape: filtersShapeResolved ?? z.void(),
+    } as unknown as ResolveCustomServiceCallOpts<
+      UnknownIfNever<TInput> & typeof paginationObjShape,
+      // TODO: test this callback return type
+      TReturnType,
+      TFilters
+    >
   }
   return {
     callback: callback as CustomServiceCallback<any, any, any>,
     inputShape: z.void(),
     outputShape: newOutputShape,
-    filtersShape: filtersShape ?? z.void(),
-  }
+    filtersShape: filtersShapeResolved ?? z.void(),
+  } as unknown as ResolveCustomServiceCallOpts<
+    UnknownIfNever<TInput> & typeof paginationObjShape,
+    // TODO: test this callback return type
+    TReturnType,
+    TFilters
+  >
 }

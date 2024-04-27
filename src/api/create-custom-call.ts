@@ -1,24 +1,13 @@
 import { z } from "zod"
-import { FiltersShape, IsNever, UnwrapBranded, ZodPrimitives, createCustomServiceCallHandler } from "../utils"
-import { AxiosLike, CustomServiceCallOpts, CustomServiceCallback, ServiceCallFn, StandAloneCallType } from "./types"
-
-type ResolveShapeOrVoid<
-  TInputShape extends z.ZodRawShape | ZodPrimitives = never,
-  TOutputShape extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny> = never,
-  TFiltersShape extends FiltersShape | z.ZodVoid = never
-> = {
-  input: IsNever<TInputShape> extends true ? z.ZodVoid : TInputShape
-  output: IsNever<TOutputShape> extends true
-    ? z.ZodVoid
-    : TOutputShape extends z.ZodRawShape
-    ? UnwrapBranded<TOutputShape>
-    : TOutputShape
-  filters: IsNever<TOutputShape> extends true
-    ? z.ZodVoid
-    : IsNever<TFiltersShape> extends true
-    ? z.ZodVoid
-    : TFiltersShape
-}
+import { FiltersShape, IsNever, ZodPrimitives, createCustomServiceCallHandler } from "../utils"
+import {
+  AxiosLike,
+  CustomServiceCallback,
+  ResolveCustomServiceCallOpts,
+  ResolveShapeOrVoid,
+  ServiceCallFn,
+  StandAloneCallType,
+} from "./types"
 
 type ResolveCustomServiceCallback<
   TInputShape extends z.ZodRawShape | ZodPrimitives = never,
@@ -34,13 +23,6 @@ type ResolveServiceCallFn<
   TFiltersShape extends FiltersShape | z.ZodVoid = never,
   TShapeOrVoid extends ResolveShapeOrVoid<any, any, any> = ResolveShapeOrVoid<TInputShape, TOutputShape, TFiltersShape>
 > = ServiceCallFn<TShapeOrVoid["input"], TShapeOrVoid["output"], TShapeOrVoid["filters"]>
-
-type ResolveCustomServiceCallOpts<
-  TInputShape extends z.ZodRawShape | ZodPrimitives = never,
-  TOutputShape extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny> = never,
-  TFiltersShape extends FiltersShape | z.ZodVoid = never,
-  TShapeOrVoid extends ResolveShapeOrVoid<any, any, any> = ResolveShapeOrVoid<TInputShape, TOutputShape, TFiltersShape>
-> = CustomServiceCallOpts<TShapeOrVoid["input"], TShapeOrVoid["output"], TShapeOrVoid["filters"]>
 
 export const createCustomServiceCall = <
   TInputShape extends z.ZodRawShape | ZodPrimitives = never,
