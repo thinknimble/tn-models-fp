@@ -11,10 +11,7 @@ import {
   objectToSnakeCaseArr,
   readonly,
 } from "../../utils"
-import {
-  // createApi,
-  createApiV2,
-} from "../create-api"
+import { createApi } from "../create-api"
 import { createCustomServiceCall } from "../create-custom-call"
 import { CustomServiceCallsRecord, ServiceCallFn } from "../types"
 import {
@@ -27,8 +24,6 @@ import {
   mockEntity2,
   mockedAxios,
 } from "./mocks"
-
-const createApi = createApiV2
 
 describe("createApi", async () => {
   const testBaseUri = "users"

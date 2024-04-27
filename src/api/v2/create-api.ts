@@ -6,7 +6,6 @@ import {
   GetInferredFromRawWithBrand,
   GetInferredWithoutReadonlyBrands,
   IPagination,
-  InferShapeOrZodWithoutBrand,
   IsNever,
   ReadonlyTag,
   UnwrapBranded,
@@ -20,10 +19,9 @@ import {
   parseFilters,
   parseResponse,
   removeReadonlyFields,
-} from "../utils"
-import { createCustomServiceCall } from "./create-custom-call"
-import { createCustomServiceCallV2 } from "./v2"
-import { AxiosLike, CustomServiceCallPlaceholder, CustomServiceCallsRecord } from "./types"
+} from "../../utils"
+import { createCustomServiceCallV2 } from "./create-custom-call"
+import { AxiosLike, CustomServiceCallPlaceholder, CustomServiceCallsRecord } from "../types"
 
 type EntityShape = z.ZodRawShape & {
   id: z.ZodString | z.ZodNumber | z.ZodBranded<z.ZodString, ReadonlyTag> | z.ZodBranded<z.ZodNumber, ReadonlyTag>
@@ -174,6 +172,20 @@ type BareApiService<TModels extends BaseModelsPlaceholder | unknown> = TModels e
     } & BaseApiCalls<TModels>
   : { client: AxiosLike }
 
+type ApiService<
+  TModels extends BaseModelsPlaceholder | unknown,
+  //extending from record makes it so that if you try to access anything it would not error, we want to actually error if there is no key in TCustomServiceCalls that does not belong to it
+  TCustomServiceCalls extends object
+> = BareApiService<TModels> & {
+  /**
+   * The custom calls you declared as input but as plain functions and wrapped for type safety
+   */
+  customServiceCalls: CustomServiceCallsRecord<TCustomServiceCalls>
+  /**
+   * Alias for customServiceCalls
+   */
+  csc: CustomServiceCallsRecord<TCustomServiceCalls>
+}
 type CreateModelObj<TApiCreate extends z.ZodRawShape> = {
   /**
    * Zod raw shape of the input for creating an entity
@@ -204,47 +216,83 @@ type EntityModelObj<TApiEntity extends EntityShape> = {
   entity: TApiEntity
 }
 
+type BaseApiParams = {
+  /**
+   * The base uri for te api to hit. We append this to request's uris for built-in methods as provide a slash-ended version for custom calls
+   * @example
+   * baseUri='/api/todos'
+   */
+  readonly baseUri: string
+  /**
+   * The axios instance created for the app.
+   */
+  client: AxiosInstance
+  disableTrailingSlash?: boolean
+}
+
+type CheckEntityIntegrity<TModels> = TModels extends { entity: any }
+  ? TModels extends { entity: { id: any } }
+    ? true
+    : "An `id` field in `entity` is required"
+  : "`entity` field is required"
+
 type ValidModelKeys = keyof { entity: unknown; create?: unknown; extraFilters?: unknown }
 type CheckModelsValidKeysPerKey<TModels> = {
   [K in keyof TModels]: K extends ValidModelKeys ? TModels[K] : "Invalid Key"
 }
+type CheckModels<TModels> = CheckEntityIntegrity<TModels> extends true
+  ? CheckModelsValidKeysPerKey<TModels> extends BaseModelsPlaceholder
+    ? CheckModelsValidKeysPerKey<TModels>
+    : "You should not pass `create` model without an `entity` model"
+  : CheckEntityIntegrity<TModels>
 
-export const createApi = <
-  TEntity extends EntityShape = never,
-  //TODO: nice-to-have make TCreate default to entity without readonly fields
-  TCreate extends z.ZodRawShape = never,
-  TExtraFilters extends FiltersShape = never,
+export function createApiV2<
+  TModels extends BaseModelsPlaceholder,
+  TCustomServiceCalls extends Record<string, CustomServiceCallPlaceholder>
+>(
+  base: BaseApiParams & {
+    models?: CheckModels<TModels>
+  },
+  /**
+   * Create your own custom service calls to use with this API. Tools for case conversion are provided.
+   */
+  customServiceCalls: TCustomServiceCalls
+): ApiService<TModels, TCustomServiceCalls>
+export function createApiV2<TCustomServiceCalls extends Record<string, CustomServiceCallPlaceholder> = never>(
+  base: BaseApiParams,
+  /**
+   * Create your own custom service calls to use with this API. Tools for case conversion are provided.
+   */
+  customServiceCalls: TCustomServiceCalls
+): ApiService<unknown, TCustomServiceCalls>
+export function createApiV2<TModels extends BaseModelsPlaceholder | unknown = unknown>(
+  base: BaseApiParams & {
+    models?: CheckModels<TModels>
+  }
+): BareApiService<TModels>
+
+//IMPLEMENTATION
+export function createApiV2<
+  TModels extends BaseModelsPlaceholder,
   TCustomServiceCalls extends Record<string, CustomServiceCallPlaceholder> = never
->(args: {
-  baseUri: string
-  client: AxiosInstance
-  customCalls?: TCustomServiceCalls
-  models?: {
-    entity: TEntity
-    create?: TCreate
-    extraFilters?: TExtraFilters
-  }
-  options?: {
-    disableTrailingSlash?: boolean
-  }
-}): BareApiService<{ entity: TEntity; create: TCreate; extraFilters: TExtraFilters }> => {
-  const { baseUri, client, customCalls, models, options } = args
+>(
+  { models, client, baseUri, disableTrailingSlash }: BaseApiParams & { models?: TModels },
+  customServiceCalls: TCustomServiceCalls | undefined = undefined
+) {
   if (models && "create" in models && !("entity" in models)) {
     throw new Error("You should not pass `create` model without an `entity` model")
   }
   //standardize the uri
-  const parsedEndingSlash = (options?.disableTrailingSlash ? "" : "/") as `${string}/`
+  const parsedEndingSlash = (disableTrailingSlash ? "" : "/") as `${string}/`
   const slashEndingBaseUri = (baseUri[baseUri.length - 1] === "/" ? baseUri : baseUri + "/") as `${string}/`
   const parsedBaseUri = (
-    args.options?.disableTrailingSlash
-      ? slashEndingBaseUri.substring(0, slashEndingBaseUri.length - 1)
-      : slashEndingBaseUri
+    disableTrailingSlash ? slashEndingBaseUri.substring(0, slashEndingBaseUri.length - 1) : slashEndingBaseUri
   ) as `${string}/`
   const axiosLikeClient = client as AxiosLike
 
-  const modifiedCustomServiceCalls = customCalls
+  const modifiedCustomServiceCalls = customServiceCalls
     ? (Object.fromEntries(
-        Object.entries(customCalls).map(([k, v]) => [
+        Object.entries(customServiceCalls).map(([k, v]) => [
           k,
           createCustomServiceCallHandler({
             client: axiosLikeClient,
@@ -262,36 +310,22 @@ export const createApi = <
       client: axiosLikeClient,
       customServiceCalls: modifiedCustomServiceCalls,
       csc: modifiedCustomServiceCalls,
-      //TODO: remove any
-    } as any
+    }
   }
   if (!models || !models.entity) {
-    //TODO: remove any
-    return { client: axiosLikeClient } as BareApiService<{
-      entity: TEntity
-      create: TCreate
-      extraFilters: TExtraFilters
-    }>
+    return { client: axiosLikeClient }
   }
-  const entityShapeWithoutReadonlyFields = removeReadonlyFields(models.entity as EntityShape, ["id"])
-  //TODO: revisit why we did this
-  type TApiEntityShape = TEntity extends z.ZodRawShape ? TEntity : z.ZodRawShape
+  const entityShapeWithoutReadonlyFields = removeReadonlyFields(models.entity, ["id"])
+  type TApiEntityShape = TModels extends EntityModelObj<infer TE> ? TE : z.ZodRawShape
 
   /**
    * Placeholder to include or not the create method in the return based on models
    */
-  type TApiCreateShape = TCreate extends z.ZodRawShape ? TCreate : z.ZodRawShape
+  type TApiCreateShape = TModels extends CreateCallObj<TApiEntityShape, infer TC> ? TC : z.ZodRawShape
   type TApiCreate = GetInferredFromRawWithBrand<TApiCreateShape>
   const create = async (inputs: TApiCreate) => {
-    //if there's an id:
-    let entityShapeWithoutReadonlyFieldsNorId: z.ZodRawShape = entityShapeWithoutReadonlyFields
-    if ("id" in entityShapeWithoutReadonlyFields) {
-      const { id: _, ...rest } = entityShapeWithoutReadonlyFields
-      entityShapeWithoutReadonlyFieldsNorId = rest
-    }
-    // const { id: _, ...entityShapeWithoutReadonlyFieldsNorId } = entityShapeWithoutReadonlyFields
-    const inputShape =
-      "create" in models && models.create ? removeReadonlyFields(models.create) : entityShapeWithoutReadonlyFieldsNorId
+    const { id: _, ...entityShapeWithoutReadonlyFieldsNorId } = entityShapeWithoutReadonlyFields
+    const inputShape = "create" in models ? removeReadonlyFields(models.create) : entityShapeWithoutReadonlyFieldsNorId
     const { utils } = createApiUtils({
       inputShape,
       name: create.name,
@@ -310,14 +344,12 @@ export const createApi = <
     return utils.fromApi(res.data)
   }
 
-  // type test = BareApiService<TEntity, TCreate, TExtraFilters>["list"] // error on list not existing or resulting in a too complex structure for typescript to resolve
-  //TODO: check if we can fix this params type
-  const list = async (params: any) => {
+  const list = async (params: Parameters<BareApiService<TModels>["list"]>[0]) => {
     const filters = params ? params.filters : undefined
     const pagination = params ? params.pagination : undefined
     // Filters parsing, throws if the fields do not comply with the zod schema
 
-    const filtersParsed = models.extraFilters ? parseFilters({ shape: models.extraFilters, filters }) : undefined
+    const filtersParsed = parseFilters({ shape: models.extraFilters, filters })
     const paginationFilters = parseFilters({
       shape: paginationFiltersZodShape,
       filters: pagination ? { page: pagination.page, pageSize: pagination.size } : undefined,
@@ -361,18 +393,18 @@ export const createApi = <
       return
     }
     const entityWithoutReadonlyFieldsZod = z.object(entityShapeWithoutReadonlyFields)
-    const finalEntityZod =
+    const finalEntityShape =
       type === "partial" ? entityWithoutReadonlyFieldsZod.partial() : entityWithoutReadonlyFieldsZod
-    type result = typeof finalEntityZod.shape
 
-    const parsedInput = finalEntityZod.parse(newValue)
+    type result = typeof finalEntityShape.shape
+
+    const parsedInput = finalEntityShape.parse(newValue)
     const updateCall = createCustomServiceCallV2.standAlone({
       client,
       models: {
-        inputShape: finalEntityZod.shape,
+        inputShape: finalEntityShape.shape,
         outputShape: models.entity,
       },
-      //@ts-expect-error TODO: need to revisit this since it is not picking up the return type properly. Maybe we need to improve createCustomServiceCallV2.standAlone types. (remove overloads)
       cb: async ({ client, input, utils }) => {
         const { id, ...body } = utils.toApi(input)
         const result = await client[httpMethod](`${slashEndingBaseUri}${id}${parsedEndingSlash}`, body)
@@ -417,15 +449,11 @@ export const createApi = <
 
   const baseReturn = { client: axiosLikeClient, retrieve, list, remove, update, create, upsert }
 
-  type test2 = BareApiService<{ entity: EntityShape; create: TCreate; extraFilters: TExtraFilters }>
+  if (!modifiedCustomServiceCalls) return baseReturn
 
-  //TODO: fix any
-  if (!modifiedCustomServiceCalls) return baseReturn as any
-
-  //TODO: fix any
   return {
     ...baseReturn,
     customServiceCalls: modifiedCustomServiceCalls,
     csc: modifiedCustomServiceCalls,
-  } as any
+  }
 }

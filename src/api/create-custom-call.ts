@@ -1,154 +1,131 @@
 import { z } from "zod"
-import { FiltersShape, UnwrapBranded, ZodPrimitives, createCustomServiceCallHandler } from "../utils"
-import {
-  AxiosLike,
-  CustomServiceCallFiltersObj,
-  CustomServiceCallInputObj,
-  CustomServiceCallOpts,
-  CustomServiceCallOutputObj,
-  CustomServiceCallback,
-  ServiceCallFn,
-} from "./types"
+import { FiltersShape, IsNever, UnwrapBranded, ZodPrimitives, createCustomServiceCallHandler } from "../utils"
+import { AxiosLike, CustomServiceCallOpts, CustomServiceCallback, ServiceCallFn, StandAloneCallType } from "./types"
 
-//TODO: remove this way of handling overloads. Prefer unions rather so that we can condense everything in a single site (the implementation)
-//! The order of overloads MATTER. This was quite a foot-gun-ish thing to discover. Lesson is: declare overloads from most generic > most narrowed. It kind of makes sense to go narrowing down the parameter possibilities. Seems like the first overload that matches is the one that is used.
-/**
- * Create a custom type-inferred service call with both input and output
- */
-export function createCustomServiceCall<
-  TInput extends z.ZodRawShape | ZodPrimitives,
-  TOutput extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny>,
-  TFilters extends FiltersShape | z.ZodVoid = z.ZodVoid
->(
-  models: CustomServiceCallInputObj<TInput> &
-    CustomServiceCallOutputObj<TOutput> &
-    CustomServiceCallFiltersObj<TFilters, TOutput>,
-  cb: TOutput extends z.ZodRawShape
-    ? CustomServiceCallback<TInput, UnwrapBranded<TOutput>, TFilters>
-    : CustomServiceCallback<TInput, TOutput, TFilters>
-): TOutput extends z.ZodRawShape
-  ? CustomServiceCallOpts<TInput, UnwrapBranded<TOutput>, TFilters>
-  : CustomServiceCallOpts<TInput, TOutput, TFilters>
-/**
- * Create a custom type-inferred service call with input only
- */
-export function createCustomServiceCall<TInput extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny>>(
-  models: CustomServiceCallInputObj<TInput>,
-  cb: CustomServiceCallback<TInput, z.ZodVoid, z.ZodVoid>
-): CustomServiceCallOpts<TInput, z.ZodVoid, z.ZodVoid>
-/**
- * Create a custom type-inferred service call with output only
- */
-export function createCustomServiceCall<
-  TOutput extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny>,
-  TFilters extends FiltersShape | z.ZodVoid = z.ZodVoid
->(
-  models: CustomServiceCallOutputObj<TOutput> & CustomServiceCallFiltersObj<TFilters, TOutput>,
-  cb: TOutput extends z.ZodRawShape
-    ? CustomServiceCallback<z.ZodVoid, UnwrapBranded<TOutput>, TFilters>
-    : CustomServiceCallback<z.ZodVoid, TOutput, TFilters>
-): TOutput extends z.ZodRawShape
-  ? CustomServiceCallOpts<z.ZodVoid, UnwrapBranded<TOutput>, TFilters>
-  : CustomServiceCallOpts<z.ZodVoid, TOutput, TFilters>
-/**
- * Create a custom type-inferred service call with neither input nor output
- */
-export function createCustomServiceCall(
-  cb: CustomServiceCallback<z.ZodVoid, z.ZodVoid, z.ZodVoid>
-): CustomServiceCallOpts<z.ZodVoid, z.ZodVoid, z.ZodVoid>
-export function createCustomServiceCall(...args: any[]): CustomServiceCallOpts<any, any, any> {
-  const [first, second] = args
-  const inputShape = typeof first === "function" || !("inputShape" in first) ? z.void() : first.inputShape
-  const outputShape = typeof first === "function" || !("outputShape" in first) ? z.void() : first.outputShape
-  const filtersShape = typeof first === "function" || !("filtersShape" in first) ? z.void() : first.filtersShape
-  const callback = typeof first === "function" ? first : second
+type ResolveShapeOrVoid<
+  TInputShape extends z.ZodRawShape | ZodPrimitives = never,
+  TOutputShape extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny> = never,
+  TFiltersShape extends FiltersShape | z.ZodVoid = never
+> = {
+  input: IsNever<TInputShape> extends true ? z.ZodVoid : TInputShape
+  output: IsNever<TOutputShape> extends true
+    ? z.ZodVoid
+    : TOutputShape extends z.ZodRawShape
+    ? UnwrapBranded<TOutputShape>
+    : TOutputShape
+  filters: IsNever<TOutputShape> extends true
+    ? z.ZodVoid
+    : IsNever<TFiltersShape> extends true
+    ? z.ZodVoid
+    : TFiltersShape
+}
 
+type ResolveCustomServiceCallback<
+  TInputShape extends z.ZodRawShape | ZodPrimitives = never,
+  TOutputShape extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny> = never,
+  TFilters extends FiltersShape | z.ZodVoid = never,
+  TCallType extends string = "",
+  TShapeOrVoid extends ResolveShapeOrVoid<any, any, any> = ResolveShapeOrVoid<TInputShape, TOutputShape, TFilters>
+> = CustomServiceCallback<TShapeOrVoid["input"], TShapeOrVoid["output"], TShapeOrVoid["filters"], TCallType>
+
+type ResolveServiceCallFn<
+  TInputShape extends z.ZodRawShape | ZodPrimitives = never,
+  TOutputShape extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny> = never,
+  TFiltersShape extends FiltersShape | z.ZodVoid = never,
+  TShapeOrVoid extends ResolveShapeOrVoid<any, any, any> = ResolveShapeOrVoid<TInputShape, TOutputShape, TFiltersShape>
+> = ServiceCallFn<TShapeOrVoid["input"], TShapeOrVoid["output"], TShapeOrVoid["filters"]>
+
+type ResolveCustomServiceCallOpts<
+  TInputShape extends z.ZodRawShape | ZodPrimitives = never,
+  TOutputShape extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny> = never,
+  TFiltersShape extends FiltersShape | z.ZodVoid = never,
+  TShapeOrVoid extends ResolveShapeOrVoid<any, any, any> = ResolveShapeOrVoid<TInputShape, TOutputShape, TFiltersShape>
+> = CustomServiceCallOpts<TShapeOrVoid["input"], TShapeOrVoid["output"], TShapeOrVoid["filters"]>
+
+export const createCustomServiceCall = <
+  TInputShape extends z.ZodRawShape | ZodPrimitives = never,
+  TOutputShape extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny> = never,
+  TFiltersShape extends FiltersShape = never
+>(
+  args:
+    | ({
+        inputShape?: TInputShape
+        outputShape?: TOutputShape
+        cb: ResolveCustomServiceCallback<TInputShape, TOutputShape, TFiltersShape>
+      } & (IsNever<TOutputShape> extends true ? unknown : { filtersShape?: TFiltersShape }))
+    | ResolveCustomServiceCallback<z.ZodVoid, z.ZodVoid, z.ZodVoid>
+): ResolveCustomServiceCallOpts<TInputShape, TOutputShape, TFiltersShape> => {
+  const inputShape = typeof args === "function" || !args.inputShape ? z.void() : args.inputShape
+  const outputShape = typeof args === "function" || !args.outputShape ? z.void() : args.outputShape
+  const filtersShape = (
+    typeof args === "function" || !args.outputShape || !("filtersShape" in args) ? z.void() : args.filtersShape
+  ) as TFiltersShape | z.ZodVoid
+  const callback = typeof args === "function" ? args : args.cb
+
+  //TODO: revisit and  see if we can fix the return type here. There seems to be a mismatch deeper in the type
   return {
     inputShape,
     outputShape,
     callback,
     filtersShape,
-  }
+  } as unknown as ResolveCustomServiceCallOpts<TInputShape, TOutputShape, TFiltersShape>
 }
 
-type StandAloneBaseArgs = {
-  client: AxiosLike
-  name?: string
-}
+const result = createCustomServiceCall({
+  inputShape: {
+    id: z.string(),
+  },
+  outputShape: {
+    id: z.string(),
+  },
+  filtersShape: {
+    id: z.string(),
+  },
+  cb: async ({ client, input, slashEndingBaseUri, utils, parsedFilters }) => {
+    return utils.fromApi({})
+  },
+})
 
-function standAlone<
-  TInput extends z.ZodRawShape | ZodPrimitives,
-  TOutput extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny>,
-  TFilters extends FiltersShape | z.ZodVoid = z.ZodVoid
+const standAlone = <
+  TInputShape extends z.ZodRawShape | ZodPrimitives = never,
+  TOutputShape extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny> = never,
+  TFiltersShape extends FiltersShape | z.ZodVoid = never
 >(
-  args: StandAloneBaseArgs & {
-    models: CustomServiceCallInputObj<TInput> &
-      CustomServiceCallOutputObj<TOutput> &
-      CustomServiceCallFiltersObj<TFilters, TOutput>
-    cb: CustomServiceCallback<TInput, TOutput, TFilters, "StandAlone">
+  args: {
+    client: AxiosLike
+    name?: string
+  } & {
+    models?: (
+      | {
+          inputShape: TInputShape
+          outputShape?: TOutputShape
+        }
+      | {
+          inputShape?: TInputShape
+          outputShape: TOutputShape
+        }
+    ) &
+      (IsNever<TOutputShape> extends true ? unknown : { filtersShape?: TFiltersShape })
+    cb: ResolveCustomServiceCallback<TInputShape, TOutputShape, TFiltersShape, StandAloneCallType>
   }
-): ServiceCallFn<TInput, TOutput, TFilters>
-/**
- * Create a custom type-inferred service call with input only
- */
-function standAlone<TInput extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny>>(
-  args: StandAloneBaseArgs & {
-    models: CustomServiceCallInputObj<TInput>
-    cb: CustomServiceCallback<TInput, z.ZodVoid, z.ZodVoid, "StandAlone">
-  }
-): ServiceCallFn<TInput, z.ZodVoid, z.ZodVoid>
-/**
- * Create a custom type-inferred service call with output only
- */
-function standAlone<
-  TOutput extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny>,
-  TFilters extends FiltersShape | z.ZodVoid = z.ZodVoid
->(
-  args: StandAloneBaseArgs & {
-    models: CustomServiceCallOutputObj<TOutput> & CustomServiceCallFiltersObj<TFilters, TOutput>
-    cb: CustomServiceCallback<z.ZodVoid, TOutput, TFilters, "StandAlone">
-  }
-): ServiceCallFn<z.ZodVoid, TOutput, TFilters>
-/**
- * Create a custom type-inferred service call with neither input nor output
- */
-function standAlone(
-  args: StandAloneBaseArgs & {
-    cb: CustomServiceCallback<z.ZodVoid, z.ZodVoid, z.ZodVoid, "StandAlone">
-  }
-): ServiceCallFn
-
-function standAlone(
-  args: StandAloneBaseArgs & {
-    models?:
-      | CustomServiceCallInputObj<any>
-      | (CustomServiceCallOutputObj<any> & CustomServiceCallFiltersObj<any, any>)
-      | (CustomServiceCallOutputObj<any> & CustomServiceCallInputObj<any> & CustomServiceCallFiltersObj<any, any>)
-    cb: CustomServiceCallback<any, any, any, "StandAlone">
-  }
-): ServiceCallFn<any, any, any> {
+): ResolveServiceCallFn<TInputShape, TOutputShape, TFiltersShape> => {
   //? Should I use zod to improve the types in here rather than any[] it?. We could probably do the same for the createCustomServiceCall
   const inputShape = (args.models && "inputShape" in args.models ? args.models.inputShape : undefined) ?? z.void()
   const outputShape = (args.models && "outputShape" in args.models ? args.models.outputShape : undefined) ?? z.void()
   const filtersShape = (args.models && "filtersShape" in args.models ? args.models.filtersShape : undefined) ?? z.void()
-  const result = createCustomServiceCall(
-    {
-      inputShape,
-      outputShape,
-      filtersShape,
-    },
-    args.cb
-  )
+  const result = createCustomServiceCall({
+    inputShape,
+    outputShape,
+    filtersShape,
+    cb: args.cb,
+    //TODO: check whether we can avoid any in these situations
+  } as any)
 
   return createCustomServiceCallHandler({
     client: args.client,
     serviceCallOpts: result,
     name: args.name,
-  })
+  }) as ResolveServiceCallFn<TInputShape, TOutputShape, TFiltersShape>
 }
 
-/**
- *  Create a stand-alone version of a custom service call.
- * Useful when you don't have a specific api resource you want to attach this call to (probably an rpc-like call)
- */
 createCustomServiceCall.standAlone = standAlone
