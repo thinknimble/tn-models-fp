@@ -53,21 +53,6 @@ export const createCustomServiceCall = <
   } as unknown as ResolveCustomServiceCallOpts<TInputShape, TOutputShape, TFiltersShape>
 }
 
-const result = createCustomServiceCall({
-  inputShape: {
-    id: z.string(),
-  },
-  outputShape: {
-    id: z.string(),
-  },
-  filtersShape: {
-    id: z.string(),
-  },
-  cb: async ({ client, input, slashEndingBaseUri, utils, parsedFilters }) => {
-    return utils.fromApi({})
-  },
-})
-
 const standAlone = <
   TInputShape extends z.ZodRawShape | ZodPrimitives = never,
   TOutputShape extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny> = never,

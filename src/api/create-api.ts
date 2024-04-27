@@ -6,7 +6,6 @@ import {
   GetInferredFromRawWithBrand,
   GetInferredWithoutReadonlyBrands,
   IPagination,
-  InferShapeOrZodWithoutBrand,
   IsNever,
   ReadonlyTag,
   UnwrapBranded,
@@ -21,9 +20,8 @@ import {
   parseResponse,
   removeReadonlyFields,
 } from "../utils"
-import { createCustomServiceCall } from "./create-custom-call"
-import { createCustomServiceCallV2 } from "./v2"
 import { AxiosLike, CustomServiceCallPlaceholder, CustomServiceCallsRecord } from "./types"
+import { createCustomServiceCallV2 } from "./v2"
 
 type EntityShape = z.ZodRawShape & {
   id: z.ZodString | z.ZodNumber | z.ZodBranded<z.ZodString, ReadonlyTag> | z.ZodBranded<z.ZodNumber, ReadonlyTag>
@@ -202,11 +200,6 @@ type EntityModelObj<TApiEntity extends EntityShape> = {
    * ```
    */
   entity: TApiEntity
-}
-
-type ValidModelKeys = keyof { entity: unknown; create?: unknown; extraFilters?: unknown }
-type CheckModelsValidKeysPerKey<TModels> = {
-  [K in keyof TModels]: K extends ValidModelKeys ? TModels[K] : "Invalid Key"
 }
 
 export const createApi = <

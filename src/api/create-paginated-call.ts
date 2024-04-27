@@ -1,4 +1,3 @@
-import { Axios } from "axios"
 import { z } from "zod"
 import {
   FiltersShape,
@@ -15,39 +14,11 @@ import {
   parseFilters,
   parseResponse,
 } from "../utils"
-import {
-  CustomServiceCallFiltersObj,
-  CustomServiceCallInputObj,
-  CustomServiceCallOpts,
-  CustomServiceCallOutputObj,
-  CustomServiceCallback,
-  ResolveCustomServiceCallOpts,
-} from "./types"
-
-type PaginatedServiceCallOptions<
-  TInput extends (z.ZodRawShape & { urlParams?: z.ZodObject<any> }) | z.ZodVoid = z.ZodVoid
-> = {
-  uri?: TInput extends { urlParams: z.ZodObject<any> } ? (input: z.infer<TInput["urlParams"]>) => string : string
-  httpMethod?: keyof Pick<Axios, "get" | "post">
-}
+import { CustomServiceCallback, ResolveCustomServiceCallOpts } from "./types"
 
 const paginationObjShape = {
   pagination: z.instanceof(Pagination),
 }
-
-// very complex shit going on here..
-type ResolvedCreatePaginatedServiceCallParameters<
-  TOutput extends z.ZodRawShape,
-  TFilters extends FiltersShape | z.ZodVoid = z.ZodVoid,
-  TInput extends (z.ZodRawShape & { urlParams?: z.ZodObject<any> }) | z.ZodVoid = z.ZodVoid
-> = [
-  models: CustomServiceCallInputObj<TInput> &
-    CustomServiceCallOutputObj<TOutput> &
-    CustomServiceCallFiltersObj<TFilters, TOutput>,
-  ...opts: TInput extends { urlParams: z.ZodObject<any> }
-    ? [{ uri: (input: z.infer<TInput["urlParams"]>) => string; httpMethod?: keyof Pick<Axios, "get" | "post"> }]
-    : [{ uri?: string; httpMethod?: keyof Pick<Axios, "get" | "post"> } | undefined]
-]
 
 export const createPaginatedServiceCall = <
   TOutput extends z.ZodRawShape = z.ZodRawShape,
