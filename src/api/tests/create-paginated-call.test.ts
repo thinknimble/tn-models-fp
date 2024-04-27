@@ -322,8 +322,7 @@ describe("createPaginatedServiceCall", () => {
     })
   })
 
-  //TODO:Will fix the uri builder at some point
-  it.skip("Allows passing url params with a builder uri function", async () => {
+  it("Allows passing url params with a builder uri function", async () => {
     // arrange
     const getSpy = vi.spyOn(mockedAxios, "get")
     mockedAxios.get.mockResolvedValueOnce({
@@ -338,7 +337,6 @@ describe("createPaginatedServiceCall", () => {
       },
       outputShape: entityZodShape,
       opts: {
-        //@ts-expect-error will fix this later
         uri: uriBuilder,
       },
     })
@@ -364,8 +362,8 @@ describe("createPaginatedServiceCall", () => {
       },
     })
   })
-  //TODO: unskip, we need to fix the uri builder thing at some point
-  it.skip("Allows passing url params with a builder uri function and filters", async () => {
+
+  it("Allows passing url params with a builder uri function and filters", async () => {
     // arrange
     const getSpy = vi.spyOn(mockedAxios, "get")
     mockedAxios.get.mockResolvedValueOnce({
@@ -385,7 +383,6 @@ describe("createPaginatedServiceCall", () => {
         anotherExtraFilter: z.number(),
       },
       opts: {
-        //@ts-expect-error will fix this later
         uri: uriBuilder,
       },
     })

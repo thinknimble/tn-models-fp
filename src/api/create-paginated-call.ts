@@ -1,5 +1,6 @@
 import { z } from "zod"
 import {
+  IsNever,
   FiltersShape,
   GetInferredFromRawWithBrand,
   Pagination,
@@ -45,7 +46,11 @@ export const createPaginatedServiceCall = <
     /**
      * Optionally point to another uri different than the original
      */
-    uri?: string
+    uri?: IsNever<TInput> extends true
+      ? string
+      : TInput extends { urlParams: z.ZodObject<any> }
+      ? (input: z.infer<TInput["urlParams"]>) => string
+      : string
   }
 }): ResolveCustomServiceCallOpts<UnknownIfNever<TInput> & typeof paginationObjShape, TReturnType, TFilters> => {
   const uri = opts?.uri as ((input: unknown) => string) | undefined | string
