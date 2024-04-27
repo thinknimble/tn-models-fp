@@ -37,6 +37,21 @@ type BaseModelsPlaceholder<
       | (EntityModelObj<TEntity> & ExtraFiltersObj<TBuiltInFilters> & CreateModelObj<TCreate>)
   : "If you include models entity should be a present shape"
 
+type ApiService<
+  TModels extends BaseModelsPlaceholder | unknown,
+  //extending from record makes it so that if you try to access anything it would not error, we want to actually error if there is no key in TCustomServiceCalls that does not belong to it
+  TCustomServiceCalls extends object
+> = BareApiService<TModels> & {
+  /**
+   * The custom calls you declared as input but as plain functions and wrapped for type safety
+   */
+  customServiceCalls: CustomServiceCallsRecord<TCustomServiceCalls>
+  /**
+   * Alias for customServiceCalls
+   */
+  csc: CustomServiceCallsRecord<TCustomServiceCalls>
+}
+
 //TODO: why can't we just check for never on Entity and return unknown since this is going to compose the api calls. The intersection is actually going to null out the unknown type.
 type RetrieveCallObj<TEntity extends EntityShape> = {
   /**
@@ -221,7 +236,7 @@ export const createApi = <
     disableTrailingSlash?: boolean
   }
   //TODO: need to make this work with custom calls as well
-}): BareApiService<{ entity: TEntity; create: TCreate; extraFilters: TExtraFilters }> => {
+}): ApiService<{ entity: TEntity; create?: TCreate; extraFilters?: TExtraFilters }, TCustomServiceCalls> => {
   const { baseUri, client, customCalls, models, options } = args
   if (models && "create" in models && !("entity" in models)) {
     throw new Error("You should not pass `create` model without an `entity` model")
@@ -261,11 +276,10 @@ export const createApi = <
   }
   if (!models || !models.entity) {
     //TODO: remove any
-    return { client: axiosLikeClient } as BareApiService<{
-      entity: TEntity
-      create: TCreate
-      extraFilters: TExtraFilters
-    }>
+    return { client: axiosLikeClient } as ApiService<
+      { entity: TEntity; create?: TCreate; extraFilters?: TExtraFilters },
+      TCustomServiceCalls
+    >
   }
   const entityShapeWithoutReadonlyFields = removeReadonlyFields(models.entity as EntityShape, ["id"])
   //TODO: revisit why we did this

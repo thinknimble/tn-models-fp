@@ -3,9 +3,9 @@ import { SnakeCasedPropertiesDeep } from "@thinknimble/tn-utils"
 import { describe, expect, it, vi } from "vitest"
 import { z } from "zod"
 import { GetInferredFromRawWithBrand, objectToSnakeCaseArr, readonly } from "../../utils"
+import { createApi } from "../create-api"
 import { createCustomServiceCall } from "../create-custom-call"
 import { InvalidEntryMessage } from "../types"
-import { createApiV2 } from "../v2"
 import { mockedAxios } from "./mocks"
 
 describe("createCustomServiceCall", () => {
@@ -29,15 +29,13 @@ describe("createCustomServiceCall", () => {
   it("calls api with snake case", async () => {
     //arrange
     const baseUri = "callsApiWithSnakeCase"
-    const testApi = createApiV2(
-      {
-        baseUri,
-        client: mockedAxios,
-      },
-      {
+    const testApi = createApi({
+      baseUri,
+      client: mockedAxios,
+      customCalls: {
         testPost,
-      }
-    )
+      },
+    })
     const postSpy = vi.spyOn(mockedAxios, "post")
     mockedAxios.post.mockResolvedValueOnce({
       data: { justAny: "any" },
@@ -58,15 +56,13 @@ describe("createCustomServiceCall", () => {
     })
     const input = { anotherInput: "testing" }
     const baseUri = "callsApiWithSnakeCaseCscAlias"
-    const testApi = createApiV2(
-      {
-        baseUri,
-        client: mockedAxios,
-      },
-      {
+    const testApi = createApi({
+      baseUri,
+      client: mockedAxios,
+      customCalls: {
         testPost,
-      }
-    )
+      },
+    })
     //act
     await testApi.csc.testPost(input)
     //assert
@@ -106,15 +102,13 @@ describe("createCustomServiceCall", () => {
     })()
 
     const baseUri = "returnsCamelCasedResponse"
-    const testApi = createApiV2(
-      {
-        baseUri,
-        client: mockedAxios,
-      },
-      {
+    const testApi = createApi({
+      baseUri,
+      client: mockedAxios,
+      customCalls: {
         testInputOutputObjects,
-      }
-    )
+      },
+    })
     const expected: Awaited<ReturnType<typeof testApi.customServiceCalls.testInputOutputObjects>> = {
       givenInput: myInput,
       inputLength: myInput.length,
@@ -134,15 +128,13 @@ describe("createCustomServiceCall", () => {
       },
     })
     const baseUri = "returnsCamelCasedResponse"
-    const testApi = createApiV2(
-      {
-        baseUri,
-        client: mockedAxios,
-      },
-      {
+    const testApi = createApi({
+      baseUri,
+      client: mockedAxios,
+      customCalls: {
         testBaseUriParam,
-      }
-    )
+      },
+    })
     const res = await testApi.customServiceCalls.testBaseUriParam()
     expect(res).toEqual(`${baseUri}/`)
   })
@@ -162,15 +154,13 @@ describe("createCustomServiceCall", () => {
       })
     })()
     const baseUri = "returnsCamelCasedResponse"
-    const testApi = createApiV2(
-      {
-        baseUri,
-        client: mockedAxios,
-      },
-      {
+    const testApi = createApi({
+      baseUri,
+      client: mockedAxios,
+      customCalls: {
         testNoInputPlainZodOutput,
-      }
-    )
+      },
+    })
     const res = await testApi.customServiceCalls.testNoInputPlainZodOutput()
     expect(res).toEqual("output only overload")
   })
@@ -190,15 +180,13 @@ describe("createCustomServiceCall", () => {
       })
     })()
     const baseUri = "inputOnlyOverload"
-    const testApi = createApiV2(
-      {
-        baseUri,
-        client: mockedAxios,
-      },
-      {
+    const testApi = createApi({
+      baseUri,
+      client: mockedAxios,
+      customCalls: {
         testNoOutputPlainZodInput,
-      }
-    )
+      },
+    })
     const res = await testApi.customServiceCalls.testNoOutputPlainZodInput(10)
     expect(res).toBeUndefined()
   })
@@ -215,15 +203,13 @@ describe("createCustomServiceCall", () => {
     )
     type testNoInputNorOutput = typeof testNoInputNorOutput
     const baseUri = "noInputNorOutputOverload"
-    const testApi = createApiV2(
-      {
-        baseUri,
-        client: mockedAxios,
-      },
-      {
+    const testApi = createApi({
+      baseUri,
+      client: mockedAxios,
+      customCalls: {
         testNoInputNorOutput,
-      }
-    )
+      },
+    })
     const res = await testApi.customServiceCalls.testNoInputNorOutput()
     expect(res).toBeUndefined()
   })
@@ -256,15 +242,13 @@ describe("createCustomServiceCall", () => {
     })()
 
     const baseUri = "tsTests"
-    const testApi = createApiV2(
-      {
-        baseUri,
-        client: mockedAxios,
-      },
-      {
+    const testApi = createApi({
+      baseUri,
+      client: mockedAxios,
+      customCalls: {
         testInputOutputPlainZods,
-      }
-    )
+      },
+    })
     //@ts-expect-error error on nonexisting custom service call method
     testApi.customServiceCalls.nonExisting
 
@@ -276,15 +260,13 @@ describe("createCustomServiceCall", () => {
     //replicating another test just for the sake of this passing with this config
     //arrange
     const baseUri = "testPost"
-    const testApiWithoutModels = createApiV2(
-      {
-        baseUri: baseUri,
-        client: mockedAxios,
-      },
-      {
+    const testApiWithoutModels = createApi({
+      baseUri: baseUri,
+      client: mockedAxios,
+      customCalls: {
         testPost,
-      }
-    )
+      },
+    })
     const postSpy = vi.spyOn(mockedAxios, "post")
     mockedAxios.post.mockResolvedValueOnce({
       data: { justAny: "any" },
@@ -326,15 +308,13 @@ describe("createCustomServiceCall", () => {
       testFilter: faker.datatype.string(),
       testArrayFilter: [faker.datatype.string(), faker.datatype.string()],
     }
-    const api = createApiV2(
-      {
-        client: mockedAxios,
-        baseUri,
-      },
-      {
+    const api = createApi({
+      client: mockedAxios,
+      baseUri,
+      customCalls: {
         callWithFilter,
-      }
-    )
+      },
+    })
     //act
     await api.csc.callWithFilter({
       input: { testInput: "testInput" },
@@ -372,15 +352,13 @@ describe("createCustomServiceCall", () => {
     const filters = {
       testFilter: "myFilter",
     }
-    const api = createApiV2(
-      {
-        client: mockedAxios,
-        baseUri,
-      },
-      {
+    const api = createApi({
+      client: mockedAxios,
+      baseUri,
+      customCalls: {
         callWithFilter,
-      }
-    )
+      },
+    })
     //act
     await api.csc.callWithFilter({
       filters,
@@ -411,15 +389,13 @@ describe("createCustomServiceCall", () => {
       },
     })
     const baseUri = "filters"
-    const api = createApiV2(
-      {
-        client: mockedAxios,
-        baseUri,
-      },
-      {
+    const api = createApi({
+      client: mockedAxios,
+      baseUri,
+      customCalls: {
         callWithFilter,
-      }
-    )
+      },
+    })
     //act
     await api.csc.callWithFilter()
     //assert
@@ -470,15 +446,13 @@ describe("createCustomServiceCall", () => {
       },
     })
 
-    const api = createApiV2(
-      {
-        baseUri: "native-enum",
-        client: mockedAxios,
-      },
-      {
+    const api = createApi({
+      baseUri: "native-enum",
+      client: mockedAxios,
+      customCalls: {
         customCall,
-      }
-    )
+      },
+    })
     type customCallType = (typeof api)["csc"]["customCall"]
     type test = Expect<Equals<Parameters<customCallType>[0], GetInferredFromRawWithBrand<typeof shapeSubject>>>
     const expectedResult = 1
@@ -510,15 +484,13 @@ describe("createCustomServiceCall", () => {
         return utils.fromApi(res.data)
       },
     })
-    const api = createApiV2(
-      {
-        baseUri: "test",
-        client: mockedAxios,
-      },
-      {
+    const api = createApi({
+      baseUri: "test",
+      client: mockedAxios,
+      customCalls: {
         customCall,
-      }
-    )
+      },
+    })
     const fakeId = faker.datatype.uuid()
     const result = await api.csc.customCall(fakeId)
     expect(result).toStrictEqual(mockResponse)
@@ -1058,15 +1030,13 @@ describe("createCustomServiceCall", () => {
           return utils.fromApi({})
         },
       })
-      const api = createApiV2(
-        {
-          baseUri: "test-readonly",
-          client: mockedAxios,
-        },
-        {
+      const api = createApi({
+        baseUri: "test-readonly",
+        client: mockedAxios,
+        customCalls: {
           customCall,
-        }
-      )
+        },
+      })
       api.csc.customCall
       type CustomCall = typeof api.csc.customCall
       type test = Expect<Equals<Equals<CustomCall, InvalidEntryMessage>, false>>
@@ -1082,15 +1052,13 @@ describe("createCustomServiceCall", () => {
           return
         },
       })
-      const api = createApiV2(
-        {
-          baseUri: "test-readonly",
-          client: mockedAxios,
-        },
-        {
+      const api = createApi({
+        baseUri: "test-readonly",
+        client: mockedAxios,
+        customCalls: {
           customCall,
-        }
-      )
+        },
+      })
       api.csc.customCall
       type CustomCall = typeof api.csc.customCall
       type test = Expect<Equals<Equals<CustomCall, InvalidEntryMessage>, false>>
@@ -1111,15 +1079,11 @@ describe("createCustomServiceCall", () => {
           return utils.fromApi({})
         },
       })
-      const api = createApiV2(
-        {
-          baseUri: "test-readonly",
-          client: mockedAxios,
-        },
-        {
-          customCall,
-        }
-      )
+      const api = createApi({
+        baseUri: "test-readonly",
+        client: mockedAxios,
+        customCalls: { customCall },
+      })
       api.csc.customCall
       type CustomCall = typeof api.csc.customCall
       type test = Expect<Equals<Equals<CustomCall, InvalidEntryMessage>, false>>
