@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import { faker } from "@faker-js/faker"
 import { SnakeCasedPropertiesDeep } from "@thinknimble/tn-utils"
 import { beforeEach, describe, expect, it, vi } from "vitest"
@@ -42,16 +41,23 @@ describe("createApi", async () => {
       extraFilters: extraFiltersShape,
     },
   })
+
   describe("general checks + TS", () => {
     it("does not expose any method if no models were passed", () => {
-      type ExpectedReturn = ReturnType<typeof createApi>
+      type ExpectedReturn = ReturnType<typeof createApi<never, never, never, never>>
       type tests = [
         //@ts-expect-error should not include list method
         ExpectedReturn["list"],
         //@ts-expect-error should not include retrieve method
         ExpectedReturn["retrieve"],
         //@ts-expect-error should not include create method
-        ExpectedReturn["create"]
+        ExpectedReturn["create"],
+        //@ts-expect-error should not include remove method
+        ExpectedReturn["remove"],
+        //@ts-expect-error should not include update method
+        ExpectedReturn["update"],
+        //@ts-expect-error should not include upsert method
+        ExpectedReturn["upsert"]
       ]
       const testApiNoModels = createApi({
         baseUri: "",
@@ -62,8 +68,7 @@ describe("createApi", async () => {
       expect(testApiNoModels).not.toHaveProperty("create")
     })
     it("only exposes retrieve, list, update if `entity` is passed, no custom calls", () => {
-      //@ts-expect-error don't mind this it is hard for TS to determine which overload it should check, on the tests below it is picking up the correct one!
-      type ExpectedReturn = ReturnType<typeof createApi<{ entity: typeof entityZodShape }>>
+      type ExpectedReturn = ReturnType<typeof createApi<typeof entityZodShape>>
       type tests = [
         ExpectedReturn["list"],
         ExpectedReturn["retrieve"],
@@ -102,6 +107,15 @@ describe("createApi", async () => {
           },
         })
       }).toThrow()
+    })
+    it("does not expose csc or customServiceCalls if there is no customCalls field in the call", () => {
+      type ExpectedReturn = ReturnType<typeof createApi<never, never, never, never>>
+      type test = [
+        //@ts-expect-error should not show up custom calls
+        ExpectedReturn["customServiceCalls"],
+        //@ts-expect-error should not show up custom calls
+        ExpectedReturn["csc"]
+      ]
     })
   })
 
@@ -453,7 +467,9 @@ describe("createApi", async () => {
         models: {
           entity: entityZodShape,
         },
-        disableTrailingSlash: true,
+        options: {
+          disableTrailingSlash: true,
+        },
       })
       //act
       await testApi.retrieve(mockEntity1Snaked.id)
@@ -773,7 +789,7 @@ describe("TS Tests", () => {
       models: {
         entity: entityShape,
         //@ts-expect-error keys that are not expected should be rejected by typescript
-        shenaninganCheck: {
+        shenaniganCheck: {
           invalidKey: z.string(),
         },
       },
@@ -816,8 +832,8 @@ describe("TS Tests", () => {
       createApi({
         baseUri: "something",
         client: mockedAxios,
-        //@ts-expect-error Call out on entity not being properly formatted - should include id
         models: {
+          //@ts-expect-error Call out on entity not being properly formatted - should include id
           entity: { nonIdField: z.string() },
         },
       })

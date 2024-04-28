@@ -10,6 +10,7 @@ import {
   InferShapeOrZodWithoutBrand,
   Is,
   IsAny,
+  IsNever,
   UnknownIfNever,
   UnwrapBranded,
   ZodPrimitives,
@@ -83,13 +84,15 @@ export type AxiosLike = {
   patchForm: BodyAxiosCall
 }
 
+export type StandAloneCallType = "StandAlone"
+
 export type ServiceCallFn<
   TInput extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny> = z.ZodVoid,
   TOutput extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny> = z.ZodVoid,
   TFilters extends FiltersShape | z.ZodVoid = z.ZodVoid
 > = (...args: ResolveServiceCallArgs<TInput, TFilters>) => Promise<InferShapeOrZodWithoutBrand<TOutput>>
 
-type BaseUriInput<TCallType extends string = ""> = TCallType extends "StandAlone"
+type BaseUriInput<TCallType extends string = ""> = TCallType extends StandAloneCallType
   ? unknown
   : {
       slashEndingBaseUri: `${string}/`
@@ -174,3 +177,28 @@ export type CustomServiceCallsRecord<TOpts extends object> = TOpts extends Recor
         : TOpts[K]
     }
   : "This should be a record of custom calls"
+
+export type ResolveShapeOrVoid<
+  TInputShape extends z.ZodRawShape | ZodPrimitives = never,
+  TOutputShape extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny> = never,
+  TFiltersShape extends FiltersShape | z.ZodVoid = never
+> = {
+  input: IsNever<TInputShape> extends true ? z.ZodVoid : TInputShape
+  output: IsNever<TOutputShape> extends true
+    ? z.ZodVoid
+    : TOutputShape extends z.ZodRawShape
+    ? UnwrapBranded<TOutputShape>
+    : TOutputShape
+  filters: IsNever<TOutputShape> extends true
+    ? z.ZodVoid
+    : IsNever<TFiltersShape> extends true
+    ? z.ZodVoid
+    : TFiltersShape
+}
+
+export type ResolveCustomServiceCallOpts<
+  TInputShape extends z.ZodRawShape | ZodPrimitives = never,
+  TOutputShape extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny> = never,
+  TFiltersShape extends FiltersShape | z.ZodVoid = never,
+  TShapeOrVoid extends ResolveShapeOrVoid<any, any, any> = ResolveShapeOrVoid<TInputShape, TOutputShape, TFiltersShape>
+> = CustomServiceCallOpts<TShapeOrVoid["input"], TShapeOrVoid["output"], TShapeOrVoid["filters"]>

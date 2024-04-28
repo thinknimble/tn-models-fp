@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import { faker } from "@faker-js/faker"
 import { describe, expect, it, vi } from "vitest"
 import { z } from "zod"
@@ -17,13 +16,27 @@ describe("createPaginatedServiceCall", () => {
     const outputShape = {
       myOutput: z.string(),
     }
-    const paginatedServiceCall = createPaginatedServiceCall({ outputShape, inputShape }, { httpMethod: "post" })
+    const paginatedServiceCall = createPaginatedServiceCall({
+      outputShape,
+      inputShape,
+      opts: {
+        httpMethod: "post",
+      },
+    })
+
+    //testing type here
 
     mockedAxios.post.mockResolvedValueOnce({
       data: { count: 1, next: null, previous: null, results: [{ my_output: "myOutput" }] },
     })
     const baseUri = "passNoUri"
-    const api = createApi({ baseUri, client: mockedAxios }, { paginatedServiceCall })
+    const api = createApi({
+      baseUri,
+      client: mockedAxios,
+      customCalls: {
+        paginatedServiceCall,
+      },
+    })
     const pagination = new Pagination({ page: 1 })
     const input = { myInput: "myInput" }
     //act
@@ -43,22 +56,22 @@ describe("createPaginatedServiceCall", () => {
   it("calls api with the right uri even if uri param is empty", async () => {
     //arrange
     const postSpy = vi.spyOn(mockedAxios, "post")
-    const paginatedServiceCall = createPaginatedServiceCall(
-      {
-        inputShape: {
-          myInput: z.string(),
-        },
-        outputShape: {
-          myOutput: z.string(),
-        },
+    const paginatedServiceCall = createPaginatedServiceCall({
+      outputShape: {
+        myOutput: z.string(),
       },
-      { httpMethod: "post", uri: "" }
-    )
+      inputShape: {
+        myInput: z.string(),
+      },
+      opts: {
+        httpMethod: "post",
+      },
+    })
     mockedAxios.post.mockResolvedValueOnce({
       data: { count: 1, next: null, previous: null, results: [{ my_output: "myOutput" }] },
     })
     const baseUri = "uriParamEmpty"
-    const api = createApi({ baseUri, client: mockedAxios }, { paginatedServiceCall })
+    const api = createApi({ baseUri, client: mockedAxios, customCalls: { paginatedServiceCall } })
     const pagination = new Pagination({ page: 1 })
     const input = { myInput: "myInput" }
     //act
@@ -79,17 +92,15 @@ describe("createPaginatedServiceCall", () => {
   describe("testSimplePaginatedCall", () => {
     //arrange
     const testSimplePaginatedCall = (() => {
-      return createPaginatedServiceCall(
-        {
-          outputShape: entityZodShape,
-        },
-        {
+      return createPaginatedServiceCall({
+        outputShape: entityZodShape,
+        opts: {
           uri: "testSimplePaginatedCall",
-        }
-      )
+        },
+      })
     })()
     const baseUri = "pagination"
-    const api = createApi({ baseUri, client: mockedAxios }, { testSimplePaginatedCall })
+    const api = createApi({ baseUri, client: mockedAxios, customCalls: { testSimplePaginatedCall } })
 
     it("calls api with the right uri", async () => {
       //arrange
@@ -125,18 +136,19 @@ describe("createPaginatedServiceCall", () => {
     })
   })
 
-  const testPostPaginatedServiceCall = createPaginatedServiceCall(
-    {
-      inputShape: {
-        dObj: z.object({
-          dObj1: z.number(),
-        }),
-        eString: z.string(),
-      },
-      outputShape: entityZodShape,
+  const testPostPaginatedServiceCall = createPaginatedServiceCall({
+    inputShape: {
+      dObj: z.object({
+        dObj1: z.number(),
+      }),
+      eString: z.string(),
     },
-    { uri: "testPostPaginatedServiceCall", httpMethod: "post" }
-  )
+    outputShape: entityZodShape,
+    opts: {
+      uri: "testPostPaginatedServiceCall",
+      httpMethod: "post",
+    },
+  })
 
   it("calls api with the selected method: post", async () => {
     //arrange
@@ -155,15 +167,11 @@ describe("createPaginatedServiceCall", () => {
       eString: "eString",
     }
     const baseUri = "callsApiWithPostMethod"
-    const api = createApi(
-      {
-        baseUri,
-        client: mockedAxios,
-      },
-      {
-        testPostPaginatedServiceCall,
-      }
-    )
+    const api = createApi({
+      baseUri,
+      client: mockedAxios,
+      customCalls: { testPostPaginatedServiceCall },
+    })
     //act
     await api.csc.testPostPaginatedServiceCall({
       ...body,
@@ -189,15 +197,13 @@ describe("createPaginatedServiceCall", () => {
       eString: "eString",
     }
     const baseUri = "callsApiWithPostAndHasRightCasing"
-    const api = createApi(
-      {
-        baseUri,
-        client: mockedAxios,
-      },
-      {
+    const api = createApi({
+      baseUri,
+      client: mockedAxios,
+      customCalls: {
         testPostPaginatedServiceCall,
-      }
-    )
+      },
+    })
     //act
     await api.csc.testPostPaginatedServiceCall({ ...body, pagination: new Pagination({ page: 1 }) })
     //assert
@@ -230,23 +236,21 @@ describe("createPaginatedServiceCall", () => {
       e: "e",
     }
     const testPagePaginatedServiceCall = (() => {
-      return createPaginatedServiceCall(
-        {
-          outputShape: entityZodShape,
+      return createPaginatedServiceCall({
+        outputShape: entityZodShape,
+        opts: {
+          uri: "testPagePaginatedServiceCall",
         },
-        { uri: "testPagePaginatedServiceCall" }
-      )
+      })
     })()
     const baseUri = "callsApiWithPaginationParams"
-    const api = createApi(
-      {
-        baseUri,
-        client: mockedAxios,
-      },
-      {
+    const api = createApi({
+      baseUri,
+      client: mockedAxios,
+      customCalls: {
         testPagePaginatedServiceCall,
-      }
-    )
+      },
+    })
     //act
     await api.csc.testPagePaginatedServiceCall({ pagination: new Pagination({ page: 10, size: 100 }) })
     //assert
@@ -276,15 +280,13 @@ describe("createPaginatedServiceCall", () => {
       },
     })
     const baseUri = "callsApiWithRightFilters"
-    const api = createApi(
-      {
-        baseUri,
-        client: mockedAxios,
-      },
-      {
+    const api = createApi({
+      baseUri,
+      client: mockedAxios,
+      customCalls: {
         testPaginatedCallWithFilters,
-      }
-    )
+      },
+    })
     const getSpy = vi.spyOn(mockedAxios, "get")
     mockedAxios.get.mockResolvedValueOnce({
       data: listResponse,
@@ -318,29 +320,25 @@ describe("createPaginatedServiceCall", () => {
       data: listResponse,
     })
     const uriBuilder = (input: { someId: string }) => `myUriWithInput/${input.someId}`
-    const callWithUrlParams = createPaginatedServiceCall(
-      {
-        inputShape: {
-          urlParams: z.object({
-            someId: z.string(),
-          }),
-        },
-        outputShape: entityZodShape,
+    const callWithUrlParams = createPaginatedServiceCall({
+      inputShape: {
+        urlParams: z.object({
+          someId: z.string(),
+        }),
       },
-      {
+      outputShape: entityZodShape,
+      opts: {
         uri: uriBuilder,
-      }
-    )
-    const baseUri = "urlParams"
-    const api = createApi(
-      {
-        baseUri,
-        client: mockedAxios,
       },
-      {
+    })
+    const baseUri = "urlParams"
+    const api = createApi({
+      baseUri,
+      client: mockedAxios,
+      customCalls: {
         callWithUrlParams,
-      }
-    )
+      },
+    })
     const pagination = new Pagination({ page: 1, size: 20 })
     const randomId = faker.datatype.uuid()
     //act
@@ -353,6 +351,7 @@ describe("createPaginatedServiceCall", () => {
       },
     })
   })
+
   it("Allows passing url params with a builder uri function and filters", async () => {
     // arrange
     const getSpy = vi.spyOn(mockedAxios, "get")
@@ -361,33 +360,29 @@ describe("createPaginatedServiceCall", () => {
     })
     const uriBuilder = (input: { someId: string }) => `myUriWithInput/${input.someId}`
     const myExtraFilter = "test"
-    const callWithUrlParamsWithFilter = createPaginatedServiceCall(
-      {
-        inputShape: {
-          urlParams: z.object({
-            someId: z.string(),
-          }),
-        },
-        outputShape: entityZodShape,
-        filtersShape: {
-          myExtraFilter: z.string(),
-          anotherExtraFilter: z.number(),
-        },
+    const callWithUrlParamsWithFilter = createPaginatedServiceCall({
+      inputShape: {
+        urlParams: z.object({
+          someId: z.string(),
+        }),
       },
-      {
+      outputShape: entityZodShape,
+      filtersShape: {
+        myExtraFilter: z.string(),
+        anotherExtraFilter: z.number(),
+      },
+      opts: {
         uri: uriBuilder,
-      }
-    )
-    const baseUri = "urlParamsWithFilters"
-    const api = createApi(
-      {
-        baseUri,
-        client: mockedAxios,
       },
-      {
+    })
+    const baseUri = "urlParamsWithFilters"
+    const api = createApi({
+      baseUri,
+      client: mockedAxios,
+      customCalls: {
         callWithUrlParamsWithFilter,
-      }
-    )
+      },
+    })
     const pagination = new Pagination({ page: 1, size: 20 })
     const randomId = faker.datatype.uuid()
     //act
@@ -423,15 +418,13 @@ describe("createPaginatedServiceCall", () => {
       },
     })
     const baseUri = "camelCaseNestedArray"
-    const api = createApi(
-      {
-        baseUri,
-        client: mockedAxios,
-      },
-      {
+    const api = createApi({
+      baseUri,
+      client: mockedAxios,
+      customCalls: {
         testPaginatedCallWithFilters,
-      }
-    )
+      },
+    })
     const mockValue = { id: faker.datatype.uuid(), nested_array: [{ nested_field: faker.datatype.string() }] }
 
     const getSpy = vi.spyOn(mockedAxios, "get")
@@ -471,15 +464,13 @@ describe("createPaginatedServiceCall", () => {
       },
     })
     const baseUri = "noObfuscatedFields"
-    const api = createApi(
-      {
-        baseUri,
-        client: mockedAxios,
-      },
-      {
+    const api = createApi({
+      baseUri,
+      client: mockedAxios,
+      customCalls: {
         testTrivialPaginatedCall,
-      }
-    )
+      },
+    })
     const mockValue = { id: faker.datatype.uuid(), extra_field: faker.datatype.string() }
 
     mockedAxios.get.mockResolvedValueOnce({
@@ -499,15 +490,13 @@ describe("createPaginatedServiceCall", () => {
       },
     })
     const baseUri = "checkBrands"
-    const api = createApi(
-      {
-        baseUri,
-        client: mockedAxios,
-      },
-      {
+    const api = createApi({
+      baseUri,
+      client: mockedAxios,
+      customCalls: {
         testTrivialPaginatedCall,
-      }
-    )
+      },
+    })
     type callbackResult = (typeof api)["customServiceCalls"]["testTrivialPaginatedCall"]
     type result = Awaited<ReturnType<callbackResult>>["results"]
     type tests = [Expect<result extends { brandedField: z.BRAND<"ReadonlyField"> }[] ? false : true>]

@@ -31,26 +31,10 @@ type ToApiUtil<T extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny
   toApi: ToApiCall<T>
 }
 
+type FromApiOrUnknown <T extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny>,TIsPrimitive extends boolean = T extends ZodPrimitives ? true : false> = TIsPrimitive extends true ? unknown : T extends z.ZodVoid ? unknown : {utils:FromApiUtil<T>}
+type ToApiOrUnknown <T extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny>,TIsPrimitive extends boolean = T extends ZodPrimitives ? true : false> = TIsPrimitive extends true ? unknown : T extends z.ZodVoid ? unknown : {utils:ToApiUtil<T>}
+
 export type CallbackUtils<
   TInput extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny>,
   TOutput extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny>,
-  TInputIsPrimitive extends boolean = TInput extends ZodPrimitives ? true : false,
-  TOutputIsPrimitive extends boolean = TOutput extends ZodPrimitives ? true : false
-> = TInput extends z.ZodVoid
-  ? TOutput extends z.ZodVoid
-    ? unknown
-    : TOutputIsPrimitive extends true
-    ? unknown
-    : { utils: FromApiUtil<TOutput> }
-  : TOutput extends z.ZodVoid
-  ? TInputIsPrimitive extends true
-    ? unknown
-    : {
-        utils: ToApiUtil<TInput>
-      }
-  : (TInputIsPrimitive extends true ? unknown : { utils: ToApiUtil<TInput> }) &
-      (TOutputIsPrimitive extends true
-        ? unknown
-        : {
-            utils: FromApiUtil<TOutput>
-          })
+> = FromApiOrUnknown<TOutput> & ToApiOrUnknown<TInput> 
