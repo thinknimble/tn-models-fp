@@ -496,7 +496,6 @@ describe("createCustomServiceCall", () => {
     expect(result).toStrictEqual(mockResponse)
   })
 
-  //TODO:REMOVE SKIP
   describe("standAlone call", () => {
     it("calls with right parameters: input object output object", async () => {
       //arrange

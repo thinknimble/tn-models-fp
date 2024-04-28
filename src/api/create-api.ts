@@ -21,7 +21,7 @@ import {
   removeReadonlyFields,
 } from "../utils"
 import { AxiosLike, CustomServiceCallPlaceholder, CustomServiceCallsRecord } from "./types"
-import { createCustomServiceCallV2 } from "./v2"
+import { createCustomServiceCall } from "./create-custom-call"
 
 type EntityShape = z.ZodRawShape & {
   id: z.ZodString | z.ZodNumber | z.ZodBranded<z.ZodString, ReadonlyTag> | z.ZodBranded<z.ZodNumber, ReadonlyTag>
@@ -373,19 +373,20 @@ export const createApi = <
     type result = typeof finalEntityZod.shape
 
     const parsedInput = finalEntityZod.parse(newValue)
-    const updateCall = createCustomServiceCallV2.standAlone({
+    const updateCall = createCustomServiceCall.standAlone({
       client,
       models: {
         inputShape: finalEntityZod.shape,
         outputShape: models.entity,
       },
-      //@ts-expect-error TODO: need to revisit this since it is not picking up the return type properly. Maybe we need to improve createCustomServiceCallV2.standAlone types. (remove overloads)
       cb: async ({ client, input, utils }) => {
         const { id, ...body } = utils.toApi(input)
         const result = await client[httpMethod](`${slashEndingBaseUri}${id}${parsedEndingSlash}`, body)
+        //@ts-expect-error The generic aspect of this function seems not to be able to make out that utils should yield fromApi
         return utils.fromApi(result?.data)
       },
     })
+    //@ts-expect-error we can ignore this since we're actually doing a hard parse
     return updateCall(parsedInput)
   }
 
