@@ -1,4 +1,4 @@
-import { AxiosInstance } from "axios"
+import axios, { AxiosInstance } from "axios"
 import { z } from "zod"
 import {
   FiltersShape,
@@ -40,17 +40,20 @@ type BaseModelsPlaceholder<
 type ApiService<
   TModels extends BaseModelsPlaceholder | unknown,
   //extending from record makes it so that if you try to access anything it would not error, we want to actually error if there is no key in TCustomServiceCalls that does not belong to it
-  TCustomServiceCalls extends object
-> = BareApiService<TModels> & {
-  /**
-   * The custom calls you declared as input but as plain functions and wrapped for type safety
-   */
-  customServiceCalls: CustomServiceCallsRecord<TCustomServiceCalls>
-  /**
-   * Alias for customServiceCalls
-   */
-  csc: CustomServiceCallsRecord<TCustomServiceCalls>
-}
+  TCustomServiceCalls extends object = never
+> = BareApiService<TModels> &
+  (IsNever<TCustomServiceCalls> extends true
+    ? unknown
+    : {
+        /**
+         * The custom calls you declared as input but as plain functions and wrapped for type safety
+         */
+        customServiceCalls: CustomServiceCallsRecord<TCustomServiceCalls>
+        /**
+         * Alias for customServiceCalls
+         */
+        csc: CustomServiceCallsRecord<TCustomServiceCalls>
+      })
 
 //TODO: why can't we just check for never on Entity and return unknown since this is going to compose the api calls. The intersection is actually going to null out the unknown type.
 type RetrieveCallObj<TEntity extends EntityShape> = {

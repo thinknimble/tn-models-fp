@@ -105,6 +105,15 @@ describe("createApi", async () => {
         })
       }).toThrow()
     })
+    it("does not expose csc or customServiceCalls if there is no customCalls field in the call", () => {
+      type ExpectedReturn = ReturnType<typeof createApi<never, never, never, never>>
+      type test = [
+        //@ts-expect-error should not show up custom calls
+        ExpectedReturn["customServiceCalls"],
+        //@ts-expect-error should not show up custom calls
+        ExpectedReturn["csc"]
+      ]
+    })
   })
 
   describe("create", () => {
