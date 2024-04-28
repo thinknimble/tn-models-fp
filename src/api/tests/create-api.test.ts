@@ -49,11 +49,11 @@ describe("createApi", async () => {
         ExpectedReturn["retrieve"],
         //@ts-expect-error should not include create method
         ExpectedReturn["create"],
-        //@ts-expect-error should not include create method
+        //@ts-expect-error should not include remove method
         ExpectedReturn["remove"],
-        //@ts-expect-error should not include create method
+        //@ts-expect-error should not include update method
         ExpectedReturn["update"],
-        //@ts-expect-error should not include create method
+        //@ts-expect-error should not include upsert method
         ExpectedReturn["upsert"]
       ]
       const testApiNoModels = createApi({
