@@ -38,10 +38,12 @@ type BaseModelsPlaceholder<
   : "If you include models entity should be a present shape"
 
 type ApiService<
-  TModels extends BaseModelsPlaceholder | unknown,
+  TEntity extends EntityShape = never,
+  TCreate extends z.ZodRawShape = never,
+  TExtraFilters extends FiltersShape = never,
   //extending from record makes it so that if you try to access anything it would not error, we want to actually error if there is no key in TCustomServiceCalls that does not belong to it
   TCustomServiceCalls extends object = never
-> = BareApiService<TModels> &
+> = BareApiService<TEntity, TCreate, TExtraFilters> &
   (IsNever<TCustomServiceCalls> extends true
     ? unknown
     : {
@@ -133,61 +135,60 @@ type UpsertCallObj<
   ): Promise<GetInferredFromRaw<TEntity>>
 }
 
-type WithCreateModelCall<TModels extends BaseModelsPlaceholder> = TModels extends EntityModelObj<infer TE>
-  ? IsNever<TE> extends true
-    ? unknown
-    : TModels extends CreateModelObj<infer TC>
-    ? IsNever<TC> extends true
-      ? CreateCallObj<TE>
-      : CreateCallObj<TE, TC>
-    : unknown
-  : unknown
+type WithCreateModelCall<
+  TEntity extends EntityShape = never,
+  TCreate extends z.ZodRawShape = never
+> = IsNever<TEntity> extends true
+  ? unknown
+  : IsNever<TCreate> extends true
+  ? CreateCallObj<TEntity>
+  : CreateCallObj<TEntity, TCreate>
 
-type WithEntityModelCall<TModels extends BaseModelsPlaceholder> = TModels extends EntityModelObj<infer TE>
-  ? IsNever<TE> extends true
-    ? unknown
-    : RetrieveCallObj<TE>
-  : unknown
-type WithExtraFiltersModelCall<TModels extends BaseModelsPlaceholder> = TModels extends EntityModelObj<infer TE>
-  ? IsNever<TE> extends true
-    ? unknown
-    : TModels extends ExtraFiltersObj<infer TEx>
-    ? IsNever<TEx> extends true
-      ? ListCallObj<TE>
-      : ListCallObj<TE, TEx>
-    : unknown
-  : unknown
-type WithRemoveModelCall<TModels extends BaseModelsPlaceholder> = TModels extends EntityModelObj<infer TE>
-  ? IsNever<TE> extends true
-    ? unknown
-    : { remove: (id: GetInferredFromRaw<TE>["id"]) => Promise<void> }
-  : unknown
-type WithUpdateModelCall<TModels extends BaseModelsPlaceholder> = TModels extends EntityModelObj<infer TE>
-  ? IsNever<TE> extends true
-    ? unknown
-    : UpdateCallObj<TE>
-  : unknown
-type WithUpsertModelCall<TModels extends BaseModelsPlaceholder> = TModels extends EntityModelObj<infer TE>
-  ? IsNever<TE> extends true
-    ? unknown
-    : TModels extends CreateModelObj<infer TC>
-    ? IsNever<TC> extends true
-      ? UpsertCallObj<TE>
-      : UpsertCallObj<TE, TC>
-    : unknown
-  : unknown
+type WithEntityModelCall<TEntity extends EntityShape = never> = IsNever<TEntity> extends true
+  ? unknown
+  : RetrieveCallObj<TEntity>
+type WithExtraFiltersModelCall<
+  TEntity extends EntityShape = never,
+  TExtraFilters extends FiltersShape = never
+> = IsNever<TEntity> extends true
+  ? unknown
+  : IsNever<TExtraFilters> extends true
+  ? ListCallObj<TEntity>
+  : ListCallObj<TEntity, TExtraFilters>
+type WithRemoveModelCall<TEntity extends EntityShape = never> = IsNever<TEntity> extends true
+  ? unknown
+  : { remove: (id: GetInferredFromRaw<TEntity>["id"]) => Promise<void> }
+type WithUpdateModelCall<TEntity extends EntityShape = never> = IsNever<TEntity> extends true
+  ? unknown
+  : UpdateCallObj<TEntity>
+type WithUpsertModelCall<
+  TEntity extends EntityShape = never,
+  TCreate extends z.ZodRawShape = never
+> = IsNever<TEntity> extends true
+  ? unknown
+  : IsNever<TCreate> extends true
+  ? UpsertCallObj<TEntity>
+  : UpsertCallObj<TEntity, TCreate>
 
-type BaseApiCalls<TModels extends BaseModelsPlaceholder> = WithCreateModelCall<TModels> &
-  WithEntityModelCall<TModels> &
-  WithExtraFiltersModelCall<TModels> &
-  WithRemoveModelCall<TModels> &
-  WithUpdateModelCall<TModels> &
-  WithUpsertModelCall<TModels>
+type BaseApiCalls<
+  TEntity extends EntityShape = never,
+  TCreate extends z.ZodRawShape = never,
+  TExtraFilters extends FiltersShape = never
+> = WithCreateModelCall<TEntity, TCreate> &
+  WithEntityModelCall<TEntity> &
+  WithExtraFiltersModelCall<TEntity, TExtraFilters> &
+  WithRemoveModelCall<TEntity> &
+  WithUpdateModelCall<TEntity> &
+  WithUpsertModelCall<TEntity, TCreate>
 
-type BareApiService<TModels extends BaseModelsPlaceholder | unknown> = TModels extends BaseModelsPlaceholder
+type BareApiService<
+  TEntity extends EntityShape = never,
+  TCreate extends z.ZodRawShape = never,
+  TExtraFilters extends FiltersShape = never
+> = IsNever<TEntity> extends false
   ? {
       client: AxiosLike
-    } & BaseApiCalls<TModels>
+    } & BaseApiCalls<TEntity, TCreate, TExtraFilters>
   : { client: AxiosLike }
 
 type CreateModelObj<TApiCreate extends z.ZodRawShape> = {
@@ -222,7 +223,6 @@ type EntityModelObj<TApiEntity extends EntityShape> = {
 
 export const createApi = <
   TEntity extends EntityShape = never,
-  //TODO: nice-to-have make TCreate default to entity without readonly fields
   TCreate extends z.ZodRawShape = never,
   TExtraFilters extends FiltersShape = never,
   TCustomServiceCalls extends Record<string, CustomServiceCallPlaceholder> = never
@@ -238,8 +238,7 @@ export const createApi = <
   options?: {
     disableTrailingSlash?: boolean
   }
-  //TODO: need to make this work with custom calls as well
-}): ApiService<{ entity: TEntity; create?: TCreate; extraFilters?: TExtraFilters }, TCustomServiceCalls> => {
+}): ApiService<TEntity, TCreate, TExtraFilters, TCustomServiceCalls> => {
   const { baseUri, client, customCalls, models, options } = args
   if (models && "create" in models && !("entity" in models)) {
     throw new Error("You should not pass `create` model without an `entity` model")
@@ -279,10 +278,7 @@ export const createApi = <
   }
   if (!models || !models.entity) {
     //TODO: remove any
-    return { client: axiosLikeClient } as ApiService<
-      { entity: TEntity; create?: TCreate; extraFilters?: TExtraFilters },
-      TCustomServiceCalls
-    >
+    return { client: axiosLikeClient } as ApiService<TEntity, TCreate, TExtraFilters, TCustomServiceCalls>
   }
   const entityShapeWithoutReadonlyFields = removeReadonlyFields(models.entity as EntityShape, ["id"])
   //TODO: revisit why we did this
@@ -428,8 +424,6 @@ export const createApi = <
 
   const baseReturn = { client: axiosLikeClient, retrieve, list, remove, update, create, upsert }
 
-  type test2 = BareApiService<{ entity: EntityShape; create: TCreate; extraFilters: TExtraFilters }>
-
   //TODO: fix any
   if (!modifiedCustomServiceCalls) return baseReturn as any
 
@@ -440,3 +434,28 @@ export const createApi = <
     csc: modifiedCustomServiceCalls,
   } as any
 }
+
+const testModels = {
+  entity: {
+    id: z.string().uuid(),
+    helloWorld: z.string(),
+  },
+  create: {
+    another: z.number(),
+  },
+}
+const randomCreateApi = createApi({
+  baseUri: "hello",
+  client: axios.create(),
+  models: {
+    entity: {
+      id: z.string().uuid(),
+      helloWorld: z.string(),
+    },
+    create: {
+      another: z.number(),
+    },
+  },
+})
+
+// result2.create({another:''})
