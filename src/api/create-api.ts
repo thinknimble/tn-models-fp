@@ -434,28 +434,3 @@ export const createApi = <
     csc: modifiedCustomServiceCalls,
   } as any
 }
-
-const testModels = {
-  entity: {
-    id: z.string().uuid(),
-    helloWorld: z.string(),
-  },
-  create: {
-    another: z.number(),
-  },
-}
-const randomCreateApi = createApi({
-  baseUri: "hello",
-  client: axios.create(),
-  models: {
-    entity: {
-      id: z.string().uuid(),
-      helloWorld: z.string(),
-    },
-    create: {
-      another: z.number(),
-    },
-  },
-})
-
-// result2.create({another:''})
