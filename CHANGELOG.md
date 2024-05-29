@@ -1,5 +1,12 @@
 # @thinknimble/tn-models-fp
 
+## 3.1.0
+
+### Minor Changes
+
+- 986108e: - Allow disabling warning logs with `disableLoggingWarning` option
+  - Try-catch all `parse` calls so that users don't just get the intelligible zod error in console.
+
 ## 3.0.0
 
 ### Major Changes
