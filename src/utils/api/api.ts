@@ -17,7 +17,7 @@ import {
 } from "../zod"
 import { CallbackUtils, FromApiCall, ToApiCall } from "./types"
 
-//TODO: this should probably move to tn-utils but will keep it here for a quick release
+//TODO: #194 these should probably move to tn-utils but will keep it here for a quick release
 export const objectToCamelCaseArr = <T extends object>(obj: T): CamelCasedPropertiesDeep<T> => {
   if (typeof obj !== "object" || obj === null) return obj
   if (Array.isArray(obj)) return obj.map((o) => objectToCamelCaseArr(o)) as CamelCasedPropertiesDeep<T>
@@ -41,22 +41,41 @@ export const objectToSnakeCaseArr = <T extends object>(obj: T): SnakeCasedProper
 
 const createToApiHandler = <T extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny>>(inputShape: T) => {
   // Given that this is under our control, we should not do safe parse, if the parsing fails means something is wrong (you're not complying with the schema you defined)
+
   if (isZodArray(inputShape)) {
-    return (arr: unknown[]) =>
-      (typeof arr?.[0] === "object"
-        ? resolveRecursiveZod(inputShape).parse(arr.map((i) => objectToSnakeCaseArr(i as object)))
-        : arr) as ToApiCall<T>
+    return ((arr: unknown[]) => {
+      try {
+        if (typeof arr?.[0] === "object") {
+          return resolveRecursiveZod(inputShape).parse(arr.map((i) => objectToSnakeCaseArr(i as object)))
+        }
+      } catch (e) {
+        console.error(`${createToApiHandler.name} - error`, e)
+        throw e
+      }
+      return arr
+    }) as ToApiCall<T>
   }
   if (isZodPrimitive(inputShape)) return
   return ((obj: object) => {
-    return zodObjectToSnakeRecursive(z.object(inputShape)).parse(objectToSnakeCaseArr(obj))
+    try {
+      const result = zodObjectToSnakeRecursive(z.object(inputShape)).parse(objectToSnakeCaseArr(obj))
+      return result
+    } catch (e) {
+      console.error(`${createToApiHandler.name} - error`, e)
+      throw e
+    }
   }) as ToApiCall<T>
 }
 
-const createFromApiHandler = <T extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny>>(
-  outputShape: T,
+const createFromApiHandler = <T extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny>>({
+  outputShape,
+  callerName,
+  disableLoggingWarning,
+}: {
+  outputShape: T
   callerName: string
-) => {
+  disableLoggingWarning?: boolean
+}) => {
   const isOutputZodArray = isZodArray(outputShape)
   const isOutputZodPrimitive = isZodPrimitive(outputShape)
 
@@ -67,6 +86,7 @@ const createFromApiHandler = <T extends z.ZodRawShape | ZodPrimitives | z.ZodArr
         identifier: callerName,
         data: typeof obj?.[0] === "object" && obj ? obj.map((o) => objectToCamelCaseArr(o as object)) : obj,
         zod: outputShape,
+        onError: disableLoggingWarning ? null : undefined,
       })
   }
   //! This would send all other things that are not shapes (and not primitives) such as unions and intersections down the drain since we don't have support for those in outputShapes.
@@ -77,22 +97,30 @@ const createFromApiHandler = <T extends z.ZodRawShape | ZodPrimitives | z.ZodArr
       identifier: callerName,
       data: objectToCamelCaseArr(obj) ?? {},
       zod: z.object(outputShape),
+      onError: disableLoggingWarning ? null : undefined,
     })
   }) as FromApiCall<T>
 }
 
 export function createApiUtils<
   TInput extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny>,
-  TOutput extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny>
+  TOutput extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny>,
 >(
-  args: { name: string } & (
+  args: { name: string; disableLoggingWarning?: boolean } & (
     | { inputShape: TInput; outputShape: TOutput }
     | { inputShape: TInput }
     | { outputShape: TOutput }
-  )
+  ),
 ) {
   if (!("inputShape" in args || "outputShape" in args)) return {} as CallbackUtils<TInput, TOutput>
-  const fromApi = "outputShape" in args ? createFromApiHandler(args.outputShape, args.name) : undefined
+  const fromApi =
+    "outputShape" in args
+      ? createFromApiHandler({
+          outputShape: args.outputShape,
+          callerName: args.name,
+          disableLoggingWarning: args.disableLoggingWarning,
+        })
+      : undefined
   const toApi = "inputShape" in args ? createToApiHandler(args.inputShape) : undefined
   return (
     fromApi || toApi
@@ -128,7 +156,7 @@ export const createCustomServiceCallHandler =
   async (args: unknown) => {
     const expectsInput = !isZodVoid(serviceCallOpts.inputShape)
     const hasPagination = (
-      argCheck: unknown
+      argCheck: unknown,
     ): argCheck is { pagination: Pagination } | { input: { pagination: Pagination } } =>
       Boolean(
         typeof argCheck === "object" &&
@@ -137,7 +165,7 @@ export const createCustomServiceCallHandler =
             ("input" in argCheck &&
               typeof argCheck.input === "object" &&
               argCheck.input &&
-              "pagination" in argCheck.input))
+              "pagination" in argCheck.input)),
       )
     const expectsFilters = !isZodVoid(serviceCallOpts.filtersShape)
     const utils = createApiUtils({
@@ -159,11 +187,11 @@ export const createCustomServiceCallHandler =
                 args && typeof args === "object" && "input" in args
                   ? args.input
                   : // TODO: probably can improve these below with two different type guards
-                  hasPagination(args) && !expectsInput && "pagination" in args
-                  ? { input: args.pagination }
-                  : hasPagination(args) && "input" in args
-                  ? { input: args.input }
-                  : undefined,
+                    hasPagination(args) && !expectsInput && "pagination" in args
+                    ? { input: args.pagination }
+                    : hasPagination(args) && "input" in args
+                      ? { input: args.input }
+                      : undefined,
             }
           : {}),
         parsedFilters:
@@ -180,7 +208,7 @@ export const createCustomServiceCallHandler =
 
 export const removeReadonlyFields = <T extends z.ZodRawShape, TUnwrap extends (keyof T)[] = []>(
   shape: T,
-  unwrap?: TUnwrap
+  unwrap?: TUnwrap,
 ) => {
   const nonReadonlyEntries: [key: string, value: z.ZodTypeAny][] = []
   const allEntries = Object.entries(shape)

@@ -8,6 +8,12 @@ export const parseResponse = <T extends z.ZodType, Z = z.infer<T>>({
   identifier,
   data,
   zod,
+  onError = (err: z.ZodError) => {
+    console.debug(
+      `Response to service call with identifier < ${identifier} > did not match expected type,\n errors:`,
+      err,
+    )
+  },
 }: {
   /**
    * Give a relevant name to identify the source request of this response (A good option is to use the name of the function that performs the request)
@@ -15,16 +21,14 @@ export const parseResponse = <T extends z.ZodType, Z = z.infer<T>>({
   identifier: string
   data: object
   zod: T
+  onError?: null | ((zodErr: z.ZodError<any>) => void)
 }) => {
   const safeParse = isZodObject(zod) ? zod.passthrough().safeParse : zod.safeParse
   const parsed = safeParse(data)
 
   if (!parsed.success) {
     // If a request does not return what you expect, we don't let that go unnoticed, you'll get a warning that your frontend model is/has become outdated.
-    console.debug(
-      `Response to service call with identifier < ${identifier} > did not match expected type,\n errors:`,
-      parsed.error
-    )
+    onError?.(parsed.error)
     // runtime will still have all the fields (no runtime obfuscation)
     return data as Z
   }
