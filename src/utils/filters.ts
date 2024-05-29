@@ -22,17 +22,22 @@ export const parseFilters = <TFilters extends FiltersShape>({
   filters?: unknown
 }) => {
   if (!filters || !shape) return
-  const filtersParsed = z.object(shape).partial().parse(filters)
-  const snakedFilters = objectToSnakeCaseArr(filtersParsed)
-  return snakedFilters
-    ? (Object.fromEntries(
-        Object.entries(snakedFilters).flatMap(([k, v]) => {
-          if (typeof v === "number") return [[k, v.toString()]]
-          if (!v) return []
-          return [[k, v]]
-        })
-      ) as SnakeCasedPropertiesDeep<AsQueryParam<GetInferredFromRawWithBrand<TFilters>>>)
-    : undefined
+  try {
+    const filtersParsed = z.object(shape).partial().parse(filters)
+    const snakedFilters = objectToSnakeCaseArr(filtersParsed)
+    return snakedFilters
+      ? (Object.fromEntries(
+          Object.entries(snakedFilters).flatMap(([k, v]) => {
+            if (typeof v === "number") return [[k, v.toString()]]
+            if (!v) return []
+            return [[k, v]]
+          }),
+        ) as SnakeCasedPropertiesDeep<AsQueryParam<GetInferredFromRawWithBrand<TFilters>>>)
+      : undefined
+  } catch (e) {
+    console.error(`${parseFilters.name} - error`)
+    throw e
+  }
 }
 
 export type FiltersShape = Record<string, z.ZodString | z.ZodNumber | z.ZodArray<z.ZodNumber> | z.ZodArray<z.ZodString>>

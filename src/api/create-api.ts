@@ -30,7 +30,7 @@ type EntityShape = z.ZodRawShape & {
 type BaseModelsPlaceholder<
   TEntity extends EntityShape = EntityShape,
   TCreate extends z.ZodRawShape = z.ZodRawShape,
-  TBuiltInFilters extends FiltersShape = FiltersShape
+  TBuiltInFilters extends FiltersShape = FiltersShape,
 > = TEntity extends EntityShape
   ?
       | (EntityModelObj<TEntity> & ExtraFiltersObj<TBuiltInFilters>)
@@ -42,7 +42,7 @@ type ApiService<
   TCreate extends z.ZodRawShape = never,
   TExtraFilters extends FiltersShape = never,
   //extending from record makes it so that if you try to access anything it would not error, we want to actually error if there is no key in TCustomServiceCalls that does not belong to it
-  TCustomServiceCalls extends object = never
+  TCustomServiceCalls extends object = never,
 > = BareApiService<TEntity, TCreate, TExtraFilters> &
   (IsNever<TCustomServiceCalls> extends true
     ? unknown
@@ -75,14 +75,14 @@ type ListCallObj<TEntity extends EntityShape, TExtraFilters extends FiltersShape
       ? {
           pagination?: IPagination
         }
-      : { pagination?: IPagination; filters?: Partial<GetInferredFromRawWithBrand<TExtraFilters>> }
+      : { pagination?: IPagination; filters?: Partial<GetInferredFromRawWithBrand<TExtraFilters>> },
   ) => Promise<z.infer<ReturnType<typeof getPaginatedZod<UnwrapBranded<TEntity, ReadonlyTag>>>>>
 }
 type CreateCallObj<TEntity extends EntityShape, TCreate extends z.ZodRawShape = never> = {
   create: (
     inputs: IsNever<TCreate> extends true
       ? Omit<GetInferredWithoutReadonlyBrands<TEntity>, "id">
-      : GetInferredWithoutReadonlyBrands<TCreate>
+      : GetInferredWithoutReadonlyBrands<TCreate>,
   ) => Promise<GetInferredFromRaw<TEntity>>
 }
 type ErrorEntityShapeMustHaveAnIdField = '[TypeError] Your entity should have an "id" field'
@@ -91,15 +91,15 @@ type UpdateCallObj<
   TInferredEntityWithoutReadonlyFields = GetInferredWithoutReadonlyBrands<TEntity>,
   TInferredIdObj = TInferredEntityWithoutReadonlyFields extends { id: infer TId }
     ? { id: TId }
-    : ErrorEntityShapeMustHaveAnIdField
+    : ErrorEntityShapeMustHaveAnIdField,
 > = {
   update: {
     /**
      * Perform a patch request with a partial body
      */
-    (inputs: Omit<Partial<TInferredEntityWithoutReadonlyFields>, "id"> & TInferredIdObj): Promise<
-      GetInferredFromRaw<TEntity>
-    >
+    (
+      inputs: Omit<Partial<TInferredEntityWithoutReadonlyFields>, "id"> & TInferredIdObj,
+    ): Promise<GetInferredFromRaw<TEntity>>
     /**
      * Perform a put request with a full body
      */
@@ -109,7 +109,7 @@ type UpdateCallObj<
        * Perform a put request with a full body
        */
       asPartial: (
-        inputs: Omit<Partial<TInferredEntityWithoutReadonlyFields>, "id"> & TInferredIdObj
+        inputs: Omit<Partial<TInferredEntityWithoutReadonlyFields>, "id"> & TInferredIdObj,
       ) => Promise<GetInferredFromRaw<TEntity>>
     }
   }
@@ -121,7 +121,7 @@ type UpsertCallObj<
   TInferredEntityWithoutReadonlyFields = GetInferredWithoutReadonlyBrands<TEntity>,
   TInferredIdObj = TInferredEntityWithoutReadonlyFields extends { id: infer TId }
     ? { id: TId }
-    : ErrorEntityShapeMustHaveAnIdField
+    : ErrorEntityShapeMustHaveAnIdField,
 > = {
   upsert(
     /**
@@ -131,49 +131,40 @@ type UpsertCallObj<
       | (IsNever<TCreate> extends true
           ? Omit<GetInferredWithoutReadonlyBrands<TEntity>, "id">
           : GetInferredWithoutReadonlyBrands<TCreate>)
-      | (Omit<Partial<TInferredEntityWithoutReadonlyFields>, "id"> & TInferredIdObj)
+      | (Omit<Partial<TInferredEntityWithoutReadonlyFields>, "id"> & TInferredIdObj),
   ): Promise<GetInferredFromRaw<TEntity>>
 }
 
-type WithCreateModelCall<
-  TEntity extends EntityShape = never,
-  TCreate extends z.ZodRawShape = never
-> = IsNever<TEntity> extends true
-  ? unknown
-  : IsNever<TCreate> extends true
-  ? CreateCallObj<TEntity>
-  : CreateCallObj<TEntity, TCreate>
+type WithCreateModelCall<TEntity extends EntityShape = never, TCreate extends z.ZodRawShape = never> =
+  IsNever<TEntity> extends true
+    ? unknown
+    : IsNever<TCreate> extends true
+      ? CreateCallObj<TEntity>
+      : CreateCallObj<TEntity, TCreate>
 
-type WithEntityModelCall<TEntity extends EntityShape = never> = IsNever<TEntity> extends true
-  ? unknown
-  : RetrieveCallObj<TEntity>
-type WithExtraFiltersModelCall<
-  TEntity extends EntityShape = never,
-  TExtraFilters extends FiltersShape = never
-> = IsNever<TEntity> extends true
-  ? unknown
-  : IsNever<TExtraFilters> extends true
-  ? ListCallObj<TEntity>
-  : ListCallObj<TEntity, TExtraFilters>
-type WithRemoveModelCall<TEntity extends EntityShape = never> = IsNever<TEntity> extends true
-  ? unknown
-  : { remove: (id: GetInferredFromRaw<TEntity>["id"]) => Promise<void> }
-type WithUpdateModelCall<TEntity extends EntityShape = never> = IsNever<TEntity> extends true
-  ? unknown
-  : UpdateCallObj<TEntity>
-type WithUpsertModelCall<
-  TEntity extends EntityShape = never,
-  TCreate extends z.ZodRawShape = never
-> = IsNever<TEntity> extends true
-  ? unknown
-  : IsNever<TCreate> extends true
-  ? UpsertCallObj<TEntity>
-  : UpsertCallObj<TEntity, TCreate>
+type WithEntityModelCall<TEntity extends EntityShape = never> =
+  IsNever<TEntity> extends true ? unknown : RetrieveCallObj<TEntity>
+type WithExtraFiltersModelCall<TEntity extends EntityShape = never, TExtraFilters extends FiltersShape = never> =
+  IsNever<TEntity> extends true
+    ? unknown
+    : IsNever<TExtraFilters> extends true
+      ? ListCallObj<TEntity>
+      : ListCallObj<TEntity, TExtraFilters>
+type WithRemoveModelCall<TEntity extends EntityShape = never> =
+  IsNever<TEntity> extends true ? unknown : { remove: (id: GetInferredFromRaw<TEntity>["id"]) => Promise<void> }
+type WithUpdateModelCall<TEntity extends EntityShape = never> =
+  IsNever<TEntity> extends true ? unknown : UpdateCallObj<TEntity>
+type WithUpsertModelCall<TEntity extends EntityShape = never, TCreate extends z.ZodRawShape = never> =
+  IsNever<TEntity> extends true
+    ? unknown
+    : IsNever<TCreate> extends true
+      ? UpsertCallObj<TEntity>
+      : UpsertCallObj<TEntity, TCreate>
 
 type BaseApiCalls<
   TEntity extends EntityShape = never,
   TCreate extends z.ZodRawShape = never,
-  TExtraFilters extends FiltersShape = never
+  TExtraFilters extends FiltersShape = never,
 > = WithCreateModelCall<TEntity, TCreate> &
   WithEntityModelCall<TEntity> &
   WithExtraFiltersModelCall<TEntity, TExtraFilters> &
@@ -184,12 +175,13 @@ type BaseApiCalls<
 type BareApiService<
   TEntity extends EntityShape = never,
   TCreate extends z.ZodRawShape = never,
-  TExtraFilters extends FiltersShape = never
-> = IsNever<TEntity> extends false
-  ? {
-      client: AxiosLike
-    } & BaseApiCalls<TEntity, TCreate, TExtraFilters>
-  : { client: AxiosLike }
+  TExtraFilters extends FiltersShape = never,
+> =
+  IsNever<TEntity> extends false
+    ? {
+        client: AxiosLike
+      } & BaseApiCalls<TEntity, TCreate, TExtraFilters>
+    : { client: AxiosLike }
 
 type CreateModelObj<TApiCreate extends z.ZodRawShape> = {
   /**
@@ -225,7 +217,7 @@ export const createApi = <
   TEntity extends EntityShape = never,
   TCreate extends z.ZodRawShape = never,
   TExtraFilters extends FiltersShape = never,
-  TCustomServiceCalls extends Record<string, CustomServiceCallPlaceholder> = never
+  TCustomServiceCalls extends Record<string, CustomServiceCallPlaceholder> = never,
 >(args: {
   baseUri: string
   client: AxiosInstance
@@ -237,6 +229,7 @@ export const createApi = <
   }
   options?: {
     disableTrailingSlash?: boolean
+    disableWarningLogging?: boolean
   }
 }): ApiService<TEntity, TCreate, TExtraFilters, TCustomServiceCalls> => {
   const { baseUri, client, customCalls, models, options } = args
@@ -263,7 +256,7 @@ export const createApi = <
             baseUri: slashEndingBaseUri,
             name: k,
           }),
-        ])
+        ]),
       ) as CustomServiceCallsRecord<TCustomServiceCalls>)
     : undefined
 
@@ -341,6 +334,7 @@ export const createApi = <
       identifier: list.name,
       data: res.data,
       zod: paginatedZod,
+      onError: args.options?.disableWarningLogging ? null : undefined,
     })
 
     return { ...rawResponse, results: rawResponse.results.map((r) => objectToCamelCaseArr(r)) }
@@ -370,29 +364,32 @@ export const createApi = <
     const entityWithoutReadonlyFieldsZod = z.object(entityShapeWithoutReadonlyFields)
     const finalEntityZod =
       type === "partial" ? entityWithoutReadonlyFieldsZod.partial() : entityWithoutReadonlyFieldsZod
-    type result = typeof finalEntityZod.shape
-
-    const parsedInput = finalEntityZod.parse(newValue)
-    const updateCall = createCustomServiceCall.standAlone({
-      client,
-      models: {
-        inputShape: finalEntityZod.shape,
-        outputShape: models.entity,
-      },
-      cb: async ({ client, input, utils }) => {
-        const { id, ...body } = utils.toApi(input)
-        const result = await client[httpMethod](`${slashEndingBaseUri}${id}${parsedEndingSlash}`, body)
-        //@ts-expect-error The generic aspect of this function seems not to be able to make out that utils should yield fromApi
-        return utils.fromApi(result?.data)
-      },
-    })
-    //@ts-expect-error we can ignore this since we're actually doing a hard parse
-    return updateCall(parsedInput)
+    try {
+      const parsedInput = finalEntityZod.parse(newValue)
+      const updateCall = createCustomServiceCall.standAlone({
+        client,
+        models: {
+          inputShape: finalEntityZod.shape,
+          outputShape: models.entity,
+        },
+        cb: async ({ client, input, utils }) => {
+          const { id, ...body } = utils.toApi(input)
+          const result = await client[httpMethod](`${slashEndingBaseUri}${id}${parsedEndingSlash}`, body)
+          //@ts-expect-error The generic aspect of this function seems not to be able to make out that utils should yield fromApi
+          return utils.fromApi(result?.data)
+        },
+      })
+      //@ts-expect-error we can ignore this since we're actually doing a hard parse
+      return updateCall(parsedInput)
+    } catch (e) {
+      console.error(`${updateBase.name} - error`, e)
+      throw e
+    }
   }
 
   //! this is a bit painful to look at but I feel it is a good UX so that we don't make Users go through updateBase params
   const update = async (
-    args: Partial<GetInferredFromRawWithBrand<typeof entityShapeWithoutReadonlyFields>> & { id: string }
+    args: Partial<GetInferredFromRawWithBrand<typeof entityShapeWithoutReadonlyFields>> & { id: string },
   ) => {
     return updateBase({ newValue: args, httpMethod: "patch", type: "partial" })
   }
@@ -400,17 +397,17 @@ export const createApi = <
     update,
     "replace",
     async (args: GetInferredFromRawWithBrand<typeof entityShapeWithoutReadonlyFields> & { id: string }) =>
-      updateBase({ newValue: args, httpMethod: "put", type: "total" })
+      updateBase({ newValue: args, httpMethod: "put", type: "total" }),
   )
   defineProperty(
     update.replace,
     "asPartial",
     (inputs: Partial<GetInferredWithoutReadonlyBrands<TApiEntityShape>> & { id: string }) =>
-      updateBase({ newValue: inputs, httpMethod: "put", type: "partial" })
+      updateBase({ newValue: inputs, httpMethod: "put", type: "partial" }),
   )
 
   const upsert = async (
-    args: TApiCreate | (Partial<GetInferredFromRawWithBrand<typeof entityShapeWithoutReadonlyFields>> & { id: string })
+    args: TApiCreate | (Partial<GetInferredFromRawWithBrand<typeof entityShapeWithoutReadonlyFields>> & { id: string }),
   ) => {
     if ("id" in args && args.id) {
       return updateBase({

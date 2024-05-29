@@ -28,7 +28,7 @@ export const createPaginatedServiceCall = <
   TInput extends z.ZodRawShape | ZodPrimitives = never,
   TReturnType extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny> = ReturnType<
     typeof getPaginatedZod<UnwrapBrandedRecursive<TOutput>>
-  >["shape"]
+  >["shape"],
 >({
   inputShape,
   outputShape,
@@ -40,6 +40,10 @@ export const createPaginatedServiceCall = <
   filtersShape?: TFilters
   opts?: {
     /**
+     * Disable the logging of errors if the response type doesn't match the one expected from the library
+     */
+    disableLoggingWarning?: boolean
+    /**
      * Choose the http method you want this call to be executed as
      */
     httpMethod?: "post" | "get"
@@ -49,8 +53,8 @@ export const createPaginatedServiceCall = <
     uri?: IsNever<TInput> extends true
       ? string
       : TInput extends { urlParams: z.ZodObject<any> }
-      ? (input: z.infer<TInput["urlParams"]>) => string
-      : string
+        ? (input: z.infer<TInput["urlParams"]>) => string
+        : string
   }
 }): ResolveCustomServiceCallOpts<UnknownIfNever<TInput> & typeof paginationObjShape, TReturnType, TFilters> => {
   const uri = opts?.uri as ((input: unknown) => string) | undefined | string
@@ -108,6 +112,7 @@ export const createPaginatedServiceCall = <
       data: res.data,
       identifier: "custom-paginated-call",
       zod: paginatedZod,
+      onError: opts?.disableLoggingWarning ? null : undefined,
     })
     //! although this claims not to be of the same type than our converted TOutput, it actually is, but all the added type complexity with camel casing util makes TS to think it is something different. It should be safe to cast this, we should definitely check this at runtime with tests
     const result: unknown = { ...rawResponse, results: rawResponse.results.map((r) => objectToCamelCaseArr(r)) }
