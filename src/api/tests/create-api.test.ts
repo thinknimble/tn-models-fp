@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { faker } from "@faker-js/faker"
 import { SnakeCasedPropertiesDeep } from "@thinknimble/tn-utils"
-import { beforeEach, describe, expect, it, vi } from "vitest"
 import { z } from "zod"
 import {
   GetInferredFromRaw,
@@ -24,8 +23,8 @@ import {
   mockEntity1,
   mockEntity1Snaked,
   mockEntity2,
-  mockedAxios,
 } from "./mocks"
+import { describe, it, expect, beforeEach, spyOn } from "bun:test"
 
 describe("createApi", async () => {
   const testBaseUri = "users"
@@ -125,7 +124,7 @@ describe("createApi", async () => {
     }
     it("calls api with snake_case", async () => {
       //arrange
-      const postSpy = vi.spyOn(mockedAxios, "post")
+      const postSpy = spyOn(mockedAxios, "post")
       mockedAxios.post.mockResolvedValueOnce({ data: createResponse })
       //act
       await testApi.create(createInput)
@@ -203,7 +202,7 @@ describe("createApi", async () => {
           create: createShape,
         },
       })
-      const postSpy = vi.spyOn(mockedAxios, "post")
+      const postSpy = spyOn(mockedAxios, "post")
       const testCreate = {
         email: faker.internet.email(),
         firstName: faker.name.firstName(),
@@ -229,7 +228,7 @@ describe("createApi", async () => {
     })
     it("Works with nested fields", async () => {
       //arrange
-      const postSpy = vi.spyOn(mockedAxios, "post")
+      const postSpy = spyOn(mockedAxios, "post")
       const arrayElementShape = {
         id: z.string().uuid(),
         textElement: z.string(),
@@ -300,7 +299,7 @@ describe("createApi", async () => {
     it("returns camelCased entity", async () => {
       //arrange
       mockedAxios.get.mockResolvedValue({ data: mockEntity1Snaked })
-      const getSpy = vi.spyOn(mockedAxios, "get")
+      const getSpy = spyOn(mockedAxios, "get")
       //act
       const response = await testApi.retrieve(mockEntity1Snaked.id)
       //assert
@@ -339,7 +338,7 @@ describe("createApi", async () => {
       }
       const pagination = new Pagination({ page: 5, size: 8 })
       mockedAxios.get.mockResolvedValueOnce({ data: listResponse })
-      const getSpy = vi.spyOn(mockedAxios, "get")
+      const getSpy = spyOn(mockedAxios, "get")
       //act
       await testApi.list({
         filters,
@@ -428,7 +427,7 @@ describe("createApi", async () => {
     it("calls api with slash ending by default", async () => {
       //arrange
       mockedAxios.get.mockResolvedValue({ data: mockEntity1Snaked })
-      const getSpy = vi.spyOn(mockedAxios, "get")
+      const getSpy = spyOn(mockedAxios, "get")
       const baseUri = "slashDefault"
       const testApi = createApi({
         baseUri,
@@ -445,7 +444,7 @@ describe("createApi", async () => {
     it("allows disabling slash ending uris", async () => {
       //arrange
       mockedAxios.get.mockResolvedValue({ data: mockEntity1Snaked })
-      const getSpy = vi.spyOn(mockedAxios, "get")
+      const getSpy = spyOn(mockedAxios, "get")
       const baseUri = "disableSlash"
       const testApi = createApi({
         baseUri,
@@ -481,7 +480,7 @@ describe("createApi", async () => {
   describe("delete", () => {
     it("calls delete with the right id", async () => {
       // arrange
-      const deleteSpy = vi.spyOn(mockedAxios, "delete")
+      const deleteSpy = spyOn(mockedAxios, "delete")
       const baseUri = "delete"
       const api = createApi({
         baseUri,
@@ -498,7 +497,7 @@ describe("createApi", async () => {
     })
     it("calls delete with number id instead of string", async () => {
       // arrange
-      const deleteSpy = vi.spyOn(mockedAxios, "delete")
+      const deleteSpy = spyOn(mockedAxios, "delete")
       const baseUri = "delete"
       const api = createApi({
         baseUri,
@@ -529,7 +528,7 @@ describe("createApi", async () => {
       mockedAxios.patch.mockResolvedValueOnce({
         data: mockEntity1Snaked,
       })
-      const patchSpy = vi.spyOn(mockedAxios, "patch")
+      const patchSpy = spyOn(mockedAxios, "patch")
       const { id, ...body } = {
         id: mockEntity1.id,
         age: mockEntity1.age,
@@ -546,7 +545,7 @@ describe("createApi", async () => {
       mockedAxios.put.mockResolvedValueOnce({
         data: mockEntity1Snaked,
       })
-      const putSpy = vi.spyOn(mockedAxios, "put")
+      const putSpy = spyOn(mockedAxios, "put")
       const { id, ...body } = {
         id: mockEntity1.id,
         age: mockEntity1.age,
@@ -563,7 +562,7 @@ describe("createApi", async () => {
       mockedAxios.put.mockResolvedValueOnce({
         data: mockEntity1Snaked,
       })
-      const putSpy = vi.spyOn(mockedAxios, "put")
+      const putSpy = spyOn(mockedAxios, "put")
       // fullName is readonly so won't be sent as parameter!
       const { id, fullName, ...body } = mockEntity1
       //act
@@ -575,7 +574,7 @@ describe("createApi", async () => {
       mockedAxios.patch.mockResolvedValueOnce({
         data: mockEntity1Snaked,
       })
-      const patchSpy = vi.spyOn(mockedAxios, "patch")
+      const patchSpy = spyOn(mockedAxios, "patch")
       const { id, ...body } = {
         id: mockEntity1.id,
         age: mockEntity1.age,
@@ -600,7 +599,7 @@ describe("createApi", async () => {
     })
     it("calls create if there is no id passed", async () => {
       //arrange
-      const postSpy = vi.spyOn(mockedAxios, "post")
+      const postSpy = spyOn(mockedAxios, "post")
       mockedAxios.post.mockResolvedValueOnce({
         data: mockEntity1Snaked,
       })
@@ -615,7 +614,7 @@ describe("createApi", async () => {
     })
     it("calls calls update if there is no id passed", async () => {
       //arrange
-      const patchSpy = vi.spyOn(mockedAxios, "patch")
+      const patchSpy = spyOn(mockedAxios, "patch")
       mockedAxios.patch.mockResolvedValueOnce({
         data: mockEntity1Snaked,
       })
