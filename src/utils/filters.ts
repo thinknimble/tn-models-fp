@@ -28,16 +28,16 @@ export const parseFilters = <TFilters extends FiltersShape>({
     return snakedFilters
       ? (Object.fromEntries(
           Object.entries(snakedFilters).flatMap(([k, v]) => {
-            if (typeof v === "number") return [[k, v.toString()]]
+            if (['boolean', 'number'].includes(typeof v)) return [[k, v.toString()]]
             if (!v) return []
             return [[k, v]]
           }),
         ) as SnakeCasedPropertiesDeep<AsQueryParam<GetInferredFromRawWithBrand<TFilters>>>)
       : undefined
   } catch (e) {
-    console.error(`${parseFilters.name} - error`)
+    console.error(`${parseFilters.name} - errors`)
     throw e
   }
 }
 
-export type FiltersShape = Record<string, z.ZodString | z.ZodNumber | z.ZodArray<z.ZodNumber> | z.ZodArray<z.ZodString>>
+export type FiltersShape = Record<string, z.ZodString | z.ZodNumber | z.ZodArray<z.ZodNumber> | z.ZodArray<z.ZodString> | z.ZodBoolean>
