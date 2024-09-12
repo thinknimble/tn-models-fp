@@ -1,5 +1,11 @@
 # @thinknimble/tn-models-fp
 
+## 3.1.1
+
+### Patch Changes
+
+- 35fb8f8: Add boolean to accepted types for filters
+
 ## 3.1.0
 
 ### Minor Changes
