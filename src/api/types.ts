@@ -12,7 +12,7 @@ import {
   IsAny,
   IsNever,
   UnknownIfNever,
-  UnwrapBranded,
+  UnwrapBrandedRecursive,
   ZodPrimitives,
 } from "../utils"
 
@@ -186,7 +186,7 @@ export type ResolveShapeOrVoid<
   output: IsNever<TOutputShape> extends true
     ? z.ZodVoid
     : TOutputShape extends z.ZodRawShape
-      ? UnwrapBranded<TOutputShape>
+      ? UnwrapBrandedRecursive<TOutputShape>
       : TOutputShape
   filters: IsNever<TOutputShape> extends true
     ? z.ZodVoid

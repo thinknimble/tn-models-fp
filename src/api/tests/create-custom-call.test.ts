@@ -459,7 +459,6 @@ describe("createCustomServiceCall", () => {
     const result = await api.csc.customCall({ nativeEnum: 1 })
     expect(result).toBe(expectedResult)
   })
-
   it("Allows an array output shape", async () => {
     //arrange
     const inputShape = z.string().uuid()
@@ -494,6 +493,34 @@ describe("createCustomServiceCall", () => {
     const fakeId = faker.datatype.uuid()
     const result = await api.csc.customCall(fakeId)
     expect(result).toStrictEqual(mockResponse)
+  })
+  it("Does not fail types when there are nested readonly fields", () => {
+    // this actually proves that we are properly unbranding the inner ZodBranded fields.
+    const profileShape = {
+      id: readonly(z.string().uuid()),
+    }
+    const userShape = {
+      id: readonly(z.string().uuid()),
+      name: z.string(),
+      profiles: z.object(profileShape).array(),
+    }
+    const failingCustomCall = createCustomServiceCall({
+      inputShape: z.string(),
+      outputShape: userShape,
+      cb: async ({ client, input, slashEndingBaseUri, utils }) => {
+        return utils.fromApi({})
+      },
+    })
+
+    const api = createApi({
+      baseUri: "uri",
+      client: mockedAxios,
+      customCalls: { failingCustomCall },
+    })
+
+    const test = () => {
+      api.csc.failingCustomCall("hello")
+    }
   })
 
   describe("standAlone call", () => {
