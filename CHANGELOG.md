@@ -1,5 +1,11 @@
 # @thinknimble/tn-models-fp
 
+## 3.1.2
+
+### Patch Changes
+
+- 187e807: Fix issue on `createCustomServiceCall` where outputShapes with nested ZodBranded fields would cause the types for the resulting service call function to break.
+
 ## 3.1.1
 
 ### Patch Changes
