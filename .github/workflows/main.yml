@@ -23,6 +23,8 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: 🆎 TypeCheck
         run: pnpm lint
+      - name: 🎨 Prettier
+        run: pnpm format:check
       - name: 🧪 Run tests
         run: pnpm test
       - name: 🏗️ Build

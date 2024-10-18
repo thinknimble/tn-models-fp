@@ -14,7 +14,9 @@
     "test:dev": "vitest",
     "ci": "pnpm run lint && pnpm run test && pnpm run build",
     "release": "pnpm run ci && changeset publish",
-    "dev:watch": "tsup src/index.ts --format cjs,esm --dts --watch"
+    "dev:watch": "tsup src/index.ts --format cjs,esm --dts --watch",
+    "format:check": "prettier --check ./src",
+    "format:write": "prettier --write ./src"
   },
   "repository": {
     "type": "git",

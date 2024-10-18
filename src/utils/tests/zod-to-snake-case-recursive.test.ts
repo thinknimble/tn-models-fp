@@ -17,7 +17,7 @@ describe("zodToSnakeCaseShapeRecursive", () => {
     z.object({
       elementOne: z.string(),
       elementTwo: z.number(),
-    })
+    }),
   )
   const arrayStringZod = z.array(z.string())
   const optionalObject = z
@@ -109,7 +109,7 @@ describe("zodToSnakeCaseShapeRecursive", () => {
       Expect<Equals<TestZods, ResultTypeCamelCasedInferred>>,
       Expect<Equals<TestZodsSnakeCasedInferred, InferredResultType>>,
       Expect<Equals<TestZods, ResultTypeOriginalCamelCasedInferred>>,
-      Expect<Equals<TestZodsSnakeCasedInferred, InferredResultTypeOriginal>>
+      Expect<Equals<TestZodsSnakeCasedInferred, InferredResultTypeOriginal>>,
     ]
   })
   it("Works on primitives", () => {

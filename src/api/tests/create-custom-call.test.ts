@@ -91,7 +91,7 @@ describe("createCustomServiceCall", () => {
                 (typeof utils)["toApi"],
                 (obj: object) => SnakeCasedPropertiesDeep<GetInferredFromRawWithBrand<typeof inputShape>>
               >
-            >
+            >,
           ]
           return {
             givenInput: input.myInput,
@@ -199,7 +199,7 @@ describe("createCustomServiceCall", () => {
         utils,
       }) => {
         return
-      }
+      },
     )
     type testNoInputNorOutput = typeof testNoInputNorOutput
     const baseUri = "noInputNorOutputOverload"
@@ -222,7 +222,7 @@ describe("createCustomServiceCall", () => {
         utils,
       }) => {
         return
-      }
+      },
     )
     const testInputOutputPlainZods = (() => {
       const inputShape = z.string()
@@ -253,7 +253,7 @@ describe("createCustomServiceCall", () => {
     testApi.customServiceCalls.nonExisting
 
     type tests = [
-      Expect<Equals<string, Parameters<(typeof testApi)["customServiceCalls"]["testInputOutputPlainZods"]>[0]>>
+      Expect<Equals<string, Parameters<(typeof testApi)["customServiceCalls"]["testInputOutputPlainZods"]>[0]>>,
     ]
   })
   it("works well if no models are passed", async () => {
@@ -822,7 +822,7 @@ describe("createCustomServiceCall", () => {
           params: {
             test_filter: testFilter,
           },
-        }
+        },
       )
       expect(result).toEqual({ testData: mockResult.test_data })
     })
@@ -860,7 +860,7 @@ describe("createCustomServiceCall", () => {
       expect(postSpy).toHaveBeenLastCalledWith(
         `${callName}/`,
         { test_input: testNumberInput },
-        { params: { test_filter: testFilter } }
+        { params: { test_filter: testFilter } },
       )
       expect(result).toEqual(mockResult)
     })

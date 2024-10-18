@@ -14,20 +14,20 @@ type ResolveCustomServiceCallback<
   TOutputShape extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny> = never,
   TFilters extends FiltersShape | z.ZodVoid = never,
   TCallType extends string = "",
-  TShapeOrVoid extends ResolveShapeOrVoid<any, any, any> = ResolveShapeOrVoid<TInputShape, TOutputShape, TFilters>
+  TShapeOrVoid extends ResolveShapeOrVoid<any, any, any> = ResolveShapeOrVoid<TInputShape, TOutputShape, TFilters>,
 > = CustomServiceCallback<TShapeOrVoid["input"], TShapeOrVoid["output"], TShapeOrVoid["filters"], TCallType>
 
 type ResolveServiceCallFn<
   TInputShape extends z.ZodRawShape | ZodPrimitives = never,
   TOutputShape extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny> = never,
   TFiltersShape extends FiltersShape | z.ZodVoid = never,
-  TShapeOrVoid extends ResolveShapeOrVoid<any, any, any> = ResolveShapeOrVoid<TInputShape, TOutputShape, TFiltersShape>
+  TShapeOrVoid extends ResolveShapeOrVoid<any, any, any> = ResolveShapeOrVoid<TInputShape, TOutputShape, TFiltersShape>,
 > = ServiceCallFn<TShapeOrVoid["input"], TShapeOrVoid["output"], TShapeOrVoid["filters"]>
 
 export const createCustomServiceCall = <
   TInputShape extends z.ZodRawShape | ZodPrimitives = never,
   TOutputShape extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny> = never,
-  TFiltersShape extends FiltersShape = never
+  TFiltersShape extends FiltersShape = never,
 >(
   args:
     | ({
@@ -35,7 +35,7 @@ export const createCustomServiceCall = <
         outputShape?: TOutputShape
         cb: ResolveCustomServiceCallback<TInputShape, TOutputShape, TFiltersShape>
       } & (IsNever<TOutputShape> extends true ? unknown : { filtersShape?: TFiltersShape }))
-    | ResolveCustomServiceCallback<z.ZodVoid, z.ZodVoid, z.ZodVoid>
+    | ResolveCustomServiceCallback<z.ZodVoid, z.ZodVoid, z.ZodVoid>,
 ): ResolveCustomServiceCallOpts<TInputShape, TOutputShape, TFiltersShape> => {
   const inputShape = typeof args === "function" || !args.inputShape ? z.void() : args.inputShape
   const outputShape = typeof args === "function" || !args.outputShape ? z.void() : args.outputShape
@@ -56,7 +56,7 @@ export const createCustomServiceCall = <
 const standAlone = <
   TInputShape extends z.ZodRawShape | ZodPrimitives = never,
   TOutputShape extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny> = never,
-  TFiltersShape extends FiltersShape | z.ZodVoid = never
+  TFiltersShape extends FiltersShape | z.ZodVoid = never,
 >(
   args: {
     client: AxiosLike
@@ -74,7 +74,7 @@ const standAlone = <
     ) &
       (IsNever<TOutputShape> extends true ? unknown : { filtersShape?: TFiltersShape })
     cb: ResolveCustomServiceCallback<TInputShape, TOutputShape, TFiltersShape, StandAloneCallType>
-  }
+  },
 ): ResolveServiceCallFn<TInputShape, TOutputShape, TFiltersShape> => {
   //? Should I use zod to improve the types in here rather than any[] it?. We could probably do the same for the createCustomServiceCall
   const inputShape = (args.models && "inputShape" in args.models ? args.models.inputShape : undefined) ?? z.void()

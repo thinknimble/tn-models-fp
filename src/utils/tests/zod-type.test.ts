@@ -9,14 +9,14 @@ describe("TS tests for zod utils", () => {
     const zodObjectTest = readonly(
       z.object({
         hello: z.string(),
-      })
+      }),
     )
     type zodObjectTest = typeof zodObjectTest
     type tests = [
       Expect<Equals<IsBrand<zodStringTest, "RandomBrand">, false>>,
       Expect<Equals<IsBrand<zodStringTest, ReadonlyTag>, true>>,
       Expect<Equals<IsBrand<zodObjectTest, "RandomBrand">, false>>,
-      Expect<Equals<IsBrand<zodObjectTest, ReadonlyTag>, true>>
+      Expect<Equals<IsBrand<zodObjectTest, ReadonlyTag>, true>>,
     ]
   })
 })

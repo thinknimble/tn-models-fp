@@ -14,7 +14,7 @@ describe("parseFilters", () => {
     expect(parseFilters({ shape, filters })).toEqual({
       company_category: filters.companyCategory,
     })
-  })  
+  })
   it("includes boolean", () => {
     const shape = {
       niceOnly: z.boolean(),
@@ -23,7 +23,7 @@ describe("parseFilters", () => {
       niceOnly: false,
     }
     expect(parseFilters({ shape, filters })).toEqual({
-      nice_only: filters.niceOnly.toString()
+      nice_only: filters.niceOnly.toString(),
     })
   })
   it("Throws error if passing a wrong type filter", () => {

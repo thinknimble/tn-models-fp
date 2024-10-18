@@ -7,7 +7,7 @@ export const getPaginatedShape = <T extends z.ZodRawShape>(
   zodRawShape: T,
   options: {
     allowPassthrough?: boolean
-  } = { allowPassthrough: false }
+  } = { allowPassthrough: false },
 ) => {
   const zObject = options.allowPassthrough ? z.object(zodRawShape).passthrough() : z.object(zodRawShape)
   return {
