@@ -50,7 +50,7 @@ describe("createPaginatedServiceCall", () => {
           page: pagination.page.toString(),
           page_size: pagination.size.toString(),
         },
-      }
+      },
     )
   })
   it("calls api with the right uri even if uri param is empty", async () => {
@@ -85,7 +85,7 @@ describe("createPaginatedServiceCall", () => {
           page: pagination.page.toString(),
           page_size: pagination.size.toString(),
         },
-      }
+      },
     )
   })
 
@@ -220,7 +220,7 @@ describe("createPaginatedServiceCall", () => {
           page: "1",
           page_size: "25",
         },
-      }
+      },
     )
   })
   it("calls api with right pagination params", async () => {

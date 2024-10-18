@@ -12,7 +12,7 @@ export const isZod = (input: unknown): input is z.ZodSchema & { _def: { typeName
       "_def" in input &&
       input._def &&
       typeof input._def === "object" &&
-      "typeName" in input._def
+      "typeName" in input._def,
   )
 }
 export const isZodArray = (input: unknown): input is z.ZodArray<z.ZodTypeAny> => {
@@ -112,13 +112,13 @@ function zodUnionRecursive<T extends z.ZodUnion<readonly [z.ZodTypeAny]>>(zod: T
  * !! This is the core method of the library.
  */
 export function zodObjectToSnakeRecursive<T extends z.ZodRawShape>(
-  zodObj: z.ZodObject<T>
+  zodObj: z.ZodObject<T>,
 ): z.ZodObject<ZodRawShapeToSnakedRecursive<T>> {
   const resultingShape = Object.fromEntries(
     Object.entries(zodObj.shape).map(([k, v]) => {
       const snakeCasedKey = toSnakeCase(k)
       return [snakeCasedKey, resolveRecursiveZod(v)]
-    })
+    }),
   ) as ZodRawShapeToSnakedRecursive<T>
   return zodObj._def.unknownKeys === "passthrough" ? z.object(resultingShape).passthrough() : z.object(resultingShape)
 }

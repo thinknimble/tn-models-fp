@@ -81,7 +81,7 @@ describe("createApiUtils", () => {
     })
     type tests = [
       Expect<Equals<ReturnType<(typeof utils)["fromApi"]>, { testOutput: string }>>,
-      Expect<Equals<ReturnType<(typeof utils)["toApi"]>, { test_input: number }>>
+      Expect<Equals<ReturnType<(typeof utils)["toApi"]>, { test_input: number }>>,
     ]
     expect("toApi" in utils).toEqual(true)
     expect("fromApi" in utils).toEqual(true)
@@ -151,7 +151,7 @@ describe("createApiUtils", () => {
         z.object({
           testString: z.string(),
           testNumber: z.number(),
-        })
+        }),
       ),
       name: "fromApiZodArray",
     })
@@ -170,7 +170,7 @@ describe("createApiUtils", () => {
         z.object({
           testString: z.string(),
           testNumber: z.number(),
-        })
+        }),
       ),
       name: "fromApiZodArray",
     })

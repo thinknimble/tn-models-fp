@@ -3,20 +3,20 @@ import { z } from "zod"
 import { GetInferredFromRawWithBrand, ZodPrimitives } from "../zod"
 
 export type ToApiCall<TInput extends z.ZodRawShape | z.ZodTypeAny> = (
-  obj: object
+  obj: object,
 ) => TInput extends z.ZodRawShape
   ? SnakeCasedPropertiesDeep<GetInferredFromRawWithBrand<TInput>>
   : TInput extends z.ZodType
-  ? z.infer<TInput>
-  : never
+    ? z.infer<TInput>
+    : never
 
 export type FromApiCall<TOutput extends z.ZodRawShape | z.ZodTypeAny> = (
-  obj: object
+  obj: object,
 ) => TOutput extends z.ZodRawShape
   ? GetInferredFromRawWithBrand<TOutput>
   : TOutput extends z.ZodType
-  ? z.infer<TOutput>
-  : never
+    ? z.infer<TOutput>
+    : never
 
 type FromApiUtil<T extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny>> = {
   /**
@@ -31,10 +31,16 @@ type ToApiUtil<T extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny
   toApi: ToApiCall<T>
 }
 
-type FromApiOrUnknown <T extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny>,TIsPrimitive extends boolean = T extends ZodPrimitives ? true : false> = TIsPrimitive extends true ? unknown : T extends z.ZodVoid ? unknown : {utils:FromApiUtil<T>}
-type ToApiOrUnknown <T extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny>,TIsPrimitive extends boolean = T extends ZodPrimitives ? true : false> = TIsPrimitive extends true ? unknown : T extends z.ZodVoid ? unknown : {utils:ToApiUtil<T>}
+type FromApiOrUnknown<
+  T extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny>,
+  TIsPrimitive extends boolean = T extends ZodPrimitives ? true : false,
+> = TIsPrimitive extends true ? unknown : T extends z.ZodVoid ? unknown : { utils: FromApiUtil<T> }
+type ToApiOrUnknown<
+  T extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny>,
+  TIsPrimitive extends boolean = T extends ZodPrimitives ? true : false,
+> = TIsPrimitive extends true ? unknown : T extends z.ZodVoid ? unknown : { utils: ToApiUtil<T> }
 
 export type CallbackUtils<
   TInput extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny>,
   TOutput extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny>,
-> = FromApiOrUnknown<TOutput> & ToApiOrUnknown<TInput> 
+> = FromApiOrUnknown<TOutput> & ToApiOrUnknown<TInput>

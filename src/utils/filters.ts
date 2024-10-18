@@ -28,7 +28,7 @@ export const parseFilters = <TFilters extends FiltersShape>({
     return snakedFilters
       ? (Object.fromEntries(
           Object.entries(snakedFilters).flatMap(([k, v]) => {
-            if (['boolean', 'number'].includes(typeof v)) return [[k, v.toString()]]
+            if (["boolean", "number"].includes(typeof v)) return [[k, v.toString()]]
             if (!v) return []
             return [[k, v]]
           }),
@@ -40,4 +40,7 @@ export const parseFilters = <TFilters extends FiltersShape>({
   }
 }
 
-export type FiltersShape = Record<string, z.ZodString | z.ZodNumber | z.ZodArray<z.ZodNumber> | z.ZodArray<z.ZodString> | z.ZodBoolean>
+export type FiltersShape = Record<
+  string,
+  z.ZodString | z.ZodNumber | z.ZodArray<z.ZodNumber> | z.ZodArray<z.ZodString> | z.ZodBoolean
+>

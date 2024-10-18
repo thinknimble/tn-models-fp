@@ -65,5 +65,5 @@ export const listResponse: ListResponse = {
 }
 export const [mockEntity1Snaked, mockEntity2Snaked] = listResponse.results as [
   ListResponse["results"][0],
-  ListResponse["results"][0]
+  ListResponse["results"][0],
 ]

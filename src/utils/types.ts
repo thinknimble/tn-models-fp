@@ -5,12 +5,12 @@ export type Prettify<T> = {
 export type And<T extends readonly boolean[]> = T extends { length: 0 }
   ? true
   : T extends [infer TFirst, ...infer TRest]
-  ? TFirst extends true
-    ? TRest extends boolean[]
-      ? And<TRest>
+    ? TFirst extends true
+      ? TRest extends boolean[]
+        ? And<TRest>
+        : false
       : false
     : false
-  : false
 export type IsNever<T> = [T] extends [never] ? true : false
 {
   //IsNever tests
@@ -21,18 +21,19 @@ export type IsNever<T> = [T] extends [never] ? true : false
     Expect<Equals<IsNever<4>, false>>,
     Expect<Equals<IsNever<"Hello">, false>>,
     Expect<Equals<IsNever<unknown>, false>>,
-    Expect<Equals<IsNever<any>, false>>
+    Expect<Equals<IsNever<any>, false>>,
   ]
 }
-export type Is<TSubject, TReference> = And<[IsNever<TSubject>, IsNever<TReference>]> extends true
-  ? true
-  : IsNever<TSubject> extends true
-  ? false
-  : IsNever<TReference> extends true
-  ? IsNever<TSubject>
-  : TSubject extends TReference
-  ? true
-  : false
+export type Is<TSubject, TReference> =
+  And<[IsNever<TSubject>, IsNever<TReference>]> extends true
+    ? true
+    : IsNever<TSubject> extends true
+      ? false
+      : IsNever<TReference> extends true
+        ? IsNever<TSubject>
+        : TSubject extends TReference
+          ? true
+          : false
 {
   //Is tests
   type tests = [
@@ -42,7 +43,7 @@ export type Is<TSubject, TReference> = And<[IsNever<TSubject>, IsNever<TReferenc
     Expect<Equals<Is<"Hello", string>, true>>,
     Expect<Equals<Is<unknown, boolean>, false>>,
     // anything is unknown so this should be okay
-    Expect<Equals<Is<boolean, unknown>, true>>
+    Expect<Equals<Is<boolean, unknown>, true>>,
   ]
 }
 export type UnknownIfNever<T, TRes = T> = IsNever<T> extends true ? unknown : TRes

@@ -17,11 +17,11 @@ import {
 } from "../utils"
 
 export type CustomServiceCallInputObj<
-  TInput extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny> = z.ZodUndefined
+  TInput extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny> = z.ZodUndefined,
 > = UnknownIfNever<TInput, { inputShape: TInput }>
 
 export type CustomServiceCallOutputObj<
-  TOutput extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny> = z.ZodUndefined
+  TOutput extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny> = z.ZodUndefined,
 > = UnknownIfNever<
   TOutput,
   {
@@ -31,21 +31,22 @@ export type CustomServiceCallOutputObj<
 
 export type CustomServiceCallFiltersObj<
   TFilters extends FiltersShape | z.ZodVoid = z.ZodVoid,
-  TOutput extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny> = z.ZodVoid
-> = And<[IsAny<TOutput>, IsAny<TFilters>]> extends true
-  ? { filtersShape?: any }
-  : TOutput extends z.ZodVoid
-  ? unknown
-  : UnknownIfNever<TFilters, { filtersShape?: TFilters }>
+  TOutput extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny> = z.ZodVoid,
+> =
+  And<[IsAny<TOutput>, IsAny<TFilters>]> extends true
+    ? { filtersShape?: any }
+    : TOutput extends z.ZodVoid
+      ? unknown
+      : UnknownIfNever<TFilters, { filtersShape?: TFilters }>
 
 type InferCallbackInput<TInput extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny>> =
   TInput extends z.ZodRawShape
     ? GetInferredFromRawWithBrand<TInput>
     : TInput extends z.ZodRawShape
-    ? GetInferredFromRawWithBrand<TInput>
-    : TInput extends z.ZodTypeAny
-    ? z.infer<TInput>
-    : never
+      ? GetInferredFromRawWithBrand<TInput>
+      : TInput extends z.ZodTypeAny
+        ? z.infer<TInput>
+        : never
 
 type CallbackInput<TInput extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny>> = TInput extends z.ZodVoid
   ? unknown
@@ -54,22 +55,22 @@ type CallbackInput<TInput extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.Z
     }
 type CallbackFilters<
   TFilters extends FiltersShape | z.ZodVoid,
-  TOutput extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny> = z.ZodVoid
+  TOutput extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny> = z.ZodVoid,
 > = TOutput extends z.ZodVoid
   ? unknown
   : TFilters extends FiltersShape
-  ? { parsedFilters?: SnakeCasedPropertiesDeep<InferShapeOrZod<TFilters>> }
-  : unknown
+    ? { parsedFilters?: SnakeCasedPropertiesDeep<InferShapeOrZod<TFilters>> }
+    : unknown
 
 type StringTrailingSlash = `${string}/`
 type AxiosCall = <TUri extends StringTrailingSlash, T = any, R = AxiosResponse<T>, D = any>(
   url: TUri,
-  config?: AxiosRequestConfig<D>
+  config?: AxiosRequestConfig<D>,
 ) => Promise<R>
 type BodyAxiosCall = <TUri extends StringTrailingSlash, T = any, R = AxiosResponse<T>, D = any>(
   url: StringTrailingSlash,
   data?: D,
-  config?: AxiosRequestConfig<D>
+  config?: AxiosRequestConfig<D>,
 ) => Promise<R>
 
 export type AxiosLike = {
@@ -89,7 +90,7 @@ export type StandAloneCallType = "StandAlone"
 export type ServiceCallFn<
   TInput extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny> = z.ZodVoid,
   TOutput extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny> = z.ZodVoid,
-  TFilters extends FiltersShape | z.ZodVoid = z.ZodVoid
+  TFilters extends FiltersShape | z.ZodVoid = z.ZodVoid,
 > = (...args: ResolveServiceCallArgs<TInput, TFilters>) => Promise<InferShapeOrZodWithoutBrand<TOutput>>
 
 type BaseUriInput<TCallType extends string = ""> = TCallType extends StandAloneCallType
@@ -102,21 +103,21 @@ export type CustomServiceCallback<
   TInput extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny> = z.ZodVoid,
   TOutput extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny> = z.ZodVoid,
   TFilters extends FiltersShape | z.ZodVoid = z.ZodVoid,
-  TCallType extends string = ""
+  TCallType extends string = "",
 > = (
   params: {
     client: AxiosLike
   } & BaseUriInput<TCallType> &
     CallbackUtils<TInput, TOutput> &
     CallbackInput<TInput> &
-    CallbackFilters<TFilters, TOutput>
+    CallbackFilters<TFilters, TOutput>,
 ) => Promise<InferShapeOrZodWithoutBrand<TOutput>>
 
 export type CustomServiceCallOpts<
   TInput extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny> = z.ZodVoid,
   TOutput extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny> = z.ZodVoid,
   TFilters extends FiltersShape | z.ZodVoid = z.ZodVoid,
-  TCallType extends string = ""
+  TCallType extends string = "",
 > = CustomServiceCallInputObj<TInput> &
   CustomServiceCallOutputObj<TOutput> & {
     callback: CustomServiceCallback<TInput, TOutput, TFilters, TCallType>
@@ -131,7 +132,7 @@ type ToApiPlaceholder = { toApi: (obj: object) => any }
 export type CustomServiceCallPlaceholder<
   TInput extends z.ZodRawShape | ZodPrimitives | z.ZodVoid = any,
   TOutput extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny> | z.ZodVoid = any,
-  TFilters extends FiltersShape | z.ZodVoid = any
+  TFilters extends FiltersShape | z.ZodVoid = any,
 > = {
   inputShape: TInput
   outputShape: TOutput
@@ -143,62 +144,60 @@ export type CustomServiceCallPlaceholder<
     utils: FromApiPlaceholder & ToApiPlaceholder
   }) => Promise<InferShapeOrZod<TOutput>>
 }
-type ResolveInputArg<TInput extends object> = Is<TInput, z.ZodVoid> extends true
-  ? unknown
-  : { input: InferShapeOrZod<TInput> }
-type ResolveFilterArg<TFilters extends object> = Is<TFilters, z.ZodVoid> extends true
-  ? unknown
-  : { filters?: Partial<InferShapeOrZod<TFilters>> }
-type ResolveServiceCallArgs<TInput extends z.ZodRawShape | z.ZodType, TFilters extends FiltersShape | z.ZodVoid> = And<
-  [Is<TInput, z.ZodVoid>, Is<TFilters, z.ZodVoid>]
-> extends true
-  ? []
-  : Is<TFilters, z.ZodVoid> extends true
-  ? [args: InferShapeOrZod<TInput>]
-  : Is<TInput, z.ZodVoid> extends true
-  ? [args: ResolveFilterArg<TFilters>] | []
-  : [args: ResolveInputArg<TInput> & ResolveFilterArg<TFilters>]
+type ResolveInputArg<TInput extends object> =
+  Is<TInput, z.ZodVoid> extends true ? unknown : { input: InferShapeOrZod<TInput> }
+type ResolveFilterArg<TFilters extends object> =
+  Is<TFilters, z.ZodVoid> extends true ? unknown : { filters?: Partial<InferShapeOrZod<TFilters>> }
+type ResolveServiceCallArgs<TInput extends z.ZodRawShape | z.ZodType, TFilters extends FiltersShape | z.ZodVoid> =
+  And<[Is<TInput, z.ZodVoid>, Is<TFilters, z.ZodVoid>]> extends true
+    ? []
+    : Is<TFilters, z.ZodVoid> extends true
+      ? [args: InferShapeOrZod<TInput>]
+      : Is<TInput, z.ZodVoid> extends true
+        ? [args: ResolveFilterArg<TFilters>] | []
+        : [args: ResolveInputArg<TInput> & ResolveFilterArg<TFilters>]
 
 export type InvalidEntryMessage = "Invalid entry does not match CustomServiceCall type"
 
 /**
  * Get resulting custom service call from `createApi`
  */
-export type CustomServiceCallsRecord<TOpts extends object> = TOpts extends Record<string, CustomServiceCallPlaceholder>
-  ? {
-      [K in keyof TOpts]: TOpts[K] extends CustomServiceCallPlaceholder<infer TInput, infer TOutput, any>
-        ? TOutput extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny>
-          ? TOpts[K] extends { filtersShape?: infer TFilters }
-            ? TFilters extends FiltersShape
-              ? ServiceCallFn<TInput, TOutput, TFilters>
+export type CustomServiceCallsRecord<TOpts extends object> =
+  TOpts extends Record<string, CustomServiceCallPlaceholder>
+    ? {
+        [K in keyof TOpts]: TOpts[K] extends CustomServiceCallPlaceholder<infer TInput, infer TOutput, any>
+          ? TOutput extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny>
+            ? TOpts[K] extends { filtersShape?: infer TFilters }
+              ? TFilters extends FiltersShape
+                ? ServiceCallFn<TInput, TOutput, TFilters>
+                : ServiceCallFn<TInput, TOutput, z.ZodVoid>
               : ServiceCallFn<TInput, TOutput, z.ZodVoid>
-            : ServiceCallFn<TInput, TOutput, z.ZodVoid>
-          : ServiceCallFn<TInput, z.ZodVoid, z.ZodVoid>
-        : TOpts[K]
-    }
-  : "This should be a record of custom calls"
+            : ServiceCallFn<TInput, z.ZodVoid, z.ZodVoid>
+          : TOpts[K]
+      }
+    : "This should be a record of custom calls"
 
 export type ResolveShapeOrVoid<
   TInputShape extends z.ZodRawShape | ZodPrimitives = never,
   TOutputShape extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny> = never,
-  TFiltersShape extends FiltersShape | z.ZodVoid = never
+  TFiltersShape extends FiltersShape | z.ZodVoid = never,
 > = {
   input: IsNever<TInputShape> extends true ? z.ZodVoid : TInputShape
   output: IsNever<TOutputShape> extends true
     ? z.ZodVoid
     : TOutputShape extends z.ZodRawShape
-    ? UnwrapBranded<TOutputShape>
-    : TOutputShape
+      ? UnwrapBranded<TOutputShape>
+      : TOutputShape
   filters: IsNever<TOutputShape> extends true
     ? z.ZodVoid
     : IsNever<TFiltersShape> extends true
-    ? z.ZodVoid
-    : TFiltersShape
+      ? z.ZodVoid
+      : TFiltersShape
 }
 
 export type ResolveCustomServiceCallOpts<
   TInputShape extends z.ZodRawShape | ZodPrimitives = never,
   TOutputShape extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny> = never,
   TFiltersShape extends FiltersShape | z.ZodVoid = never,
-  TShapeOrVoid extends ResolveShapeOrVoid<any, any, any> = ResolveShapeOrVoid<TInputShape, TOutputShape, TFiltersShape>
+  TShapeOrVoid extends ResolveShapeOrVoid<any, any, any> = ResolveShapeOrVoid<TInputShape, TOutputShape, TFiltersShape>,
 > = CustomServiceCallOpts<TShapeOrVoid["input"], TShapeOrVoid["output"], TShapeOrVoid["filters"]>

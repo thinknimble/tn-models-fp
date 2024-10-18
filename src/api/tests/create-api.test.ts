@@ -57,7 +57,7 @@ describe("createApi", async () => {
         //@ts-expect-error should not include update method
         ExpectedReturn["update"],
         //@ts-expect-error should not include upsert method
-        ExpectedReturn["upsert"]
+        ExpectedReturn["upsert"],
       ]
       const testApiNoModels = createApi({
         baseUri: "",
@@ -77,7 +77,7 @@ describe("createApi", async () => {
         //@ts-expect-error should not include customServiceCalls
         ExpectedReturn["customServiceCalls"],
         //@ts-expect-error should not include  csc
-        ExpectedReturn["csc"]
+        ExpectedReturn["csc"],
       ]
 
       const testApiOnlyEntity = createApi({
@@ -114,7 +114,7 @@ describe("createApi", async () => {
         //@ts-expect-error should not show up custom calls
         ExpectedReturn["customServiceCalls"],
         //@ts-expect-error should not show up custom calls
-        ExpectedReturn["csc"]
+        ExpectedReturn["csc"],
       ]
     })
   })
@@ -484,7 +484,7 @@ describe("createApi", async () => {
           Expect<Equals<UriParameter, typeof slashEndingBaseUri>>,
           Expect<Extends<UriParameter, `slashEndingUri/`>>,
           //@ts-expect-error non slash ending uri should error on ts
-          Expect<Extends<UriParameter, `nonSlashEnding`>>
+          Expect<Extends<UriParameter, `nonSlashEnding`>>,
         ]
         //@ts-expect-error should error bc we're not ending the url with a slash
         client.get(`${slashEndingBaseUri}/slashEndingUri`)
@@ -693,7 +693,7 @@ describe("TS Tests", () => {
               input: InferShapeOrZod<tInputShape>
             } & {
               filters?: Partial<InferShapeOrZod<tFiltersShape>> | undefined
-            }
+            },
           ) => Promise<InferShapeOrZod<tOutputShape>>
         >
       >,
@@ -711,7 +711,7 @@ describe("TS Tests", () => {
           ) => Promise<InferShapeOrZod<tOutputShape>>
         >
       >,
-      Expect<Equals<result["justCallback"], () => Promise<void>>>
+      Expect<Equals<result["justCallback"], () => Promise<void>>>,
     ]
   })
 
@@ -736,10 +736,10 @@ describe("TS Tests", () => {
           (
             args: {
               input: InferShapeOrZod<inputShapeMock>
-            } & { filters?: Partial<InferShapeOrZod<filtersShapeMock>> }
+            } & { filters?: Partial<InferShapeOrZod<filtersShapeMock>> },
           ) => Promise<InferShapeOrZod<outputShapeMock>>
         >
-      >
+      >,
     ]
   })
 
@@ -772,7 +772,7 @@ describe("TS Tests", () => {
       Expect<Equals<Parameters<apiStrId["remove"]>[0], string>>,
       Expect<Equals<Parameters<apiNumId["remove"]>[0], number>>,
       Expect<Equals<Parameters<apiStrId["retrieve"]>[0], string>>,
-      Expect<Equals<Parameters<apiNumId["retrieve"]>[0], number>>
+      Expect<Equals<Parameters<apiNumId["retrieve"]>[0], number>>,
     ]
   })
 
@@ -801,7 +801,7 @@ describe("TS Tests", () => {
       Expect<Equals<Awaited<ReturnType<api["create"]>>, unwrappedReadonlyBrands>>,
       Expect<Equals<Awaited<ReturnType<api["update"]>>, unwrappedReadonlyBrands>>,
       Expect<Equals<Awaited<ReturnType<api["update"]["replace"]>>, unwrappedReadonlyBrands>>,
-      Expect<Equals<Awaited<ReturnType<api["update"]["replace"]["asPartial"]>>, unwrappedReadonlyBrands>>
+      Expect<Equals<Awaited<ReturnType<api["update"]["replace"]["asPartial"]>>, unwrappedReadonlyBrands>>,
     ]
   })
   it("should not show up any built-in method if there is no `models` passed", () => {
