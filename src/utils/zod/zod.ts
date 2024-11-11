@@ -76,6 +76,9 @@ export function resolveRecursiveZod<T extends z.ZodTypeAny>(zod: T) {
   if (isZodUnion(zod)) {
     return zodUnionRecursive(zod)
   }
+  if (isNativeZodReadonly(zod)) {
+    return zodNativeReadonlyRecursive(zod)
+  }
   return zod
 }
 
@@ -109,7 +112,7 @@ function zodUnionRecursive<T extends z.ZodUnion<readonly [z.ZodTypeAny]>>(zod: T
   return z.union(remapped as readonly [z.ZodTypeAny, z.ZodTypeAny, ...z.ZodTypeAny[]])
 }
 
-function zodNativeReadonlyRecursive<T extends z.ZodReadonly<z.ZodTypeAny>>(zodReadonly: z.ZodReadonly<T>): any {
+function zodNativeReadonlyRecursive<T extends z.ZodTypeAny>(zodReadonly: z.ZodReadonly<T>): any {
   const unwrapped = zodReadonly.unwrap()
   return resolveRecursiveZod(unwrapped).readonly()
 }
