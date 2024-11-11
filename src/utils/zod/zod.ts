@@ -45,6 +45,9 @@ export const isZodReadonly = (input: unknown): input is z.ZodBranded<any, Readon
 export const isZodVoid = (input: unknown): input is z.ZodVoid => {
   return isZod(input) && input._def.typeName === z.ZodFirstPartyTypeKind.ZodVoid
 }
+export const isNativeZodReadonly = (input: unknown): input is z.ZodReadonly<z.ZodTypeAny> => {
+  return isZod(input) && input._def.typeName === z.ZodFirstPartyTypeKind.ZodReadonly
+}
 
 //TODO: we should probably revisit the types here but they seem not too friendly to tackle given the recursive nature of this operation
 export function resolveRecursiveZod<T extends z.ZodTypeAny>(zod: T) {
@@ -104,6 +107,11 @@ function zodUnionRecursive<T extends z.ZodUnion<readonly [z.ZodTypeAny]>>(zod: T
   const allUnions = zod._def.options
   const remapped: unknown = allUnions.map((u) => resolveRecursiveZod(u))
   return z.union(remapped as readonly [z.ZodTypeAny, z.ZodTypeAny, ...z.ZodTypeAny[]])
+}
+
+function zodNativeReadonlyRecursive<T extends z.ZodReadonly<z.ZodTypeAny>>(zodReadonly: z.ZodReadonly<T>): any {
+  const unwrapped = zodReadonly.unwrap()
+  return resolveRecursiveZod(unwrapped).readonly()
 }
 
 //TODO: why are we not using `resolveRecursiveZod` as the main method instead..
