@@ -157,3 +157,45 @@ export type HandleZodArrayReadonly<T extends z.ZodArray<any>> =
           ? z.ZodArray<TROInner>
           : z.ZodArray<TElement>
     : never
+
+/**strip readonly fields */
+
+/**
+ * Unwrap readonly recursively, useful for the library when trying to reuse regular models as output
+ */
+export type StripZodReadonly<T extends z.ZodRawShape> = {
+  /**
+   * Summary:
+   * UnwrapZodReadonly T extends z.ZodRawShape
+   *  K in keyof T: T[K] is z.readonly<TInner> ?
+   *    TInner is z.object ? HandleZodObject :
+   *    TInner is z.array ? HandleZodArray :
+   *    -nothing to do -
+   *    TInner
+   *  -nothing to do-
+   *  T
+   */
+  [K in keyof T as T[K] extends z.ZodReadonly<any>
+    ? never
+    : T[K] extends z.ZodArray<infer TElement>
+      ? TElement extends z.ZodReadonly<any>
+        ? never
+        : K
+      : K]: T[K] extends z.ZodObject<any>
+    ? HandleStripZodObjectReadonly<T[K]>
+    : T[K] extends z.ZodArray<any>
+      ? HandleStripZodArrayReadonly<T[K]>
+      : T[K]
+}
+
+export type HandleStripZodObjectReadonly<T extends z.ZodObject<any>> =
+  T extends z.ZodObject<infer TShape> ? z.ZodObject<StripZodReadonly<TShape>> : T
+
+export type HandleStripZodArrayReadonly<T extends z.ZodArray<any>> =
+  T extends z.ZodArray<infer TElement>
+    ? TElement extends z.ZodObject<z.ZodRawShape>
+      ? z.ZodArray<HandleStripZodObjectReadonly<TElement>>
+      : TElement extends z.ZodArray<any>
+        ? z.ZodArray<HandleStripZodArrayReadonly<TElement>>
+        : never
+    : never

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { z } from "zod"
-import { HandleZodReadonly, isZodReadonly, UnwrapZodReadonly } from "../zod"
+import { HandleZodReadonly, isZodReadonly, StripZodReadonly, UnwrapZodReadonly } from "../zod"
 
 /**
  * Simplifies the zod object type to the plain zod object with shape.
@@ -20,7 +20,7 @@ describe("Check on the zod readonly feature", () => {
     type TestIfUnwrapsId = UnwrapZodReadonly<typeof simpleShape>
     type tests = [Expect<Equals<TestIfUnwrapsId, { id: z.ZodString; name: z.ZodString }>>]
   })
-  it("TS - Unwrap readonly array primitive", () => {
+  it("TS - HandleZodReadonly - Unwrap readonly array primitive", () => {
     /**
      * An array readonly shape
      */
@@ -53,7 +53,7 @@ describe("Check on the zod readonly feature", () => {
       >,
     ]
   })
-  it("TS - Unwrap readonly complex", () => {
+  it("TS - UnwrapZodReadonly - Unwrap readonly complex", () => {
     /**
      * An array readonly shape
      */
@@ -102,5 +102,37 @@ describe("Check on the zod readonly feature", () => {
   it("isReadonly", () => {
     const aReadonlyZod = z.string().readonly()
     expect(isZodReadonly(aReadonlyZod)).toBe(true)
+  })
+  it("TS - StripZodReadonly - strip readonly types", () => {
+    /**
+     * An array readonly shape
+     */
+    const objReadonlyNestedOneLevel = {
+      id: z.string().readonly(),
+      name: z.string(),
+      profile: z.object({
+        id: z.string().readonly(),
+        name: z.string(),
+      }),
+      relatedFieldIds: z.string().readonly().array(),
+      wallets: z
+        .object({
+          id: z.string().readonly(),
+          name: z.string(),
+        })
+        .array(),
+    }
+    type unwrappedResult = StripZodReadonly<typeof objReadonlyNestedOneLevel>
+
+    type tests = [
+      //@ts-expect-error ID should have been stripped
+      unwrappedResult["id"],
+      //@ts-expect-error ID should have been stripped
+      unwrappedResult["profile"]["shape"]["id"],
+      //@ts-expect-error relatedFieldIds should have been stripped
+      unwrappedResult["relatedFieldIds"],
+      //@ts-expect-error ID should have been stripped
+      unwrappedResult["wallets"]["element"]["shape"]["id"],
+    ]
   })
 })
