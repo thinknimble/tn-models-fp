@@ -1,7 +1,7 @@
 import { faker } from "@faker-js/faker"
 import { describe, expect, it, vi } from "vitest"
 import { z } from "zod"
-import { GetInferredFromRawWithBrand, Pagination, readonly } from "../../utils"
+import { GetInferredFromRawWithReadonly, Pagination } from "../../utils"
 import { createApi } from "../create-api"
 import { createPaginatedServiceCall } from "../create-paginated-call"
 import { entityZodShape, listResponse, mockEntity1, mockEntity2, mockedAxios } from "./mocks"
@@ -160,7 +160,10 @@ describe("createPaginatedServiceCall", () => {
     mockedAxios.post.mockResolvedValueOnce({
       data: listResponse,
     })
-    const body: Omit<GetInferredFromRawWithBrand<(typeof testPostPaginatedServiceCall)["inputShape"]>, "pagination"> = {
+    const body: Omit<
+      GetInferredFromRawWithReadonly<(typeof testPostPaginatedServiceCall)["inputShape"]>,
+      "pagination"
+    > = {
       dObj: {
         dObj1: 1,
       },
@@ -190,7 +193,10 @@ describe("createPaginatedServiceCall", () => {
     mockedAxios.post.mockResolvedValueOnce({
       data: listResponse,
     })
-    const body: Omit<GetInferredFromRawWithBrand<(typeof testPostPaginatedServiceCall)["inputShape"]>, "pagination"> = {
+    const body: Omit<
+      GetInferredFromRawWithReadonly<(typeof testPostPaginatedServiceCall)["inputShape"]>,
+      "pagination"
+    > = {
       dObj: {
         dObj1: 1,
       },
@@ -481,12 +487,12 @@ describe("createPaginatedServiceCall", () => {
     //assert
     expect(result.results).toEqual([{ id: mockValue.id, extraField: mockValue.extra_field }])
   })
-  it("Does not return a brand in the response if there's one in the shape", async () => {
+  it("Does not return readonly in the response if there's one in the shape", async () => {
     //arrange
     const testTrivialPaginatedCall = createPaginatedServiceCall({
       outputShape: {
         id: z.string().uuid(),
-        brandedField: readonly(z.string()),
+        brandedField: z.string().readonly(),
       },
     })
     const baseUri = "checkBrands"

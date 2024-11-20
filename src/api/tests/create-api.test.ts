@@ -4,13 +4,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { z } from "zod"
 import {
   GetInferredFromRaw,
-  GetInferredFromRawWithBrand,
-  GetInferredWithoutReadonlyBrands,
+  GetInferredFromRawWithReadonly,
+  GetInferredFromRawWithStripReadonly,
   InferShapeOrZod,
   Pagination,
   objectToCamelCaseArr,
   objectToSnakeCaseArr,
-  readonly,
 } from "../../utils"
 import { createApi } from "../create-api"
 import { createCustomServiceCall } from "../create-custom-call"
@@ -124,7 +123,7 @@ describe("createApi", async () => {
       mockedAxios.post.mockReset()
     })
 
-    const createInput: GetInferredFromRawWithBrand<typeof createZodShape> = {
+    const createInput: GetInferredFromRaw<typeof createZodShape> = {
       age: 19,
       lastName: "Doe",
       firstName: "Jane",
@@ -194,16 +193,16 @@ describe("createApi", async () => {
     it("It properly works with create model and readonly id", async () => {
       //arrange
       const baseShape = {
-        id: readonly(z.string().uuid()),
-        datetimeCreated: readonly(z.string().datetime().optional()),
-        lastEdited: readonly(z.string().datetime().optional()),
+        id: z.string().uuid().readonly(),
+        datetimeCreated: z.string().datetime().optional().readonly(),
+        lastEdited: z.string().datetime().optional().readonly(),
       }
       const entityShape = {
         ...baseShape,
         email: z.string().email(),
         firstName: z.string(),
         lastName: z.string(),
-        token: readonly(z.string().nullable().optional()),
+        token: z.string().nullable().optional().readonly(),
       }
       const createShape = {
         ...entityShape,
@@ -250,8 +249,8 @@ describe("createApi", async () => {
       }
       const baseModelShape = {
         id: z.string().uuid(),
-        datetimeCreated: readonly(z.string().datetime().optional()),
-        lastEdited: readonly(z.string().datetime().optional()),
+        datetimeCreated: z.string().datetime().optional().readonly(),
+        lastEdited: z.string().datetime().optional().readonly(),
       }
       const subEntityShape = {
         firstName: z.string(),
@@ -432,7 +431,7 @@ describe("createApi", async () => {
       type list = (typeof testApi)["list"]
       type isPartial = Equals<
         Required<Parameters<list>[0]> extends { filters?: infer TFilters } | undefined ? TFilters : unknown,
-        Partial<GetInferredWithoutReadonlyBrands<typeof extraFiltersShape>>
+        Partial<GetInferredFromRawWithStripReadonly<typeof extraFiltersShape>>
       >
       type test = Expect<isPartial>
     })
@@ -660,19 +659,19 @@ describe("TS Tests", () => {
         inputShape: tInputShape
         outputShape: tOutputShape
         filtersShape: tFiltersShape
-        callback: (params: any) => Promise<GetInferredFromRawWithBrand<tOutputShape>>
+        callback: (params: any) => Promise<GetInferredFromRawWithReadonly<tOutputShape>>
       }
       noFiltersService: {
         inputShape: tInputShape
         outputShape: tOutputShape
         filtersShape: tFiltersShapeVoid
-        callback: (params: any) => Promise<GetInferredFromRawWithBrand<tOutputShape>>
+        callback: (params: any) => Promise<GetInferredFromRawWithReadonly<tOutputShape>>
       }
       noInputWithFilterService: {
         inputShape: z.ZodVoid
         outputShape: tOutputShape
         filtersShape: tFiltersShape
-        callback: (params: any) => Promise<GetInferredFromRawWithBrand<tOutputShape>>
+        callback: (params: any) => Promise<GetInferredFromRawWithReadonly<tOutputShape>>
       }
       justCallback: {
         inputShape: z.ZodVoid
@@ -707,7 +706,7 @@ describe("TS Tests", () => {
         Equals<
           result["noInputWithFilterService"],
           (
-            ...args: [{ filters?: Partial<GetInferredFromRawWithBrand<tFiltersShape>> }] | []
+            ...args: [{ filters?: Partial<GetInferredFromRawWithReadonly<tFiltersShape>> }] | []
           ) => Promise<InferShapeOrZod<tOutputShape>>
         >
       >,
@@ -745,11 +744,11 @@ describe("TS Tests", () => {
 
   it("infers the id with the type declared in the entity shape", () => {
     const entityShapeStrId = {
-      id: readonly(z.string()),
+      id: z.string().readonly(),
       name: z.string(),
     }
     const entityShapeNumId = {
-      id: readonly(z.number()),
+      id: z.number().readonly(),
       name: z.string(),
     }
     const apiStrId = createApi({
@@ -778,10 +777,10 @@ describe("TS Tests", () => {
 
   it("yields right types when using readonly fields", () => {
     const entityShape = {
-      id: readonly(z.string()),
+      id: z.string().readonly(),
       name: z.string(),
       lastName: z.string(),
-      fullName: readonly(z.string()),
+      fullName: z.string().readonly(),
     }
     const api = createApi({
       baseUri: "readonly",
@@ -806,10 +805,10 @@ describe("TS Tests", () => {
   })
   it("should not show up any built-in method if there is no `models` passed", () => {
     const entityShape = {
-      id: readonly(z.string()),
+      id: z.string().readonly(),
       name: z.string(),
       lastName: z.string(),
-      fullName: readonly(z.string()),
+      fullName: z.string().readonly(),
     }
     const api = createApi({
       baseUri: "readonly",

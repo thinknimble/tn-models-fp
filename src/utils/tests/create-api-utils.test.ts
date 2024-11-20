@@ -1,9 +1,9 @@
 import { faker } from "@faker-js/faker"
 import { describe, expect, it, vi } from "vitest"
 import { z } from "zod"
-import { createApiUtils, objectToSnakeCaseArr, removeReadonlyFields } from "../api"
-import { GetInferredFromRawWithBrand, readonly } from "../zod"
 import { mockedAxios } from "../../api/tests/mocks"
+import { createApiUtils, objectToSnakeCaseArr, removeReadonlyFields } from "../api"
+import { GetInferredFromRaw } from "../zod"
 
 describe("createApiUtils", () => {
   it("returns undefined when both input output are primitives", () => {
@@ -128,7 +128,7 @@ describe("createApiUtils", () => {
     const expoTokenInputShape = {
       expoToken: z.string(),
     }
-    type ExpoTokenInput = GetInferredFromRawWithBrand<typeof expoTokenInputShape>
+    type ExpoTokenInput = GetInferredFromRaw<typeof expoTokenInputShape>
     const expoTokenTest: ExpoTokenInput = {
       expoToken: "my-expo-token",
     }
@@ -206,16 +206,16 @@ describe("createApiUtils", () => {
 describe("removeReadonlyFields", () => {
   it("properly removes a readonly field", () => {
     const baseModelShape = {
-      id: readonly(z.string().uuid()),
-      datetimeCreated: readonly(z.string().datetime().optional()),
-      lastEdited: readonly(z.string().datetime().optional()),
+      id: z.string().uuid().readonly(),
+      datetimeCreated: z.string().datetime().optional().readonly(),
+      lastEdited: z.string().datetime().optional().readonly(),
     }
     const userShape = {
       ...baseModelShape,
       email: z.string().email(),
       firstName: z.string(),
       lastName: z.string(),
-      token: readonly(z.string().nullable().optional()),
+      token: z.string().nullable().optional().readonly(),
     }
 
     const userCreateShape = {

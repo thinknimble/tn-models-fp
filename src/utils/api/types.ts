@@ -1,22 +1,18 @@
 import { SnakeCasedPropertiesDeep } from "@thinknimble/tn-utils"
 import { z } from "zod"
-import { GetInferredFromRawWithBrand, ZodPrimitives } from "../zod"
+import { GetInferredFromRaw, ZodPrimitives } from "../zod"
 
 export type ToApiCall<TInput extends z.ZodRawShape | z.ZodTypeAny> = (
   obj: object,
 ) => TInput extends z.ZodRawShape
-  ? SnakeCasedPropertiesDeep<GetInferredFromRawWithBrand<TInput>>
+  ? SnakeCasedPropertiesDeep<GetInferredFromRaw<TInput>>
   : TInput extends z.ZodType
     ? z.infer<TInput>
     : never
 
 export type FromApiCall<TOutput extends z.ZodRawShape | z.ZodTypeAny> = (
   obj: object,
-) => TOutput extends z.ZodRawShape
-  ? GetInferredFromRawWithBrand<TOutput>
-  : TOutput extends z.ZodType
-    ? z.infer<TOutput>
-    : never
+) => TOutput extends z.ZodRawShape ? GetInferredFromRaw<TOutput> : TOutput extends z.ZodType ? z.infer<TOutput> : never
 
 type FromApiUtil<T extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny>> = {
   /**

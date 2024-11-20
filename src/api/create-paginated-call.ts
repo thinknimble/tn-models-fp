@@ -1,11 +1,11 @@
 import { z } from "zod"
 import {
-  IsNever,
   FiltersShape,
-  GetInferredFromRawWithBrand,
+  InferShapeOrZod,
+  IsNever,
   Pagination,
   UnknownIfNever,
-  UnwrapBrandedRecursive,
+  UnwrapZodReadonly,
   ZodPrimitives,
   getPaginatedShape,
   getPaginatedSnakeCasedZod,
@@ -24,10 +24,10 @@ const paginationObjShape = {
 export const createPaginatedServiceCall = <
   TOutput extends z.ZodRawShape = z.ZodRawShape,
   TFilters extends FiltersShape = never,
-  //things that are optional are better off being  never so that we can decided later whether we want to void them or not to exclude them from things
+  //things that are optional are better off being  never so that we can decide later whether we want to void them or not to exclude them from things
   TInput extends z.ZodRawShape | ZodPrimitives = never,
   TReturnType extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny> = ReturnType<
-    typeof getPaginatedZod<UnwrapBrandedRecursive<TOutput>>
+    typeof getPaginatedZod<UnwrapZodReadonly<TOutput>>
   >["shape"],
 >({
   inputShape,
@@ -115,12 +115,13 @@ export const createPaginatedServiceCall = <
       onError: opts?.disableLoggingWarning ? null : undefined,
     })
     //! although this claims not to be of the same type than our converted TOutput, it actually is, but all the added type complexity with camel casing util makes TS to think it is something different. It should be safe to cast this, we should definitely check this at runtime with tests
-    const result: unknown = { ...rawResponse, results: rawResponse.results.map((r) => objectToCamelCaseArr(r)) }
-    return result as GetInferredFromRawWithBrand<ReturnType<typeof getPaginatedShape<TOutput>>>
+    return { ...rawResponse, results: rawResponse.results.map((r) => objectToCamelCaseArr(r)) } as InferShapeOrZod<
+      ReturnType<typeof getPaginatedShape<TOutput>>
+    >
   }
   if (inputShape) {
     return {
-      callback: callback as CustomServiceCallback<any, any, any>,
+      callback: callback,
       inputShape,
       outputShape: newOutputShape,
       filtersShape: filtersShapeResolved ?? z.void(),
@@ -132,7 +133,7 @@ export const createPaginatedServiceCall = <
     >
   }
   return {
-    callback: callback as CustomServiceCallback<any, any, any>,
+    callback: callback,
     inputShape: z.void(),
     outputShape: newOutputShape,
     filtersShape: filtersShapeResolved ?? z.void(),

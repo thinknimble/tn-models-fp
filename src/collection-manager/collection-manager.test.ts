@@ -2,10 +2,10 @@ import { faker } from "@faker-js/faker"
 import axios from "axios"
 import { Mocked, beforeEach, describe, expect, it, vi } from "vitest"
 import { z } from "zod"
-import { createCollectionManager } from "."
 import { createApi } from "../api"
 import { objectToCamelCaseArr, objectToSnakeCaseArr } from "../utils"
 import { Pagination, getPaginatedSnakeCasedZod } from "../utils/pagination"
+import { createCollectionManager } from "./collection-manager"
 
 vi.mock("axios")
 

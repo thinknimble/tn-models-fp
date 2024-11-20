@@ -98,18 +98,22 @@ type GetZodObjectType<T extends z.ZodRawShape> = ReturnType<typeof z.object<T>>
 /**
  * Infer the shape type, removing readonly marks and inferring their inner types
  */
-export type GetInferredFromRaw<T extends z.ZodRawShape> = z.infer<GetZodObjectType<T>>
+export type GetInferredFromRaw<T extends z.ZodRawShape> = z.infer<GetZodObjectType<UnwrapZodReadonly<T>>>
+
+export type GetInferredFromRawWithReadonly<T extends z.ZodRawShape> = z.infer<GetZodObjectType<T>>
+
+export type GetInferredFromRawWithStripReadonly<T extends z.ZodRawShape> = z.infer<
+  GetZodObjectType<StripZodReadonly<T>>
+>
 
 export type PartializeShape<T extends z.ZodRawShape> = {
   [K in keyof T]: z.ZodOptional<T[K]>
 }
 export type InferShapeOrZod<T extends object> = T extends z.ZodRawShape
-  ? GetInferredFromRaw<T>
+  ? GetInferredFromRawWithReadonly<T>
   : T extends z.ZodTypeAny
     ? z.infer<T>
     : never
-
-type QuickTest<T extends z.ZodObject<any>> = T extends z.ZodObject<infer TInnerObj> ? TInnerObj : never
 
 /**
  * Unwrap readonly recursively, useful for the library when trying to reuse regular models as output
@@ -163,7 +167,7 @@ export type HandleZodArrayReadonly<T extends z.ZodArray<any>> =
 /**
  * Unwrap readonly recursively, useful for the library when trying to reuse regular models as output
  */
-export type StripZodReadonly<T extends z.ZodRawShape> = {
+export type StripZodReadonly<T extends z.ZodRawShape, TUnwrap extends (keyof T)[] = []> = {
   /**
    * Summary:
    * UnwrapZodReadonly T extends z.ZodRawShape
@@ -175,13 +179,15 @@ export type StripZodReadonly<T extends z.ZodRawShape> = {
    *  -nothing to do-
    *  T
    */
-  [K in keyof T as T[K] extends z.ZodReadonly<any>
-    ? never
-    : T[K] extends z.ZodArray<infer TElement>
-      ? TElement extends z.ZodReadonly<any>
-        ? never
-        : K
-      : K]: T[K] extends z.ZodObject<any>
+  [K in keyof T as K extends TUnwrap[number]
+    ? K
+    : T[K] extends z.ZodReadonly<any>
+      ? never
+      : T[K] extends z.ZodArray<infer TElement>
+        ? TElement extends z.ZodReadonly<any>
+          ? never
+          : K
+        : K]: T[K] extends z.ZodObject<any>
     ? HandleStripZodObjectReadonly<T[K]>
     : T[K] extends z.ZodArray<any>
       ? HandleStripZodArrayReadonly<T[K]>

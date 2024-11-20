@@ -5,14 +5,12 @@ import {
   And,
   CallbackUtils,
   FiltersShape,
-  GetInferredFromRawWithBrand,
+  GetInferredFromRaw,
   InferShapeOrZod,
-  InferShapeOrZodWithoutBrand,
   Is,
   IsAny,
   IsNever,
   UnknownIfNever,
-  UnwrapBrandedRecursive,
   ZodPrimitives,
 } from "../utils"
 
@@ -41,9 +39,9 @@ export type CustomServiceCallFiltersObj<
 
 type InferCallbackInput<TInput extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny>> =
   TInput extends z.ZodRawShape
-    ? GetInferredFromRawWithBrand<TInput>
+    ? GetInferredFromRaw<TInput>
     : TInput extends z.ZodRawShape
-      ? GetInferredFromRawWithBrand<TInput>
+      ? GetInferredFromRaw<TInput>
       : TInput extends z.ZodTypeAny
         ? z.infer<TInput>
         : never
@@ -91,7 +89,7 @@ export type ServiceCallFn<
   TInput extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny> = z.ZodVoid,
   TOutput extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny> = z.ZodVoid,
   TFilters extends FiltersShape | z.ZodVoid = z.ZodVoid,
-> = (...args: ResolveServiceCallArgs<TInput, TFilters>) => Promise<InferShapeOrZodWithoutBrand<TOutput>>
+> = (...args: ResolveServiceCallArgs<TInput, TFilters>) => Promise<InferShapeOrZod<TOutput>>
 
 type BaseUriInput<TCallType extends string = ""> = TCallType extends StandAloneCallType
   ? unknown
@@ -111,7 +109,7 @@ export type CustomServiceCallback<
     CallbackUtils<TInput, TOutput> &
     CallbackInput<TInput> &
     CallbackFilters<TFilters, TOutput>,
-) => Promise<InferShapeOrZodWithoutBrand<TOutput>>
+) => Promise<InferShapeOrZod<TOutput>>
 
 export type CustomServiceCallOpts<
   TInput extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny> = z.ZodVoid,
@@ -183,11 +181,7 @@ export type ResolveShapeOrVoid<
   TFiltersShape extends FiltersShape | z.ZodVoid = never,
 > = {
   input: IsNever<TInputShape> extends true ? z.ZodVoid : TInputShape
-  output: IsNever<TOutputShape> extends true
-    ? z.ZodVoid
-    : TOutputShape extends z.ZodRawShape
-      ? UnwrapBrandedRecursive<TOutputShape>
-      : TOutputShape
+  output: IsNever<TOutputShape> extends true ? z.ZodVoid : TOutputShape
   filters: IsNever<TOutputShape> extends true
     ? z.ZodVoid
     : IsNever<TFiltersShape> extends true

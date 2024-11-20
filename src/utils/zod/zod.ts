@@ -39,8 +39,8 @@ export const isZodUnion = (input: unknown): input is z.ZodUnion<readonly [z.ZodT
 export const isZodBrand = (input: unknown): input is z.ZodBranded<any, any> => {
   return isZod(input) && input._def?.typeName === z.ZodFirstPartyTypeKind.ZodBranded
 }
-export const isZodReadonly = (input: unknown): input is z.ZodBranded<any, ReadonlyTag> => {
-  return isZod(input) && isZodBrand(input) && input.description === READONLY_TAG
+export const isZodReadonly = (input: unknown): input is z.ZodReadonly<any> => {
+  return isZod(input) && input._def.typeName === z.ZodFirstPartyTypeKind.ZodReadonly
 }
 export const isZodVoid = (input: unknown): input is z.ZodVoid => {
   return isZod(input) && input._def.typeName === z.ZodFirstPartyTypeKind.ZodVoid
@@ -123,25 +123,11 @@ export function zodObjectToSnakeRecursive<T extends z.ZodRawShape>(
   return zodObj._def.unknownKeys === "passthrough" ? z.object(resultingShape).passthrough() : z.object(resultingShape)
 }
 
-function zodReadonlyToSnakeRecursive<T extends z.ZodBranded<any, ReadonlyTag>>(zodBrand: T): any {
-  return readonly(resolveRecursiveZod(zodBrand.unwrap()))
+function zodReadonlyToSnakeRecursive<T extends z.ZodReadonly<any>>(zod: T): any {
+  return resolveRecursiveZod(zod.unwrap()).readonly()
 }
 
 function zodBrandToSnakeRecursive<T extends z.ZodBranded<any, any>>(zodBrand: T): any {
   //brand is just a static type thing so I don't think this is going to affect that much runtime...We're losing the brand information anyway so I think it would be good to document that users should just not use brands since they're sort of pointless in the context of the library. We're just getting around the runtime here.
   return resolveRecursiveZod(zodBrand.unwrap()).brand()
-}
-
-export const READONLY_TAG = "ReadonlyField"
-export type ReadonlyTag = typeof READONLY_TAG
-export type ReadonlyField<T> = T & z.BRAND<ReadonlyTag>
-
-/**
- * Identity function that just brands this type so we can recognize readonly fields
- * @param zod
- * @returns
- */
-export const readonly = <T extends z.ZodTypeAny>(zod: T) => {
-  //we will detect readonly fields with brands at the type level and verify the ReadonlyTag with the description.
-  return zod.brand(READONLY_TAG).describe(READONLY_TAG)
 }
