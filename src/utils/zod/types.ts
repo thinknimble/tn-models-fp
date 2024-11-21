@@ -1,6 +1,5 @@
 import { SnakeCase } from "@thinknimble/tn-utils"
 import { z } from "zod"
-import { ReadonlyTag } from "./zod"
 
 type InferZodArray<T extends z.ZodArray<z.ZodTypeAny>> =
   T extends z.ZodArray<infer TEl> ? z.ZodArray<ZodRecursiveResult<TEl>> : never
@@ -97,79 +96,112 @@ export type ZodPrimitives =
 type GetZodObjectType<T extends z.ZodRawShape> = ReturnType<typeof z.object<T>>
 
 /**
- * Get the resulting inferred type from a zod shape (brands are inferred as such)
- */
-export type GetInferredFromRawWithBrand<T extends z.ZodRawShape> = z.infer<GetZodObjectType<T>>
-
-/**
- * Strip read only brand from a type, optionally unwrap some types from brands
- */
-export type StripReadonlyBrand<T extends z.ZodRawShape, TUnwrap extends (keyof T)[] = []> = {
-  [K in keyof T as K extends TUnwrap[number]
-    ? K
-    : IsBrand<T[K], ReadonlyTag> extends true
-      ? never
-      : K]: T[K] extends z.ZodBranded<infer TZod, any> ? TZod : T[K]
-}
-
-/**
- * Infer the shape type, removing all the readonly fields in it.
- */
-export type GetInferredWithoutReadonlyBrands<T extends z.ZodRawShape> = GetInferredFromRawWithBrand<
-  StripReadonlyBrand<T>
->
-
-/**
  * Infer the shape type, removing readonly marks and inferring their inner types
  */
-export type GetInferredFromRaw<T extends z.ZodRawShape> = GetInferredFromRawWithBrand<
-  UnwrapBrandedRecursive<T, ReadonlyTag>
+export type GetInferredFromRaw<T extends z.ZodRawShape> = z.infer<GetZodObjectType<UnwrapZodReadonly<T>>>
+
+export type GetInferredFromRawWithReadonly<T extends z.ZodRawShape> = z.infer<GetZodObjectType<T>>
+
+export type GetInferredFromRawWithStripReadonly<T extends z.ZodRawShape> = z.infer<
+  GetZodObjectType<StripZodReadonly<T>>
 >
 
 export type PartializeShape<T extends z.ZodRawShape> = {
   [K in keyof T]: z.ZodOptional<T[K]>
 }
 export type InferShapeOrZod<T extends object> = T extends z.ZodRawShape
-  ? GetInferredFromRawWithBrand<T>
-  : T extends z.ZodTypeAny
-    ? z.infer<T>
-    : never
-export type InferShapeOrZodWithoutBrand<T extends object> = T extends z.ZodRawShape
-  ? GetInferredFromRaw<T>
+  ? GetInferredFromRawWithReadonly<T>
   : T extends z.ZodTypeAny
     ? z.infer<T>
     : never
 
 /**
- * Determine whether a given zod is of a certain brand
+ * Unwrap readonly recursively, useful for the library when trying to reuse regular models as output
  */
-export type IsBrand<T extends z.ZodTypeAny, TBrand extends string> =
-  T extends z.ZodBranded<infer TZod, any> ? (z.infer<T> extends z.infer<TZod> & z.BRAND<TBrand> ? true : false) : false
-
-//!Good attempt but cannot use this with generic in createApi
-export type BrandedKeys<T extends z.ZodRawShape> = keyof {
-  [K in keyof T as T[K] extends z.ZodBranded<any, any> ? K : never]: K
-}
-
-export type UnwrapBranded<T extends z.ZodRawShape, TBrandType extends string | number | symbol = any> = {
-  [K in keyof T]: T[K] extends z.ZodBranded<infer TUnwrapped, TBrandType> ? TUnwrapped : T[K]
-}
-
-type UnwrapBrandedInArray<T extends z.ZodArray<z.ZodTypeAny>, TBrandType extends string | number | symbol = any> =
-  T extends z.ZodArray<infer TZod>
-    ? TZod extends z.ZodObject<z.ZodRawShape>
-      ? TZod["shape"] extends z.ZodRawShape
-        ? z.ZodArray<z.ZodObject<UnwrapBrandedRecursive<TZod["shape"], TBrandType>>>
-        : T
-      : T
-    : T
-
-export type UnwrapBrandedRecursive<T extends z.ZodRawShape, TBrandType extends string | number | symbol = any> = {
-  [K in keyof T]: T[K] extends z.ZodObject<z.ZodRawShape>
-    ? z.ZodObject<UnwrapBrandedRecursive<T[K]["shape"], TBrandType>>
-    : T[K] extends z.ZodArray<z.ZodObject<z.ZodRawShape>>
-      ? UnwrapBrandedInArray<T[K], TBrandType>
-      : T[K] extends z.ZodBranded<infer TUnwrapped, TBrandType>
-        ? TUnwrapped
+export type UnwrapZodReadonly<T extends z.ZodRawShape> = {
+  /**
+   * Summary:
+   * UnwrapZodReadonly T extends z.ZodRawShape
+   *  K in keyof T: T[K] is z.readonly<TInner> ?
+   *    TInner is z.object ? HandleZodObject :
+   *    TInner is z.array ? HandleZodArray :
+   *    -nothing to do -
+   *    TInner
+   *  -nothing to do-
+   *  T
+   */
+  [K in keyof T]: T[K] extends z.ZodReadonly<infer TROInner>
+    ? HandleZodReadonly<T[K]>
+    : T[K] extends z.ZodObject<any>
+      ? HandleZodObjectReadonly<T[K]>
+      : T[K] extends z.ZodArray<any>
+        ? HandleZodArrayReadonly<T[K]>
         : T[K]
 }
+
+export type HandleZodReadonly<T extends z.ZodReadonly<any>> =
+  T extends z.ZodReadonly<infer TROInner>
+    ? TROInner extends z.ZodArray<any>
+      ? HandleZodArrayReadonly<TROInner>
+      : TROInner extends z.ZodObject<any>
+        ? HandleZodObjectReadonly<TROInner>
+        : TROInner
+    : never
+
+export type HandleZodObjectReadonly<T extends z.ZodObject<any>> =
+  T extends z.ZodObject<infer TShape> ? z.ZodObject<UnwrapZodReadonly<TShape>> : T
+
+export type HandleZodArrayReadonly<T extends z.ZodArray<any>> =
+  T extends z.ZodArray<infer TElement>
+    ? TElement extends z.ZodObject<z.ZodRawShape>
+      ? z.ZodArray<HandleZodObjectReadonly<TElement>>
+      : TElement extends z.ZodArray<any>
+        ? z.ZodArray<HandleZodArrayReadonly<TElement>>
+        : TElement extends z.ZodReadonly<infer TROInner>
+          ? z.ZodArray<TROInner>
+          : z.ZodArray<TElement>
+    : never
+
+/**strip readonly fields */
+
+/**
+ * Unwrap readonly recursively, useful for the library when trying to reuse regular models as output
+ */
+export type StripZodReadonly<T extends z.ZodRawShape, TUnwrap extends (keyof T)[] = []> = {
+  /**
+   * Summary:
+   * UnwrapZodReadonly T extends z.ZodRawShape
+   *  K in keyof T: T[K] is z.readonly<TInner> ?
+   *    TInner is z.object ? HandleZodObject :
+   *    TInner is z.array ? HandleZodArray :
+   *    -nothing to do -
+   *    TInner
+   *  -nothing to do-
+   *  T
+   */
+  [K in keyof T as K extends TUnwrap[number]
+    ? K
+    : T[K] extends z.ZodReadonly<any>
+      ? never
+      : T[K] extends z.ZodArray<infer TElement>
+        ? TElement extends z.ZodReadonly<any>
+          ? never
+          : K
+        : K]: T[K] extends z.ZodObject<any>
+    ? HandleStripZodObjectReadonly<T[K]>
+    : T[K] extends z.ZodArray<any>
+      ? HandleStripZodArrayReadonly<T[K]>
+      : T[K]
+}
+
+export type HandleStripZodObjectReadonly<T extends z.ZodObject<any>> =
+  T extends z.ZodObject<infer TShape> ? z.ZodObject<StripZodReadonly<TShape>> : T
+
+export type HandleStripZodArrayReadonly<T extends z.ZodArray<any>> =
+  T extends z.ZodArray<infer TElement>
+    ? TElement extends z.ZodObject<z.ZodRawShape>
+      ? z.ZodArray<HandleStripZodObjectReadonly<TElement>>
+      : TElement extends z.ZodArray<any>
+        ? z.ZodArray<HandleStripZodArrayReadonly<TElement>>
+        : never
+    : never

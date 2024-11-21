@@ -1,14 +1,12 @@
-import axios, { AxiosInstance } from "axios"
+import { AxiosInstance } from "axios"
 import { z } from "zod"
 import {
   FiltersShape,
   GetInferredFromRaw,
-  GetInferredFromRawWithBrand,
-  GetInferredWithoutReadonlyBrands,
+  GetInferredFromRawWithStripReadonly,
   IPagination,
   IsNever,
-  ReadonlyTag,
-  UnwrapBranded,
+  StripZodReadonly,
   createApiUtils,
   createCustomServiceCallHandler,
   defineProperty,
@@ -20,22 +18,12 @@ import {
   parseResponse,
   removeReadonlyFields,
 } from "../utils"
-import { AxiosLike, CustomServiceCallPlaceholder, CustomServiceCallsRecord } from "./types"
 import { createCustomServiceCall } from "./create-custom-call"
+import { AxiosLike, CustomServiceCallPlaceholder, CustomServiceCallsRecord } from "./types"
 
 type EntityShape = z.ZodRawShape & {
-  id: z.ZodString | z.ZodNumber | z.ZodBranded<z.ZodString, ReadonlyTag> | z.ZodBranded<z.ZodNumber, ReadonlyTag>
+  id: z.ZodString | z.ZodNumber | z.ZodReadonly<z.ZodString> | z.ZodReadonly<z.ZodNumber>
 }
-
-type BaseModelsPlaceholder<
-  TEntity extends EntityShape = EntityShape,
-  TCreate extends z.ZodRawShape = z.ZodRawShape,
-  TBuiltInFilters extends FiltersShape = FiltersShape,
-> = TEntity extends EntityShape
-  ?
-      | (EntityModelObj<TEntity> & ExtraFiltersObj<TBuiltInFilters>)
-      | (EntityModelObj<TEntity> & ExtraFiltersObj<TBuiltInFilters> & CreateModelObj<TCreate>)
-  : "If you include models entity should be a present shape"
 
 type ApiService<
   TEntity extends EntityShape = never,
@@ -75,20 +63,20 @@ type ListCallObj<TEntity extends EntityShape, TExtraFilters extends FiltersShape
       ? {
           pagination?: IPagination
         }
-      : { pagination?: IPagination; filters?: Partial<GetInferredFromRawWithBrand<TExtraFilters>> },
-  ) => Promise<z.infer<ReturnType<typeof getPaginatedZod<UnwrapBranded<TEntity, ReadonlyTag>>>>>
+      : { pagination?: IPagination; filters?: Partial<GetInferredFromRaw<TExtraFilters>> },
+  ) => Promise<z.infer<ReturnType<typeof getPaginatedZod<TEntity>>>>
 }
 type CreateCallObj<TEntity extends EntityShape, TCreate extends z.ZodRawShape = never> = {
   create: (
     inputs: IsNever<TCreate> extends true
-      ? Omit<GetInferredWithoutReadonlyBrands<TEntity>, "id">
-      : GetInferredWithoutReadonlyBrands<TCreate>,
+      ? Omit<GetInferredFromRawWithStripReadonly<TEntity>, "id">
+      : GetInferredFromRawWithStripReadonly<TCreate>,
   ) => Promise<GetInferredFromRaw<TEntity>>
 }
 type ErrorEntityShapeMustHaveAnIdField = '[TypeError] Your entity should have an "id" field'
 type UpdateCallObj<
   TEntity extends EntityShape,
-  TInferredEntityWithoutReadonlyFields = GetInferredWithoutReadonlyBrands<TEntity>,
+  TInferredEntityWithoutReadonlyFields = GetInferredFromRawWithStripReadonly<TEntity>,
   TInferredIdObj = TInferredEntityWithoutReadonlyFields extends { id: infer TId }
     ? { id: TId }
     : ErrorEntityShapeMustHaveAnIdField,
@@ -118,7 +106,7 @@ type UpdateCallObj<
 type UpsertCallObj<
   TEntity extends EntityShape,
   TCreate extends z.ZodRawShape = never,
-  TInferredEntityWithoutReadonlyFields = GetInferredWithoutReadonlyBrands<TEntity>,
+  TInferredEntityWithoutReadonlyFields = GetInferredFromRaw<TEntity>,
   TInferredIdObj = TInferredEntityWithoutReadonlyFields extends { id: infer TId }
     ? { id: TId }
     : ErrorEntityShapeMustHaveAnIdField,
@@ -128,9 +116,7 @@ type UpsertCallObj<
      * Perform a patch request with a partial body
      */
     inputs:
-      | (IsNever<TCreate> extends true
-          ? Omit<GetInferredWithoutReadonlyBrands<TEntity>, "id">
-          : GetInferredWithoutReadonlyBrands<TCreate>)
+      | (IsNever<TCreate> extends true ? Omit<GetInferredFromRaw<TEntity>, "id"> : GetInferredFromRaw<TCreate>)
       | (Omit<Partial<TInferredEntityWithoutReadonlyFields>, "id"> & TInferredIdObj),
   ): Promise<GetInferredFromRaw<TEntity>>
 }
@@ -281,7 +267,7 @@ export const createApi = <
    * Placeholder to include or not the create method in the return based on models
    */
   type TApiCreateShape = TCreate extends z.ZodRawShape ? TCreate : z.ZodRawShape
-  type TApiCreate = GetInferredFromRawWithBrand<TApiCreateShape>
+  type TApiCreate = GetInferredFromRaw<StripZodReadonly<TApiCreateShape>>
   const create = async (inputs: TApiCreate) => {
     //if there's an id:
     let entityShapeWithoutReadonlyFieldsNorId: z.ZodRawShape = entityShapeWithoutReadonlyFields
@@ -352,9 +338,9 @@ export const createApi = <
     type?: "partial" | "total"
     httpMethod?: "put" | "patch"
     newValue: (TType extends "partial"
-      ? Omit<Partial<GetInferredFromRawWithBrand<typeof entityShapeWithoutReadonlyFields>>, "id">
-      : GetInferredFromRawWithBrand<typeof entityShapeWithoutReadonlyFields>) & {
-      id: GetInferredFromRawWithBrand<TApiEntityShape>["id"]
+      ? Omit<Partial<GetInferredFromRaw<typeof entityShapeWithoutReadonlyFields>>, "id">
+      : GetInferredFromRaw<typeof entityShapeWithoutReadonlyFields>) & {
+      id: GetInferredFromRaw<TApiEntityShape>["id"]
     }
   }) => {
     if (!("id" in newValue)) {
@@ -389,29 +375,26 @@ export const createApi = <
 
   //! this is a bit painful to look at but I feel it is a good UX so that we don't make Users go through updateBase params
   const update = async (
-    args: Partial<GetInferredFromRawWithBrand<typeof entityShapeWithoutReadonlyFields>> & { id: string },
+    args: Partial<GetInferredFromRaw<typeof entityShapeWithoutReadonlyFields>> & { id: string },
   ) => {
     return updateBase({ newValue: args, httpMethod: "patch", type: "partial" })
   }
   defineProperty(
     update,
     "replace",
-    async (args: GetInferredFromRawWithBrand<typeof entityShapeWithoutReadonlyFields> & { id: string }) =>
+    async (args: GetInferredFromRaw<typeof entityShapeWithoutReadonlyFields> & { id: string }) =>
       updateBase({ newValue: args, httpMethod: "put", type: "total" }),
   )
-  defineProperty(
-    update.replace,
-    "asPartial",
-    (inputs: Partial<GetInferredWithoutReadonlyBrands<TApiEntityShape>> & { id: string }) =>
-      updateBase({ newValue: inputs, httpMethod: "put", type: "partial" }),
+  defineProperty(update.replace, "asPartial", (inputs: Partial<GetInferredFromRaw<TApiEntityShape>> & { id: string }) =>
+    updateBase({ newValue: inputs, httpMethod: "put", type: "partial" }),
   )
 
   const upsert = async (
-    args: TApiCreate | (Partial<GetInferredFromRawWithBrand<typeof entityShapeWithoutReadonlyFields>> & { id: string }),
+    args: TApiCreate | (Partial<GetInferredFromRaw<typeof entityShapeWithoutReadonlyFields>> & { id: string }),
   ) => {
     if ("id" in args && args.id) {
       return updateBase({
-        newValue: args as Partial<GetInferredFromRawWithBrand<typeof entityShapeWithoutReadonlyFields>> & {
+        newValue: args as Partial<GetInferredFromRaw<typeof entityShapeWithoutReadonlyFields>> & {
           id: string
         },
       })

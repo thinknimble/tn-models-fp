@@ -2,7 +2,7 @@ import { faker } from "@faker-js/faker"
 import { SnakeCasedPropertiesDeep } from "@thinknimble/tn-utils"
 import { describe, expect, it, vi } from "vitest"
 import { z } from "zod"
-import { GetInferredFromRawWithBrand, objectToSnakeCaseArr, readonly } from "../../utils"
+import { GetInferredFromRawWithReadonly, objectToSnakeCaseArr } from "../../utils"
 import { createApi } from "../create-api"
 import { createCustomServiceCall } from "../create-custom-call"
 import { InvalidEntryMessage } from "../types"
@@ -84,12 +84,14 @@ describe("createCustomServiceCall", () => {
         outputShape,
         cb: async ({ input, utils }) => {
           type tests = [
-            Expect<Equals<typeof input, GetInferredFromRawWithBrand<typeof inputShape>>>,
-            Expect<Equals<(typeof utils)["fromApi"], (obj: object) => GetInferredFromRawWithBrand<typeof outputShape>>>,
+            Expect<Equals<typeof input, GetInferredFromRawWithReadonly<typeof inputShape>>>,
+            Expect<
+              Equals<(typeof utils)["fromApi"], (obj: object) => GetInferredFromRawWithReadonly<typeof outputShape>>
+            >,
             Expect<
               Equals<
                 (typeof utils)["toApi"],
-                (obj: object) => SnakeCasedPropertiesDeep<GetInferredFromRawWithBrand<typeof inputShape>>
+                (obj: object) => SnakeCasedPropertiesDeep<GetInferredFromRawWithReadonly<typeof inputShape>>
               >
             >,
           ]
@@ -454,7 +456,7 @@ describe("createCustomServiceCall", () => {
       },
     })
     type customCallType = (typeof api)["csc"]["customCall"]
-    type test = Expect<Equals<Parameters<customCallType>[0], GetInferredFromRawWithBrand<typeof shapeSubject>>>
+    type test = Expect<Equals<Parameters<customCallType>[0], GetInferredFromRawWithReadonly<typeof shapeSubject>>>
     const expectedResult = 1
     const result = await api.csc.customCall({ nativeEnum: 1 })
     expect(result).toBe(expectedResult)
@@ -497,10 +499,10 @@ describe("createCustomServiceCall", () => {
   it("Does not fail types when there are nested readonly fields", () => {
     // this actually proves that we are properly unbranding the inner ZodBranded fields.
     const profileShape = {
-      id: readonly(z.string().uuid()),
+      id: z.string().uuid().readonly(),
     }
     const userShape = {
-      id: readonly(z.string().uuid()),
+      id: z.string().uuid().readonly(),
       name: z.string(),
       profiles: z.object(profileShape).array(),
     }
@@ -1048,7 +1050,7 @@ describe("createCustomServiceCall", () => {
     it("TS - doesn't break custom call type if adding readonly util to output", async () => {
       const outputShape = {
         id: z.string().uuid(),
-        fieldWithReadonly: readonly(z.string().uuid()),
+        fieldWithReadonly: z.string().uuid().readonly(),
       }
       const customCall = createCustomServiceCall({
         outputShape,
@@ -1070,7 +1072,7 @@ describe("createCustomServiceCall", () => {
     it("TS - doesn't break custom call type if adding readonly util to input", async () => {
       const inputShape = {
         id: z.string().uuid(),
-        fieldWithReadonly: readonly(z.string().uuid()),
+        fieldWithReadonly: z.string().uuid().readonly(),
       }
       const customCall = createCustomServiceCall({
         inputShape,
@@ -1092,11 +1094,11 @@ describe("createCustomServiceCall", () => {
     it("TS - doesn't break custom call type if adding readonly util to input and output", async () => {
       const inputShape = {
         id: z.string().uuid(),
-        fieldWithReadonly: readonly(z.string().uuid()),
+        fieldWithReadonly: z.string().uuid().readonly(),
       }
       const outputShape = {
         id: z.string().uuid(),
-        fieldWithReadonly: readonly(z.string().uuid()),
+        fieldWithReadonly: z.string().uuid().readonly(),
       }
       const customCall = createCustomServiceCall({
         inputShape,

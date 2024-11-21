@@ -6,7 +6,7 @@ import { parseFilters } from "../filters"
 import { Pagination } from "../pagination"
 import { parseResponse } from "../response"
 import {
-  StripReadonlyBrand,
+  StripZodReadonly,
   ZodPrimitives,
   isZodArray,
   isZodPrimitive,
@@ -222,5 +222,6 @@ export const removeReadonlyFields = <T extends z.ZodRawShape, TUnwrap extends (k
     }
     nonReadonlyEntries.push([k, v])
   }
-  return Object.fromEntries(nonReadonlyEntries) as StripReadonlyBrand<T, TUnwrap>
+
+  return Object.fromEntries(nonReadonlyEntries) as StripZodReadonly<T, TUnwrap>
 }

@@ -23,7 +23,7 @@ The package is based in zod to replace models and fields approach from previous 
       - [`update` - Put/Patch request to update a resource by id](#update---putpatch-request-to-update-a-resource-by-id)
   - [Models (zod-based)](#models-zod-based)
     - [Why shapes and not zods?](#why-shapes-and-not-zods)
-    - [Make fields readonly ( only applicable for `entity`)](#make-fields-readonly--only-applicable-for-entity)
+    - [Make fields readonly](#make-fields-readonly)
   - [`createCustomServiceCall`](#createcustomservicecall)
     - [Call with filters](#call-with-filters)
     - [`standAlone` calls](#standalone-calls)
@@ -315,14 +315,14 @@ When passing an `entity` model to `createApi` parameter you get a couple of buil
 
 If you passed a `create` model you would get the input type resolved from that shape. Otherwise `entity` will be used as a default
 
-Note that if `entity` shape is used to resolve the type of the input, any [readonly fields](#make-fields-readonly--only-applicable-for-entity) and `id` itself will be stripped from that type. So
+Note that if `entity` shape is used to resolve the type of the input, any [readonly fields](#make-fields-readonly) and `id` itself will be stripped from that type. So
 
 ```typescript
 const entityShape = {
   id: z.string().uuid(),
   firstName: z.string(),
   lastName: z.string(),
-  fullName: readonly(z.string()),
+  fullName: z.string().readonly(),
 }
 const api = createApi({
   //...
@@ -357,7 +357,7 @@ Returns a paginated version of the resolved type of `entity` from given models.
 
 #### `update` - Put/Patch request to update a resource by id
 
-This method takes as parameter the resolved type of the `entity` from given models minus the [declared readonly fields](#make-fields-readonly--only-applicable-for-entity) which are stripped to keep you from sending them in the request.
+This method takes as parameter the resolved type of the `entity` from given models minus the [declared readonly fields](#make-fields-readonly) which are stripped to keep you from sending them in the request.
 
 There are a couple of flavors of this method to your convenience:
 
@@ -427,15 +427,15 @@ const myZodShape = {
 
 > PS: In a not-that-far future we want to accept zod objects as well as shapes. Or even eradicate shapes altogether, since ZodObjects are the go-to for creating schemas with zod.
 
-### Make fields readonly ( only applicable for `entity`)
+### Make fields readonly
 
-You can mark fields as readonly with the `readonly` function from the library. This will create a brand for your field which will allow the library to identify it as a readonly field, thus preventing those fields to be included in models for creation and update.
+You can mark fields as readonly with the built-in zod's `.readonly()` function. This will use a `z.ZodReadonly` for your field which will allow the library to identify it as a readonly field, thus preventing those fields to be included in models for creation and update.
 
 ```ts
 const entityShape = {
   firstName: z.string(),
   lastName: z.string(),
-  fullName: readonly(z.string()),
+  fullName: z.string().readonly(),
 }
 ```
 
@@ -552,7 +552,7 @@ There could be situations where you don't want to attach a call to an api. Proba
 
 For this case we can use `createCustomServiceCall.standAlone` which is a function that gets fed a `client` and is a self-contained version of regular custom service calls.
 
-The parameter to create these calls is slightly different than for dependant custom calls. Here's an example
+Here's an example
 
 ```typescript
 const standAloneCall = createCustomServiceCall.standAlone({
@@ -566,7 +566,6 @@ const standAloneCall = createCustomServiceCall.standAlone({
     },
   },
   name: "standAlone",
-  // here is where the difference is, this is not a second parameter but instead it is a `cb` field!
   cb: async ({
     client,
     utils,
