@@ -149,9 +149,6 @@ var isZodReadonly = (input) => {
 var isZodVoid = (input) => {
   return isZod(input) && input._def.typeName === z3.ZodFirstPartyTypeKind.ZodVoid;
 };
-var isNativeZodReadonly = (input) => {
-  return isZod(input) && input._def.typeName === z3.ZodFirstPartyTypeKind.ZodReadonly;
-};
 function resolveRecursiveZod(zod) {
   if (isZodReadonly(zod)) {
     return zodReadonlyToSnakeRecursive(zod);
@@ -177,9 +174,6 @@ function resolveRecursiveZod(zod) {
   if (isZodUnion(zod)) {
     return zodUnionRecursive(zod);
   }
-  if (isNativeZodReadonly(zod)) {
-    return zodNativeReadonlyRecursive(zod);
-  }
   return zod;
 }
 function zodArrayRecursive(zodArray) {
@@ -202,10 +196,6 @@ function zodUnionRecursive(zod) {
   const allUnions = zod._def.options;
   const remapped = allUnions.map((u) => resolveRecursiveZod(u));
   return z3.union(remapped);
-}
-function zodNativeReadonlyRecursive(zodReadonly) {
-  const unwrapped = zodReadonly.unwrap();
-  return resolveRecursiveZod(unwrapped).readonly();
 }
 function zodObjectToSnakeRecursive(zodObj) {
   const resultingShape = Object.fromEntries(
