@@ -110,7 +110,7 @@ export type PartializeShape<T extends z.ZodRawShape> = {
   [K in keyof T]: z.ZodOptional<T[K]>
 }
 export type InferShapeOrZod<T extends object> = T extends z.ZodRawShape
-  ? GetInferredFromRawWithReadonly<T>
+  ? GetInferredFromRaw<T>
   : T extends z.ZodTypeAny
     ? z.infer<T>
     : never
