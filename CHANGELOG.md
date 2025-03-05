@@ -1,5 +1,13 @@
 # @thinknimble/tn-models-fp
 
+## 4.0.1
+
+### Patch Changes
+
+- 62e6ff9: Fix issue with custom calls returning readonly fields which would cause unnecessary type issues on end users of the library.
+- 403194d: Swap strip with unwrap
+- 9c894a9: Remove readonly from custom call outputs
+
 ## 4.0.1-canary.1
 
 ### Patch Changes
