@@ -1,5 +1,11 @@
 # @thinknimble/tn-models-fp
 
+## 4.0.1-canary.0
+
+### Patch Changes
+
+- Remove readonly from custom call outputs
+
 ## 4.0.0
 
 ### Major Changes
