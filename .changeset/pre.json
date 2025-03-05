@@ -5,6 +5,7 @@
     "@thinknimble/tn-models": "4.0.0"
   },
   "changesets": [
+    "kind-zebras-remain",
     "pretty-tigers-attend"
   ]
 }

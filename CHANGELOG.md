@@ -1,5 +1,11 @@
 # @thinknimble/tn-models-fp
 
+## 4.0.1-canary.1
+
+### Patch Changes
+
+- 403194d: Swap strip with unwrap
+
 ## 4.0.1-canary.0
 
 ### Patch Changes
