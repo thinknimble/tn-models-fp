@@ -1,6 +1,14 @@
 import { z } from "zod"
 import { isZodObject } from "./zod"
 
+const compareKeys = (expectedObject: object, subjectObject: object) => {
+  const expected = new Set(Object.keys(expectedObject))
+  const subject = new Set(Object.keys(subjectObject))
+  return {
+    missing: Array.from(expected.difference(subject)),
+    extra: Array.from(subject.difference(expected)),
+  }
+}
 /**
  * Parse a backend response by providing a zod schema which will safe validate it and return the corresponding value typed. Will raise a warning if what we receive does not match our expected schema, thus we can update the schema and that will automatically update our types by inference.
  */
@@ -9,9 +17,9 @@ export const parseResponse = <T extends z.ZodType, Z = z.infer<T>>({
   data,
   zod,
   onError = (err: z.ZodError) => {
-    console.debug(
+    console.warn(
       `Response to service call with identifier < ${identifier} > did not match expected type,\n errors:`,
-      err,
+      err.format(),
     )
   },
 }: {
@@ -25,7 +33,7 @@ export const parseResponse = <T extends z.ZodType, Z = z.infer<T>>({
 }) => {
   const safeParse = isZodObject(zod) ? zod.passthrough().safeParse : zod.safeParse
   const parsed = safeParse(data)
-
+  const fieldsCheck = compareKeys(data, parsed.data)
   if (!parsed.success) {
     // If a request does not return what you expect, we don't let that go unnoticed, you'll get a warning that your frontend model is/has become outdated.
     onError?.(parsed.error)
