@@ -27,7 +27,6 @@
   ],
   "homepage": "https://github.com/thinknimble/tn-models-fp",
   "dependencies": {
-    "@thinknimble/tn-models": "link:",
     "@thinknimble/tn-utils": "^2.0.1"
   },
   "devDependencies": {
