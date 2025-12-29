@@ -1,6 +1,6 @@
 {
   "name": "@thinknimble/tn-models",
-  "version": "4.0.1",
+  "version": "4.0.2",
   "description": "Utilities for building front-end models when using snake-cased backends.",
   "author": "Thinknimble",
   "license": "MIT",
@@ -27,6 +27,7 @@
   ],
   "homepage": "https://github.com/thinknimble/tn-models-fp",
   "dependencies": {
+    "@thinknimble/tn-models": "link:",
     "@thinknimble/tn-utils": "^2.0.1"
   },
   "devDependencies": {
@@ -48,5 +49,10 @@
   "peerDependencies": {
     "axios": ">1.0.0",
     "zod": ">=3.23.8"
+  },
+  "pnpm": {
+    "overrides": {
+      "@thinknimble/tn-models": "link:"
+    }
   }
 }

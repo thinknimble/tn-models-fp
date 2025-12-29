@@ -45,6 +45,9 @@ export const isZodReadonly = (input: unknown): input is z.ZodReadonly<any> => {
 export const isZodVoid = (input: unknown): input is z.ZodVoid => {
   return isZod(input) && input._def.typeName === z.ZodFirstPartyTypeKind.ZodVoid
 }
+export const isZodDefault = (input: unknown): input is z.ZodDefault<z.ZodTypeAny> => {
+  return isZod(input) && input._def.typeName === z.ZodFirstPartyTypeKind.ZodDefault
+}
 
 //TODO: we should probably revisit the types here but they seem not too friendly to tackle given the recursive nature of this operation
 export function resolveRecursiveZod<T extends z.ZodTypeAny>(zod: T) {
@@ -72,6 +75,9 @@ export function resolveRecursiveZod<T extends z.ZodTypeAny>(zod: T) {
   }
   if (isZodUnion(zod)) {
     return zodUnionRecursive(zod)
+  }
+  if (isZodDefault(zod)) {
+    return zodDefaultRecursive(zod)
   }
   return zod
 }
@@ -130,4 +136,10 @@ function zodReadonlyToSnakeRecursive<T extends z.ZodReadonly<any>>(zod: T): any 
 function zodBrandToSnakeRecursive<T extends z.ZodBranded<any, any>>(zodBrand: T): any {
   //brand is just a static type thing so I don't think this is going to affect that much runtime...We're losing the brand information anyway so I think it would be good to document that users should just not use brands since they're sort of pointless in the context of the library. We're just getting around the runtime here.
   return resolveRecursiveZod(zodBrand.unwrap()).brand()
+}
+
+function zodDefaultRecursive<T extends z.ZodDefault<z.ZodTypeAny>>(zodDefault: T): any {
+  const innerType = zodDefault._def.innerType
+  const defaultValue = zodDefault._def.defaultValue
+  return resolveRecursiveZod(innerType).default(defaultValue())
 }
