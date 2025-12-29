@@ -53,5 +53,9 @@
     "overrides": {
       "@thinknimble/tn-models": "link:"
     }
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
   }
 }
