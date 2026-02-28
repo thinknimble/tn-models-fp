@@ -4,6 +4,7 @@ parent: create-ws-api
 created: 2026-02-28T17:00:00Z
 priority: 1
 status: not_started
+branch: feature/create-ws-api
 ---
 
 # WSClientLike type exists in src/api/
