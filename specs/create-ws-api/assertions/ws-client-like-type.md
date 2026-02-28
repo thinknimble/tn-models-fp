@@ -3,7 +3,7 @@ id: ws-client-like-type
 parent: create-ws-api
 created: 2026-02-28T17:00:00Z
 priority: 1
-status: not_started
+status: done
 branch: feature/create-ws-api
 ---
 

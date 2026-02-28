@@ -1,4 +1,5 @@
 export { createApi, createCustomServiceCall, createPaginatedServiceCall } from "./api"
+export type { WSClientLike } from "./api"
 export { createCollectionManager } from "./collection-manager"
 export {
   IPagination,
