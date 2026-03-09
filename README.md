@@ -34,6 +34,12 @@ The package is based in zod to replace models and fields approach from previous 
   - [`createApiUtils`](#createapiutils)
   - [`createCollectionManager`](#createcollectionmanager)
     - [Example use](#example-use)
+- [WebSocket API](#websocket-api)
+  - [`createWSApi`](#createwsapi)
+    - [`WSClientLike`](#wsclientlike)
+    - [Send operations](#send-operations)
+    - [Receive operations](#receive-operations)
+    - [Send and receive](#send-and-receive)
 - [Roadmap](#roadmap)
 - [Contribution guide](#contribution-guide)
   - [pnpm](#pnpm)
@@ -46,15 +52,15 @@ The package is based in zod to replace models and fields approach from previous 
 ## Install this package with your favorite package manager!
 
 ```bash
-npm i @thinknimble/tn-models-fp
+npm i @thinknimble/tn-models
 ```
 
 ```bash
-yarn add @thinknimble/tn-models-fp
+yarn add @thinknimble/tn-models
 ```
 
 ```bash
-pnpm i @thinknimble/tn-models-fp
+pnpm i @thinknimble/tn-models
 ```
 
 ## Quickstart
@@ -736,6 +742,164 @@ const collectionManager = createCollectionManager({
   list: [], // your feed list, type-inferred from api.list
   pagination: feedPagination, // your pagination object
   filters: feedFilters, // inferred from api.list
+})
+```
+
+# WebSocket API
+
+## `createWSApi`
+
+Creates a type-safe WebSocket API. This follows the same philosophy as `createApi` — define your message shapes with zod and get full type inference, case conversion (camelCase <-> snake_case), and runtime validation.
+
+Unlike `createApi`, WebSockets don't have universal CRUD semantics, so there are no built-in methods. Instead you explicitly define `send` and `receive` operations.
+
+```typescript
+import { z } from "zod"
+import { createWSApi, WSClientLike } from "@thinknimble/tn-models-fp"
+
+const chatApi = createWSApi({
+  channel: "chat",
+  client: myWSClient, // any object implementing WSClientLike
+  operations: {
+    send: {
+      newMessage: {
+        inputShape: { text: z.string(), roomId: z.string() },
+      },
+    },
+    receive: {
+      messageReceived: {
+        outputShape: { userId: z.string(), content: z.string(), sentAt: z.string() },
+      },
+    },
+  },
+})
+```
+
+Parameters:
+
+- `channel`: A namespace for the events. Events are sent/received as `{channel}:{operationName}` (e.g. `chat:newMessage`)
+- `client`: Any object that satisfies the `WSClientLike` interface (see below)
+- `operations`: An object with optional `send` and `receive` fields, each containing named operations with their shapes
+
+### `WSClientLike`
+
+A minimal interface that your WebSocket client must implement. This keeps the library transport-agnostic — it works with Socket.IO, Phoenix Channels, or anything that supports named-event routing.
+
+```typescript
+type WSClientLike = {
+  send: (event: string, data: unknown) => void
+  on: (event: string, handler: (data: unknown) => void) => void
+  off: (event: string, handler?: (data: unknown) => void) => void
+}
+```
+
+Libraries like Socket.IO already satisfy this interface natively. However, raw WebSocket libraries (like the `ws` package) only have generic `send(data)` and `on('message', handler)` — no event routing. For these, use the built-in `createWSAdapter` helper:
+
+```typescript
+import WebSocket from "ws"
+import { createWSAdapter, createWSApi } from "@thinknimble/tn-models"
+
+const ws = new WebSocket("wss://example.com")
+const client = createWSAdapter(ws)
+
+const api = createWSApi({
+  channel: "chat",
+  client,
+  // ...operations
+})
+```
+
+The adapter uses a `{ event, data }` JSON wire format — your server must send and expect the same format. It accepts any object matching the `RawWSLike` interface (i.e. `send(data)`, `on(event, handler)`, `readyState`, `OPEN`).
+
+### Send operations
+
+Define `send` operations with an `inputShape`. The resulting api exposes typed `send` methods that validate the payload and convert it to snake_case before sending.
+
+```typescript
+const api = createWSApi({
+  channel: "notifications",
+  client: wsClient,
+  operations: {
+    send: {
+      markRead: {
+        inputShape: { notificationId: z.string().uuid() },
+      },
+      ping: {
+        inputShape: {}, // no payload
+      },
+    },
+  },
+})
+
+api.send.markRead({ notificationId: "abc-123" })
+// calls client.send("notifications:markRead", { notification_id: "abc-123" })
+
+api.send.ping()
+// calls client.send("notifications:ping", {})
+```
+
+### Receive operations
+
+Define `receive` operations with an `outputShape`. The resulting api exposes `on` and `off` methods. Incoming data is converted from snake_case to camelCase and validated against the shape.
+
+```typescript
+const api = createWSApi({
+  channel: "events",
+  client: wsClient,
+  operations: {
+    receive: {
+      userJoined: {
+        outputShape: { userId: z.string(), displayName: z.string() },
+      },
+    },
+  },
+})
+
+const handler = (data) => {
+  // data is typed: { userId: string, displayName: string }
+  console.log(`${data.displayName} joined`)
+}
+
+api.on.userJoined(handler)
+
+// Later, unsubscribe:
+api.off.userJoined(handler)
+```
+
+### Send and receive
+
+You can combine both in a single api. The return type adapts to what you define — if you only define `send`, you only get `send` methods. If you only define `receive`, you get `on`/`off`. Define both and you get all three.
+
+```typescript
+const chatApi = createWSApi({
+  channel: "chat",
+  client: wsClient,
+  operations: {
+    send: {
+      sendMessage: {
+        inputShape: { text: z.string(), roomId: z.string() },
+      },
+    },
+    receive: {
+      messageReceived: {
+        outputShape: { userId: z.string(), text: z.string(), roomId: z.string() },
+      },
+      userTyping: {
+        outputShape: { userId: z.string(), roomId: z.string() },
+      },
+    },
+  },
+})
+
+// Send
+chatApi.send.sendMessage({ text: "hello", roomId: "room-1" })
+
+// Receive
+chatApi.on.messageReceived((msg) => {
+  console.log(msg.text) // typed
+})
+chatApi.on.userTyping((data) => {
+  console.log(`${data.userId} is typing in ${data.roomId}`)
 })
 ```
 
