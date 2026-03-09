@@ -1,5 +1,11 @@
 # @thinknimble/tn-models-fp
 
+## 4.2.0
+
+### Minor Changes
+
+- 029bed9: Add built-in `createWSAdapter` helper for wrapping raw WebSocket libraries (like `ws`) into a `WSClientLike` compatible with `createWSApi`. No new dependencies — accepts any object with `send(data)`, `on(event, handler)`, `readyState`, and `OPEN`.
+
 ## 4.0.1
 
 ### Patch Changes
