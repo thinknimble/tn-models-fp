@@ -5,6 +5,7 @@ created: 2026-02-28T17:00:00Z
 priority: 2
 status: not_started
 depends-on: create-ws-api-function
+branch: feature/create-ws-api
 ---
 
 # Events are namespaced as channel:operationName

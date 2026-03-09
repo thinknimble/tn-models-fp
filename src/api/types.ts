@@ -14,6 +14,16 @@ import {
   ZodPrimitives,
 } from "../utils"
 
+/**
+ * Minimal interface any WebSocket client must satisfy.
+ * Transport-agnostic: works with native WebSocket wrappers, Socket.IO, Phoenix Channels, etc.
+ */
+export type WSClientLike = {
+  send: (event: string, data: unknown) => void
+  on: (event: string, handler: (data: unknown) => void) => void
+  off: (event: string, handler?: (data: unknown) => void) => void
+}
+
 export type CustomServiceCallInputObj<
   TInput extends z.ZodRawShape | ZodPrimitives | z.ZodArray<z.ZodTypeAny> = z.ZodUndefined,
 > = UnknownIfNever<TInput, { inputShape: TInput }>

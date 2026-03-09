@@ -3,8 +3,9 @@ id: create-ws-api-function
 parent: create-ws-api
 created: 2026-02-28T17:00:00Z
 priority: 1
-status: not_started
+status: done
 depends-on: ws-client-like-type
+branch: feature/create-ws-api
 ---
 
 # createWSApi function exists in src/api/
